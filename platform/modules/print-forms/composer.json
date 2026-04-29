@@ -1,0 +1,23 @@
+{
+    "name": "polirium/print-forms",
+    "description": "Print Forms Module - Module for Polirium Core",
+    "authors": [
+        {
+            "name": "Nghia Pham",
+            "email": "vingamagic@gmail.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Polirium\\Modules\\PrintForms\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Polirium\\Modules\\PrintForms\\Providers\\PrintFormsServiceProvider"
+            ]
+        }
+    }
+}

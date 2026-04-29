@@ -1,0 +1,23 @@
+{
+    "name": "polirium/sale",
+    "description": "Sale Module - Module for Polirium Core",
+    "authors": [
+        {
+            "name": "Nghia Pham",
+            "email": "vingamagic@gmail.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Polirium\\Modules\\Sale\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Polirium\\Modules\\Sale\\Providers\\SaleServiceProvider"
+            ]
+        }
+    }
+}

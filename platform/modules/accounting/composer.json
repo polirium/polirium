@@ -1,0 +1,23 @@
+{
+    "name": "polirium/accounting",
+    "description": "Accounting Module - Module for Polirium Core",
+    "authors": [
+        {
+            "name": "Nghia Pham",
+            "email": "vingamagic@gmail.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Polirium\\Modules\\Accounting\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Polirium\\Modules\\Accounting\\Providers\\AccountingServiceProvider"
+            ]
+        }
+    }
+}

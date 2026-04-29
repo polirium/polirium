@@ -1,0 +1,91 @@
+<?php
+
+return [
+    // Labels
+    'task' => 'Công việc',
+    'task_name' => 'Tên công việc',
+    'task_code' => 'Mã công việc',
+    'task_info' => 'Thông tin công việc',
+    'parent_task' => 'Công việc cha',
+    'child_tasks' => 'Công việc con',
+    'dependent_tasks' => 'Các công việc phụ thuộc',
+    'dependency' => 'Phụ thuộc',
+    'dependency_before' => 'Phụ thuộc trước',
+    'task_word' => 'công việc',
+
+    // Project
+    'project' => 'Dự án',
+    'project_name' => 'Tên dự án',
+    'project_code' => 'Mã dự án',
+    'project_info' => 'Thông tin dự án',
+
+    // Fields
+    'description' => 'Mô tả',
+    'no_description' => 'Không có mô tả',
+    'note' => 'Ghi chú',
+    'status' => 'Trạng thái',
+    'priority' => 'Mức ưu tiên',
+    'progress' => 'Tiến độ',
+    'progress_percent' => 'Tiến độ (%)',
+    'budget' => 'Ngân sách',
+    'sort_order' => 'Thứ tự',
+    'assignee' => 'Người thực hiện',
+    'creator' => 'Người tạo',
+    'none' => 'Không có',
+    'unassigned' => 'Chưa giao',
+    'branch' => 'Chi nhánh',
+    'time' => 'Thời gian',
+
+    // Dates
+    'start_date' => 'Ngày bắt đầu',
+    'end_date' => 'Ngày kết thúc',
+    'actual_start_date' => 'Ngày bắt đầu thực tế',
+    'actual_end_date' => 'Ngày kết thúc thực tế',
+    'actual_start' => 'Bắt đầu thực tế',
+    'actual_end' => 'Kết thúc thực tế',
+    'expected_date' => 'Ngày dự kiến',
+    'created_at' => 'Ngày tạo',
+    'estimated_hours' => 'Thời gian ước tính (giờ)',
+    'actual_hours' => 'Thời gian thực tế (giờ)',
+    'auto_generate_if_empty' => 'Tự động tạo nếu để trống',
+    'only_root_as_parent' => 'Chỉ công việc gốc có thể chọn làm cha',
+
+    // Gantt
+    'day' => 'Ngày',
+    'week' => 'Tuần',
+    'month' => 'Tháng',
+    'add_date_for_gantt' => 'Thêm ngày vào công việc để hiển thị trên biểu đồ Gantt',
+    'no_tasks_with_dates' => 'Chưa có công việc nào có ngày bắt đầu và kết thúc',
+
+    // Actions
+    'view_more' => 'Xem thêm',
+    'view_all' => 'Xem tất cả',
+    'no_tasks' => 'Chưa có công việc',
+    'error_occurred' => 'Có lỗi xảy ra: ',
+
+    // Restored from git (commit 3071420)
+    'name' => 'Công việc',
+    'index' => 'Danh sách công việc',
+    'create' => 'Tạo công việc',
+    'edit' => 'Sửa công việc',
+    'show' => 'Chi tiết công việc',
+    'created_successfully' => 'Tạo công việc thành công',
+    'updated_successfully' => 'Cập nhật công việc thành công',
+    'deleted_successfully' => 'Xóa công việc thành công',
+    'gantt' => 'Biểu đồ Gantt',
+    'kanban' => 'Bảng Kanban',
+    'datatable' => 'Bảng dữ liệu',
+    'search_by_code' => 'Tìm theo mã công việc',
+    'search_by_name' => 'Tìm theo tên công việc',
+    'filter' => 'Bộ lọc',
+    'filter_by_status' => 'Lọc theo trạng thái',
+    'filter_by_priority' => 'Lọc theo mức độ ưu tiên',
+    'filter_by_project' => 'Lọc theo dự án',
+    'filter_by_parent' => 'Lọc theo công việc cha',
+    'root_tasks_only' => 'Chỉ công việc gốc',
+    'overdue' => 'Quá hạn',
+    'status_label' => 'Trạng thái',
+    'priority_label' => 'Mức ưu tiên',
+    'assigned_to' => 'Người thực hiện',
+    'drag_to_add' => 'Kéo thả để thêm',
+];

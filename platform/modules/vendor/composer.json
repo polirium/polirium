@@ -1,0 +1,23 @@
+{
+    "name": "polirium/vendor",
+    "description": "Vendor Module - Module for Polirium Core",
+    "authors": [
+        {
+            "name": "Nghia Pham",
+            "email": "vingamagic@gmail.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Polirium\\Modules\\Vendor\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Polirium\\Modules\\Vendor\\Providers\\VendorServiceProvider"
+            ]
+        }
+    }
+}

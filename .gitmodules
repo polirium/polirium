@@ -1,0 +1,15 @@
+[submodule "platform/packages/laravel-tabler-icons"]
+	path = platform/packages/laravel-tabler-icons
+	url = https://github.com/vigstudio/laravel-tabler-icons.git
+
+[submodule "platform/core"]
+	path = platform/core
+	url = https://github.com/polirium/platform-core.git
+
+[submodule "platform/packages/laravel-impersonate"]
+	path = platform/packages/laravel-impersonate
+	url = https://github.com/polirium/laravel-impersonate.git
+
+[submodule "platform/packages/core-datatable"]
+	path = platform/packages/core-datatable
+	url = https://github.com/polirium/polirium-tabler-datatable.git

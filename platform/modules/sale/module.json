@@ -1,0 +1,7 @@
+{
+    "name": "Sale",
+    "description": "Handle sales orders, quotations, and billing processes.",
+    "version": "1.0.0",
+    "author": "Polirium Team",
+    "url": "https://polirium.com"
+}

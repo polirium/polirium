@@ -1,0 +1,11 @@
+{
+    "name": "Task",
+    "alias": "task",
+    "description": "Task management system with Kanban and Gantt views.",
+    "version": "1.0.0",
+    "author": "Polirium Team",
+    "url": "https://polirium.com",
+    "providers": [
+        "Polirium\\Modules\\Task\\Providers\\TaskServiceProvider"
+    ]
+}

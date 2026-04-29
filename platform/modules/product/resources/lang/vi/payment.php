@@ -1,0 +1,35 @@
+<?php
+
+return [
+    'total_amount' => 'Tổng tiền hàng',
+    'total_value' => 'Tổng giá trị',
+    'discount' => 'Giảm giá',
+    'discount_percent' => 'Giảm giá (%)',
+    'discount_amount' => 'Giảm giá (VNĐ)',
+    'apply' => 'Áp dụng',
+    'customer_need_pay' => 'Khách cần trả',
+    'customer_payment' => 'Khách thanh toán',
+    'payment_methods' => 'Phương thức thanh toán',
+    'enter_amount' => 'Nhập số tiền',
+    'suggestions' => 'Gợi ý',
+    'add_money' => 'Thêm tiền',
+    'exact_amount' => 'Đúng tiền',
+    'change' => 'Tiền trả khách',
+    'cash' => 'Tiền mặt',
+    'bank_transfer' => 'Chuyển khoản',
+    'card' => 'Thẻ',
+    'cod' => 'COD',
+    'other' => 'Khác',
+
+    // Draft payment translations
+    'save_draft' => 'Lưu tạm',
+    'draft_list' => 'Danh sách hóa đơn tạm',
+    'draft' => 'Tạm',
+    'draft_empty' => 'Chưa có hóa đơn tạm nào',
+    'open_draft' => 'Mở',
+    'delete_draft' => 'Xóa',
+    'confirm_delete_draft' => 'Xóa hóa đơn tạm này?',
+    'draft_saved' => 'Đã lưu hóa đơn tạm',
+    'draft_updated' => 'Đã cập nhật hóa đơn tạm',
+    'draft_opened' => 'Đã mở hóa đơn tạm',
+];

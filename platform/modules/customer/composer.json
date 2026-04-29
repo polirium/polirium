@@ -1,0 +1,23 @@
+{
+    "name": "polirium/customer",
+    "description": "Customer Module - Module for Polirium Core",
+    "authors": [
+        {
+            "name": "Nghia Pham",
+            "email": "vingamagic@gmail.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Polirium\\Modules\\Customer\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Polirium\\Modules\\Customer\\Providers\\CustomerServiceProvider"
+            ]
+        }
+    }
+}

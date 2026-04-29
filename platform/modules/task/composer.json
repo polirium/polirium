@@ -1,0 +1,25 @@
+{
+    "name": "polirium/task",
+    "description": "Project & Task Management Module for Polirium ERP",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Polirium\\Modules\\Task\\": "src/",
+            "Polirium\\Modules\\Task\\Database\\Factories\\": "database/factories",
+            "Polirium\\Modules\\Task\\Database\\Seeders\\": "database/seeders"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Polirium\\Modules\\Task\\Providers\\TaskServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
