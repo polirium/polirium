@@ -89,7 +89,7 @@ platform/
 
 ```text
 URL: /admin
-Default: admin@polirium.com / password
+Default: admin@polirium.com / 123456789
 ```
 
 ## License
