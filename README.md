@@ -92,6 +92,16 @@ URL: /admin
 Default: admin@polirium.com / 123456789
 ```
 
+## Donate
+
+Nếu thấy dự án hữu ích, bạn có thể ủng hộ qua các kênh sau:
+
+1. **Momo:** `0369272718`
+2. **TPBank:** `66605091991`
+3. **ZaloPay:** `0369272718`
+4. **PayPal:** `vingamagic@gmail.com`
+5. **Buy Me a Coffee:** [buymeacoffee.com/nghianecom](https://buymeacoffee.com/nghianecom)
+
 ## License
 
 The Polirium platform is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
