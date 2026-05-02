@@ -3,6 +3,7 @@
 namespace Polirium\Modules\Accounting\Http\Livewire\Payment\Datatable;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Components\SetUp\Exportable;
@@ -80,6 +81,19 @@ final class PaymentTable extends BaseTable
     }
 
     protected int $tab = 1;
+
+    public function mount(): void
+    {
+        parent::mount();
+
+        if ($this->compactMode || $this->customerId !== null) {
+            return;
+        }
+
+        if (($this->filters['date'] ?? '') === '') {
+            $this->filters['date'] = Carbon::today()->toDateString();
+        }
+    }
 
     public function boot(): void
     {

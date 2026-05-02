@@ -55,6 +55,12 @@
                              dateFormat: 'Y-m-d',
                              onChange: () => { this.activePreset = ''; }
                          });
+                         const v = (this.$refs.datePicker.value || '').trim();
+                         const d = new Date();
+                         const todayStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                         if (v === todayStr || v === todayStr + ' to ' + todayStr) {
+                             this.activePreset = 'today';
+                         }
                      },
                      setPreset(key) {
                          if (this.activePreset === key) {

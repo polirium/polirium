@@ -2,6 +2,7 @@
 
 namespace Polirium\Modules\Accounting\Http\Livewire\Payment;
 
+use Illuminate\Support\Carbon;
 use Livewire\Component;
 
 class FilterSidebarComponent extends Component
@@ -34,6 +35,10 @@ class FilterSidebarComponent extends Component
 
     public function mount(): void
     {
+        if (($this->search['date'] ?? '') === '') {
+            $this->search['date'] = Carbon::today()->toDateString();
+        }
+
         $this->statuses = [
             'pending' => __('modules/accounting::accounting.pending'),
             'success' => __('modules/accounting::accounting.completed'),

@@ -17,15 +17,15 @@
       0 => 'Cmgmyr\\Messenger\\MessengerServiceProvider',
     ),
   ),
-  'davejamesmiller/laravel-breadcrumbs' => 
+  'diglactic/laravel-breadcrumbs' => 
   array (
-    'providers' => 
-    array (
-      0 => 'DaveJamesMiller\\Breadcrumbs\\BreadcrumbsServiceProvider',
-    ),
     'aliases' => 
     array (
-      'Breadcrumbs' => 'DaveJamesMiller\\Breadcrumbs\\Facades\\Breadcrumbs',
+      'Breadcrumbs' => 'Diglactic\\Breadcrumbs\\Breadcrumbs',
+    ),
+    'providers' => 
+    array (
+      0 => 'Diglactic\\Breadcrumbs\\ServiceProvider',
     ),
   ),
   'kalnoy/nestedset' => 
@@ -76,6 +76,13 @@
     'providers' => 
     array (
       0 => 'Laravel\\Mcp\\Server\\McpServiceProvider',
+    ),
+  ),
+  'laravel/passkeys' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Laravel\\Passkeys\\PasskeysServiceProvider',
     ),
   ),
   'laravel/roster' => 
