@@ -163,8 +163,8 @@
                         </div>
                         <h2 class="mb-1">{{ trans('modules/accounting::accounting.sales_report') }}</h2>
                         <div class="text-muted">
-                            {{ trans('modules/accounting::accounting.from') }}: {{ \Carbon\Carbon::parse($dateFrom)->format('d/m/Y') }}
-                            {{ trans('modules/accounting::accounting.to_lower') }}: {{ \Carbon\Carbon::parse($dateTo)->format('d/m/Y') }}
+                            {{ trans('modules/accounting::accounting.from') }}: {{ $dateFrom ? \Carbon\Carbon::parse($dateFrom)->format('d/m/Y') : '-' }}
+                            {{ trans('modules/accounting::accounting.to_lower') }}: {{ $dateTo ? \Carbon\Carbon::parse($dateTo)->format('d/m/Y') : '-' }}
                         </div>
                     </div>
 
