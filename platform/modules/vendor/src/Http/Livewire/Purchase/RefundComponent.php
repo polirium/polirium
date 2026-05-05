@@ -110,22 +110,17 @@ class RefundComponent extends Component
 
     public function updatedSearch($value)
     {
-        if ($value) {
-            $this->lists['products'] = Product::where(function ($query) use ($value) {
-                $query->where('name', 'like', '%' . $value . '%')
-                ->orWhere('code', 'like', '%' . $value . '%');
-            })
+        if ( ! $value) {
+            $this->lists['products'] = [];
+            return;
+        }
+
+        $search = '%' . $value . '%';
+        $this->lists['products'] = Product::where(fn ($q) => $q->where('name', 'like', $search)->orWhere('code', 'like', $search))
+            ->select(['id', 'name', 'code', 'unit', 'cost', 'price', 'amount'])
             ->limit(15)
             ->get()
-            ->transform(function ($item) {
-                $item->amount = $item->amount;
-
-                return $item;
-            })
             ->toArray();
-        } else {
-            $this->lists['products'] = [];
-        }
     }
 
     public function updatedProducts(mixed $value, string $key) : void
