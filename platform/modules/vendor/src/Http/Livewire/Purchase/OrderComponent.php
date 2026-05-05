@@ -77,9 +77,14 @@ class OrderComponent extends Component
             return;
         }
 
+        $branchId = user_branch();
         $search = '%' . $value . '%';
-        $this->lists['products'] = Product::where(fn ($q) => $q->where('name', 'like', $search)->orWhere('code', 'like', $search))
-            ->select(['id', 'name', 'code', 'unit', 'cost', 'price', 'amount'])
+
+        $this->lists['products'] = Product::with([
+            'branches' => fn ($q) => $q->where('branch_id', $branchId)->select('branch_id')
+        ])
+            ->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('code', 'like', $search))
+            ->select(['id', 'name', 'code', 'unit', 'cost', 'price'])
             ->limit(15)
             ->get()
             ->toArray();
