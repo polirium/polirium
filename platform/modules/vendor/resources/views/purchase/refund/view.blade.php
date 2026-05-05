@@ -26,7 +26,7 @@
                 </div>
 
                 <div class="w-100">
-                    <x-form::autocomplete wire:model.live="search">
+                    <x-form::autocomplete wire:model.live.debounce.300ms="search">
                         @foreach ($lists['products'] as $item)
                             <x-form::autocomplete.item wire:click="selectProduct({{ $item['id'] }})" class="w-100">
                                 <b>{{ $item['name'] }} - {{ $item['unit'] }}</b> <br>
