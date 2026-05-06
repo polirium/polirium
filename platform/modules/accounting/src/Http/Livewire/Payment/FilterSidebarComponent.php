@@ -35,7 +35,7 @@ class FilterSidebarComponent extends Component
 
     public function mount(): void
     {
-        if (($this->search['date'] ?? '') === '') {
+        if (($this->search['date'] ?? '') === '' && ! request()->query('search')) {
             $this->search['date'] = Carbon::today()->toDateString();
         }
 

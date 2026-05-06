@@ -90,7 +90,7 @@ final class PaymentTable extends BaseTable
             return;
         }
 
-        if (($this->filters['date'] ?? '') === '') {
+        if (($this->filters['date'] ?? '') === '' && ! request()->query('search')) {
             $this->filters['date'] = Carbon::today()->toDateString();
         }
     }
