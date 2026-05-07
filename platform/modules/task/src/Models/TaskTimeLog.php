@@ -4,6 +4,7 @@ namespace Polirium\Modules\Task\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Polirium\Core\Base\Http\Models\BaseModel;
+use Polirium\Core\Base\Http\Models\User;
 
 class TaskTimeLog extends BaseModel
 {
@@ -35,6 +36,6 @@ class TaskTimeLog extends BaseModel
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(\Polirium\Core\Base\Http\Models\User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 }

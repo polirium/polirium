@@ -60,7 +60,9 @@ class Payment extends BaseModel
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id')->withDefault(['name' => null]);
+        return $this->belongsTo(User::class, 'user_id')
+            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class)
+            ->withDefault(['name' => null]);
     }
 
     /**
@@ -70,7 +72,9 @@ class Payment extends BaseModel
      */
     public function userCreated(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_created_id')->withDefault(['name' => null]);
+        return $this->belongsTo(User::class, 'user_created_id')
+            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class)
+            ->withDefault(['name' => null]);
     }
 
     public function products(): HasMany

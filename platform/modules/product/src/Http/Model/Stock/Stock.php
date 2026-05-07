@@ -43,12 +43,12 @@ class Stock extends BaseModel
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     public function userCreated()
     {
-        return $this->belongsTo(User::class, 'user_created_id');
+        return $this->belongsTo(User::class, 'user_created_id')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     public function getStatusNameAttribute(): string

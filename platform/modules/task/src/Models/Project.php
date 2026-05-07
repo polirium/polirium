@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Polirium\Core\Base\Http\Models\BaseModel;
 use Polirium\Core\Base\Http\Models\Branch\Branch;
+use Polirium\Core\Base\Http\Models\User;
 
 class Project extends BaseModel
 {
@@ -62,7 +63,7 @@ class Project extends BaseModel
      */
     public function createdBy(): BelongsTo
     {
-        return $this->belongsTo(\Polirium\Core\Base\Http\Models\User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     /**
@@ -70,7 +71,7 @@ class Project extends BaseModel
      */
     public function updatedBy(): BelongsTo
     {
-        return $this->belongsTo(\Polirium\Core\Base\Http\Models\User::class, 'updated_by');
+        return $this->belongsTo(User::class, 'updated_by')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     /**

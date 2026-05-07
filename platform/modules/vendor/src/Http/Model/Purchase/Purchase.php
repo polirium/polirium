@@ -82,7 +82,7 @@ class Purchase extends BaseModel
      */
     public function userCreated(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_created_id');
+        return $this->belongsTo(User::class, 'user_created_id')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     /**

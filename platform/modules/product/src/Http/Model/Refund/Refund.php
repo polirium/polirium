@@ -5,6 +5,7 @@ namespace Polirium\Modules\Product\Http\Model\Refund;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Polirium\Core\Base\Http\Models\BaseModel;
+use Polirium\Core\Base\Http\Models\User;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
 
 class Refund extends BaseModel
@@ -66,7 +67,7 @@ class Refund extends BaseModel
      */
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'user_created_id');
+        return $this->belongsTo(User::class, 'user_created_id')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     /**
@@ -76,7 +77,7 @@ class Refund extends BaseModel
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     /**

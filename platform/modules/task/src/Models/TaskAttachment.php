@@ -4,6 +4,7 @@ namespace Polirium\Modules\Task\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Polirium\Core\Base\Http\Models\BaseModel;
+use Polirium\Core\Base\Http\Models\User;
 
 class TaskAttachment extends BaseModel
 {
@@ -35,7 +36,7 @@ class TaskAttachment extends BaseModel
      */
     public function uploadedBy(): BelongsTo
     {
-        return $this->belongsTo(\Polirium\Core\Base\Http\Models\User::class, 'uploaded_by');
+        return $this->belongsTo(User::class, 'uploaded_by')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     /**

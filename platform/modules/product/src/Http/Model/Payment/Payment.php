@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Polirium\Core\Base\Http\Models\BaseModel;
+use Polirium\Core\Base\Http\Models\Branch\Branch;
+use Polirium\Core\Base\Http\Models\User;
 use Polirium\Modules\Customer\Http\Model\Customer;
 
 class Payment extends BaseModel
@@ -91,7 +93,8 @@ class Payment extends BaseModel
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(\Polirium\Core\Base\Http\Models\User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id')
+            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     /**
@@ -101,7 +104,8 @@ class Payment extends BaseModel
      */
     public function author(): BelongsTo
     {
-        return $this->belongsTo(\Polirium\Core\Base\Http\Models\User::class, 'author_id');
+        return $this->belongsTo(User::class, 'author_id')
+            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     /**
@@ -111,7 +115,7 @@ class Payment extends BaseModel
      */
     public function branch(): BelongsTo
     {
-        return $this->belongsTo(\Polirium\Core\Base\Http\Models\Branch\Branch::class, 'branch_id');
+        return $this->belongsTo(Branch::class, 'branch_id');
     }
 
     /**
