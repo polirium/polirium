@@ -188,6 +188,9 @@ class OrderComponent extends Component
 
     public function selectProduct(int $id) : void
     {
+        $this->search = '';
+        $this->lists['products'] = [];
+
         if (isset($this->products[$id]) && $this->products[$id]) {
             return;
         }

@@ -26,7 +26,7 @@
                 <div class="w-100">
                     <x-form::autocomplete wire:model.live="search">
                         @foreach ($lists['products'] as $item)
-                            <x-form::autocomplete.item wire:click="selectProduct({{ $item['id'] }})" class="w-100">
+                            <x-form::autocomplete.item wire:key="purchase-order-product-option-{{ $item['id'] }}" wire:click="selectProduct({{ $item['id'] }})" class="w-100">
                                 <b>{{ $item['name'] }} - {{ $item['unit'] }}</b> <br>
                                 <span>{{ $item['code'] }}@can('vendors.purchases.view-price') - Giá: {{ core_number_format($item['cost']) }}@endcan</span> <br>
                                 <span>Tồn kho: {{ isset($item['amount']) ? $item['amount'] : 0 }}</span>
@@ -58,7 +58,7 @@
                     </thead>
                     <tbody>
                         @forelse ($products as $key => $item)
-                            <tr>
+                            <tr wire:key="purchase-order-product-row-{{ $item['product_id'] ?? $key }}">
                                 <td>
                                     @if(($state['status'] ?? '') !== 'success')
                                         <x-ui::button
@@ -209,9 +209,9 @@
         </div>
     </div>
 
-    @livewire('modules/product::index.modal.modal-create-product')
-    @livewire('modules/vendor::index.modal.modal-create-vendor')
-    @livewire('modules/vendor::purchase.modal.modal-import-purchase')
+    @livewire('modules/product::index.modal.modal-create-product', [], key('purchase-order-modal-create-product'))
+    @livewire('modules/vendor::index.modal.modal-create-vendor', [], key('purchase-order-modal-create-vendor'))
+    @livewire('modules/vendor::purchase.modal.modal-import-purchase', [], key('purchase-order-modal-import-purchase'))
 
     {{-- Confirm Delete Product Modal --}}
     <div class="modal modal-blur fade" :class="{ 'show': showDeleteModal }" :style="showDeleteModal ? 'display: block;' : 'display: none;'" tabindex="-1" role="dialog">
