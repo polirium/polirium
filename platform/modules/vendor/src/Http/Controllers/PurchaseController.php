@@ -17,8 +17,13 @@ class PurchaseController extends BaseController
 
     public function order(int $id = 0)
     {
-        $this->authorize('vendors.purchases.create');
-        page_title()->setTitle($id ? __('Sửa phiếu nhập') : __('Tạo phiếu nhập'));
+        if ($id) {
+            $this->authorize('vendors.purchases.edit');
+            page_title()->setTitle(__('Sửa phiếu nhập'));
+        } else {
+            $this->authorize('vendors.purchases.create');
+            page_title()->setTitle(__('Tạo phiếu nhập'));
+        }
 
         return view('modules/vendor::purchase.order.index', compact('id'));
     }
