@@ -45,6 +45,13 @@ class InvoiceStatsWidget extends AbstractWidget
         return 2;
     }
 
+    public static function getPermissions(): array
+    {
+        return [
+            'accountings.dashboard',
+        ];
+    }
+
     protected static function getComponentName(): string
     {
         return 'modules/accounting::widgets.invoice-stats';
@@ -67,6 +74,8 @@ class InvoiceStatsWidget extends AbstractWidget
 
     public function render()
     {
+        abort_unless(auth()->user()?->can('accountings.dashboard'), 403);
+
         [$startDate, $endDate] = $this->getDateRange();
 
         // type_id = 1: Thu, type_id = 2: Chi (assumed based on typical accounting)

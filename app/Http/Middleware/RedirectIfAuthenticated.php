@@ -2,10 +2,10 @@
 
 namespace App\Http\Middleware;
 
-use App\Providers\RouteServiceProvider;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
 
 class RedirectIfAuthenticated
@@ -21,10 +21,15 @@ class RedirectIfAuthenticated
 
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
-                return redirect(RouteServiceProvider::HOME);
+                return redirect(Route::has('core.index') ? route('core.index') : $this->adminPath());
             }
         }
 
         return $next($request);
+    }
+
+    private function adminPath(): string
+    {
+        return '/' . trim((string) config('core.base.setting.admin_dir', 'admin'), '/');
     }
 }
