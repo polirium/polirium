@@ -83,6 +83,11 @@ return [
         'parent_flag' => 'vendors',
     ],
     [
+        'name' => 'Tạo phiếu trả hàng nhập',
+        'flag' => 'vendors.refunds.create',
+        'parent_flag' => 'vendors',
+    ],
+    [
         'name' => 'Xem phiếu trả hàng nhập',
         'flag' => 'vendors.refunds.view',
         'parent_flag' => 'vendors',

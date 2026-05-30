@@ -311,6 +311,7 @@ class OrderComponent extends Component
 
                 $this->purchase->fill($this->state);
                 $this->purchase->save();
+                $productLogDate = $this->purchase->created_at ?: now();
 
                 $this->purchase->products()->delete();
 
@@ -325,6 +326,9 @@ class OrderComponent extends Component
                             $value['amount'],
                             $product['cost'],
                             $value['value'],
+                            true,
+                            $this->purchase->branch_id,
+                            $productLogDate
                         );
                     }
 

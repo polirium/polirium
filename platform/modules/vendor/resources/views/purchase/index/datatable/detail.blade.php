@@ -291,17 +291,18 @@
                     </x-ui::button>
                     @endcan
 
-                    @can('vendors.refunds.index')
-                    {{-- Return Purchase Button --}}
-                    <x-ui::button
-                        color="white"
-                        size="sm"
-                        icon="arrow-back-up"
-                        :href="route('vendors.purchases.refund', ['id' => $row->refund_id ?? 0, 'purchase_id' => $row->id])"
-                    >
-                        {{ __('Trả hàng nhập') }}
-                    </x-ui::button>
-                    @endcan
+                    @php($canManageRefund = $row->refund_id ? auth()->user()?->can('vendors.refunds.edit') : auth()->user()?->can('vendors.refunds.create'))
+                    @if ($canManageRefund)
+                        {{-- Return Purchase Button --}}
+                        <x-ui::button
+                            color="white"
+                            size="sm"
+                            icon="arrow-back-up"
+                            :href="route('vendors.purchases.refund', ['id' => $row->refund_id ?? 0, 'purchase_id' => $row->id])"
+                        >
+                            {{ __('Trả hàng nhập') }}
+                        </x-ui::button>
+                    @endif
                 @endif
             </div>
         </div>

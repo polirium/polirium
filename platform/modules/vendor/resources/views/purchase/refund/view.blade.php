@@ -15,14 +15,18 @@
         }
     }
 }">
+    @php
+        $canManageRefund = auth()->user()?->can($refund->exists ? 'vendors.refunds.edit' : 'vendors.refunds.create');
+    @endphp
+
     <div class="row">
         <div class="col-md-8">
             <x-ui::card>
                 <div class="d-flex mb-3 gap-2">
-                    @can('vendors.refunds.edit')
+                    @if ($canManageRefund)
                         <x-ui.button wire:click="$dispatch('show-modal-create-product')" color="success" icon="plus" :label="trans('modules/product::product.create')" />
                         <x-ui.button wire:click="$dispatch('show-modal-import-refund')" color="outline-primary" icon="file-upload" :label="trans('modules/vendor::purchase.import_from_excel')" />
-                    @endcan
+                    @endif
                 </div>
 
                 <div class="w-100">
@@ -205,7 +209,7 @@
                     </td>
                 </tr>
 
-                @can('vendors.refunds.edit')
+                @if ($canManageRefund)
                     <tr>
                         <td class="w-50">
                             <x-ui.button color="primary" icon="device-floppy" wire:click="save('temp')" :label="trans('modules/vendor::purchase.refund.status.temp')" style="width: 100%;" />
@@ -218,7 +222,7 @@
                             @endif
                         </td>
                     </tr>
-                @endcan
+                @endif
             </x-ui::table>
         </x-ui::card>
     </div>

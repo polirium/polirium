@@ -2,10 +2,10 @@
 
 namespace Polirium\Modules\Vendor\Http\Livewire\Purchase\Modal;
 
-use Livewire\Component;
-use Livewire\WithFileUploads;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Rule;
+use Livewire\Component;
+use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 use Polirium\Modules\Vendor\Imports\RefundImport;
 
@@ -71,7 +71,11 @@ class ModalImportRefundComponent extends Component
 
     public function import()
     {
-        $this->authorize('vendors.refunds.view');
+        abort_unless(
+            auth()->user()?->can('vendors.refunds.create') || auth()->user()?->can('vendors.refunds.edit'),
+            403
+        );
+
         $this->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
         ]);
@@ -88,7 +92,7 @@ class ModalImportRefundComponent extends Component
 
             $this->importResult = [
                 'success' => true,
-                'message' => "Đã đọc " . count($products) . " sản phẩm từ file.",
+                'message' => 'Đã đọc ' . count($products) . ' sản phẩm từ file.',
                 'count' => count($products),
                 'errors' => $import->getErrors(),
             ];
