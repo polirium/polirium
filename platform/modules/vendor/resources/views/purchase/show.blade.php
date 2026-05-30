@@ -18,11 +18,12 @@
                     </a>
                 @endcan
                 
-                @can('vendors.refunds.index')
+                @php($canManageRefund = $purchase->refund_id ? auth()->user()?->can('vendors.refunds.edit') : auth()->user()?->can('vendors.refunds.create'))
+                @if ($canManageRefund)
                     <a href="{{ route('vendors.purchases.refund', ['id' => $purchase->refund_id ?? 0, 'purchase_id' => $purchase->id]) }}" class="btn btn-danger">
                         {!! tabler_icon('arrow-back-up', ['class' => 'icon']) !!} {{ __('Trả hàng nhập') }}
                     </a>
-                @endcan
+                @endif
 
                 @can('vendors.purchases.create')
                     <a href="{{ route('vendors.purchases.order', ['copy_id' => $purchase->id]) }}" class="btn btn-secondary">

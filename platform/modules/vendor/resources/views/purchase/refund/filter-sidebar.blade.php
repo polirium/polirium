@@ -60,7 +60,7 @@
         </div>
 
         <div class="d-grid gap-2">
-            @can('vendors.refunds.edit')
+            @can('vendors.refunds.create')
                 <a
                    href="{{ route('vendors.purchases.refund') }}"
                    class="btn btn-outline-primary d-flex align-items-center justify-content-start gap-2">

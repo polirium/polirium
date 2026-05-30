@@ -88,14 +88,14 @@
                                 </td>
                                 <td style="white-space: nowrap;">{{ isset($item['product']['amount']) ? $item['product']['amount'] : 0 }}</td>
                                 <td>
-                                    <x-form::input type="number" wire:model.blur="products.{{ $key }}.amount" style="min-width: 100px;" />
+                                    <x-form::input type="number" wire:model.live.blur="products.{{ $key }}.amount" style="min-width: 100px;" />
                                 </td>
                                 @can('vendors.purchases.view-price')
                                 <td>
-                                    <x-form::currency wire:model.blur="products.{{ $key }}.price" />
+                                    <x-form::currency wire:model.live.blur="products.{{ $key }}.price" />
                                 </td>
                                 <td>
-                                    <x-form::currency wire:model.blur="products.{{ $key }}.discount_value">
+                                    <x-form::currency wire:model.live.blur="products.{{ $key }}.discount_value">
                                         <x-slot name="append">
                                             <x-ui.button :color="$item['discount_type'] === 'percent' ? 'primary' : 'default'" icon="percentage" wire:click="$set('products.{{ $key }}.discount_type', 'percent')" />
                                             <x-ui.button :color="$item['discount_type'] === 'number' ? 'primary' : 'default'" icon="currency-dong" wire:click="$set('products.{{ $key }}.discount_type', 'number')" />

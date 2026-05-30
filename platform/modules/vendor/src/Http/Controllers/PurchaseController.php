@@ -3,7 +3,6 @@
 namespace Polirium\Modules\Vendor\Http\Controllers;
 
 use Polirium\Core\Base\Http\Controllers\BaseController;
-use Illuminate\Http\Request;
 
 class PurchaseController extends BaseController
 {
@@ -47,8 +46,13 @@ class PurchaseController extends BaseController
 
     public function refund($id = null)
     {
-        $this->authorize('vendors.refunds.index');
-        page_title()->setTitle($id ? __('Sửa trả hàng nhập') : __('Tạo trả hàng nhập'));
+        if ($id) {
+            $this->authorize('vendors.refunds.edit');
+            page_title()->setTitle(__('Sửa trả hàng nhập'));
+        } else {
+            $this->authorize('vendors.refunds.create');
+            page_title()->setTitle(__('Tạo trả hàng nhập'));
+        }
 
         return view('modules/vendor::purchase.refund.index', compact('id'));
     }

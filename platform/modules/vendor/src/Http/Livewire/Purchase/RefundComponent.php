@@ -279,7 +279,7 @@ class RefundComponent extends Component
 
     public function save(string $status)
     {
-        $this->authorize($this->refund_id ? 'vendors.refunds.edit' : 'vendors.refunds.view');
+        $this->authorize($this->refund_id ? 'vendors.refunds.edit' : 'vendors.refunds.create');
         $this->refund->status = $status;
         $this->refund->vendor_id = $this->vendor_id ?: null;
         $this->refund->purchase_id = $this->order_id ?: $this->refund->purchase_id;
