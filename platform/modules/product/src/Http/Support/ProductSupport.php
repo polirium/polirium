@@ -2,6 +2,7 @@
 
 namespace Polirium\Modules\Product\Http\Support;
 
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Polirium\Modules\Product\Http\Model\Product;
 use Polirium\Modules\Product\Http\Model\ProductBranch;
@@ -17,7 +18,8 @@ class ProductSupport
         int $value_before = 0,
         int $value_after = 0,
         bool $increase = true,
-        ?int $branch_id = null
+        ?int $branch_id = null,
+        DateTimeInterface|string|null $logged_at = null
     ): void {
         $product = Product::select(['id'])->find($product_id);
 
@@ -31,7 +33,7 @@ class ProductSupport
 
         $after_amount = self::changeProductAmount($product, $amount, $increase, $branch_id);
 
-        ProductLog::create([
+        $logData = [
             'product_id' => $product_id,
             'productable_id' => $productable_id,
             'productable_type' => $productable_type,
@@ -40,7 +42,14 @@ class ProductSupport
             'value_after' => $value_after,
             'amount_before' => $after_amount['before'],
             'amount_after' => $after_amount['current'],
-        ]);
+        ];
+
+        if ($logged_at) {
+            $logData['created_at'] = $logged_at;
+            $logData['updated_at'] = $logged_at;
+        }
+
+        (new ProductLog())->forceFill($logData)->save();
     }
 
     public function changeProductAmount(int|Product $product, int $amount, bool $increase = true, ?int $branch_id = null): array

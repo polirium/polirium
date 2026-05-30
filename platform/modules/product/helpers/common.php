@@ -58,9 +58,10 @@ if (! function_exists('product_logs')) {
         int $value_before = 0,
         int $value_after = 0,
         bool $increase = true,
-        ?int $branch_id = null
+        ?int $branch_id = null,
+        \DateTimeInterface|string|null $logged_at = null
     ): void {
-        ProductHelper::productLogs($product_id, $productable_id, $productable_type, $amount, $value_before, $value_after, $increase, $branch_id);
+        ProductHelper::productLogs($product_id, $productable_id, $productable_type, $amount, $value_before, $value_after, $increase, $branch_id, $logged_at);
     }
 }
 
