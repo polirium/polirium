@@ -34,23 +34,27 @@
 
             let isDown = false;
             let startX;
+            let startY;
             let scrollLeft;
+            let scrollTop;
             let activeSlider = null;
 
             document.addEventListener('mousedown', (e) => {
                 const slider = e.target.closest('.table-responsive');
                 if (!slider) return;
 
-                // Prevent dragging if clicking interactable elements or detail view
+                // Prevent dragging if clicking interactable elements.
                 if (['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
-                if (e.target.closest('a') || e.target.closest('button') || e.target.closest('.invoice-detail-selectable')) return;
+                if (e.target.closest('a') || e.target.closest('button')) return;
 
                 isDown = true;
                 activeSlider = slider;
                 activeSlider.style.cursor = 'grabbing';
                 activeSlider.style.userSelect = 'none'; // Prevent text selection
                 startX = e.pageX - activeSlider.offsetLeft;
+                startY = e.pageY;
                 scrollLeft = activeSlider.scrollLeft;
+                scrollTop = window.scrollY;
             });
 
             document.addEventListener('mouseup', () => {
@@ -78,8 +82,14 @@
                 if (!isDown || !activeSlider) return;
                 e.preventDefault();
                 const x = e.pageX - activeSlider.offsetLeft;
-                const walk = (x - startX) * 1.5; // Scroll speed
-                activeSlider.scrollLeft = scrollLeft - walk;
+                const walkX = (x - startX) * 1.5; // Scroll speed
+                const walkY = (e.pageY - startY) * 1.5;
+
+                activeSlider.scrollLeft = scrollLeft - walkX;
+                window.scrollTo({
+                    top: scrollTop - walkY,
+                    behavior: 'auto',
+                });
             });
         })();
     </script>
