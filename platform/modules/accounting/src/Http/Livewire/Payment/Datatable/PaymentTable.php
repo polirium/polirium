@@ -823,29 +823,30 @@ final class PaymentTable extends BaseTable
             return;
         }
 
-        // Lấy danh sách product_id bị ảnh hưởng
-        $affectedProductIds = \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Payment::class)
-            ->where('productable_id', $payment->id)
-            ->pluck('product_id')
-            ->unique();
+        \DB::transaction(function () use ($payment) {
+            // Giữ log xuất kho và ghi log hoàn kho đối ứng. Việc xóa log rồi tính lại
+            // từ 0 làm mất tồn đầu khi sản phẩm không có đủ lịch sử product_logs.
+            foreach ($payment->products as $item) {
+                product_logs(
+                    $item->product_id,
+                    $payment->id,
+                    Payment::class,
+                    $item->amount,
+                    $item->product?->cost ?? 0,
+                    0,
+                    true,
+                    $payment->branch_id
+                );
+            }
 
-        // Xóa tất cả product_logs liên quan đến payment này (net = 0)
-        \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Payment::class)
-            ->where('productable_id', $payment->id)
-            ->delete();
+            $payment->status = 'cancel';
+            $payment->save();
 
-        // Recalculate inventory cho các sản phẩm bị ảnh hưởng
-        foreach ($affectedProductIds as $productId) {
-            $this->recalculateProductInventory($productId);
-        }
-
-        $payment->status = 'cancel';
-        $payment->save();
-
-        if ($payment->finance) {
-            $payment->finance->status = 'cancelled';
-            $payment->finance->save();
-        }
+            if ($payment->finance) {
+                $payment->finance->status = 'cancelled';
+                $payment->finance->save();
+            }
+        });
 
         $this->dispatch('success', 'Đã hủy hóa đơn và hoàn lại tồn kho.');
     }

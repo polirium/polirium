@@ -48,20 +48,19 @@ class PaymentActions extends Component
             }
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($payment) {
-                // Lấy product_ids bị ảnh hưởng
-                $affectedProductIds = \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Payment::class)
-                    ->where('productable_id', $payment->id)
-                    ->pluck('product_id')
-                    ->unique();
-
-                // Xóa tất cả product_logs (sale + cancel logs) → net = 0
-                \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Payment::class)
-                    ->where('productable_id', $payment->id)
-                    ->delete();
-
-                // Recalculate inventory
-                foreach ($affectedProductIds as $productId) {
-                    $this->recalculateProductInventory($productId);
+                // Giữ log xuất kho và ghi log hoàn kho đối ứng. Tính lại từ 0 sau khi
+                // xóa log không thể khôi phục tồn đầu không có trong product_logs.
+                foreach ($payment->products as $item) {
+                    product_logs(
+                        $item->product_id,
+                        $payment->id,
+                        Payment::class,
+                        $item->amount,
+                        $item->product?->cost ?? 0,
+                        0,
+                        true,
+                        $payment->branch_id
+                    );
                 }
 
                 // Update Status
@@ -302,31 +301,4 @@ class PaymentActions extends Component
         return view('modules/accounting::payment.actions');
     }
 
-    /**
-     * Tính lại toàn bộ chuỗi tồn kho cho 1 sản phẩm sau khi xóa logs.
-     */
-    private function recalculateProductInventory(int $productId): void
-    {
-        $logs = \Polirium\Modules\Product\Http\Model\ProductLog::where('product_id', $productId)
-            ->orderBy('created_at')
-            ->orderBy('id')
-            ->get();
-
-        $runningQty = 0;
-        foreach ($logs as $log) {
-            $before = $runningQty;
-            $delta = $log->amount_after - $log->amount_before;
-            $runningQty = $before + $delta;
-
-            if ($log->amount_before !== $before || $log->amount_after !== $runningQty) {
-                $log->update([
-                    'amount_before' => $before,
-                    'amount_after' => $runningQty,
-                ]);
-            }
-        }
-
-        \Polirium\Modules\Product\Http\Model\Product::where('id', $productId)->update(['qty' => $runningQty]);
-        \DB::table('product_branches')->where('product_id', $productId)->update(['qty' => $runningQty]);
-    }
 }
