@@ -75,6 +75,10 @@
                                                 <th class="text-center">{{ __('SL') }}</th>
                                                 <th class="text-end">{{ trans('modules/accounting::accounting.unit_price') }}</th>
                                                 <th class="text-end">{{ trans('modules/accounting::accounting.discount') }}</th>
+                                                @can('accountings.dashboard.cogs')
+                                                    <th class="text-end">{{ trans('modules/accounting::accounting.cost_price') }}</th>
+                                                    <th class="text-end">{{ __('Tổng vốn') }}</th>
+                                                @endcan
                                                 <th class="text-end">{{ trans('modules/accounting::accounting.total') }}</th>
                                             </tr>
                                         </thead>
@@ -108,13 +112,20 @@
                                                             -
                                                         @endif
                                                     </td>
+                                                    @can('accountings.dashboard.cogs')
+                                                        @php
+                                                            $costPrice = $item->product?->cost ?? 0;
+                                                        @endphp
+                                                        <td class="text-end">{{ number_format($costPrice) }}</td>
+                                                        <td class="text-end fw-medium">{{ number_format($costPrice * $item->amount) }}</td>
+                                                    @endcan
                                                     <td class="fw-bold text-end">{{ number_format($item->value) }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <td colspan="5" class="text-end">{{ trans('modules/accounting::accounting.total_goods') }}</td>
+                                                <td colspan="@can('accountings.dashboard.cogs') 7 @else 5 @endcan" class="text-end">{{ trans('modules/accounting::accounting.total_goods') }}</td>
                                                 <td class="text-end">{{ number_format($payment->total_cost) }}</td>
                                             </tr>
                                             @if ($payment->discount_value > 0)
@@ -122,7 +133,7 @@
                                                     $invoiceDiscountAmount = $payment->discount_type === 'percent' ? ($payment->total_cost * $payment->discount_value) / 100 : $payment->discount_value;
                                                 @endphp
                                                 <tr>
-                                                    <td colspan="5" class="text-end">{{ trans('modules/accounting::accounting.invoice_discount') }}@if ($payment->discount_type === 'percent')
+                                                    <td colspan="@can('accountings.dashboard.cogs') 7 @else 5 @endcan" class="text-end">{{ trans('modules/accounting::accounting.invoice_discount') }}@if ($payment->discount_type === 'percent')
                                                             ({{ $payment->discount_value }}%)
                                                         @endif
                                                     </td>
@@ -131,16 +142,16 @@
                                             @endif
                                             @if ($payment->extra_fee > 0)
                                                 <tr>
-                                                    <td colspan="5" class="text-end">{{ trans('modules/accounting::accounting.other_receipt') }}</td>
+                                                    <td colspan="@can('accountings.dashboard.cogs') 7 @else 5 @endcan" class="text-end">{{ trans('modules/accounting::accounting.other_receipt') }}</td>
                                                     <td class="text-end">{{ number_format($payment->extra_fee) }}</td>
                                                 </tr>
                                             @endif
                                             <tr>
-                                                <td colspan="5" class="font-weight-bold text-end">{{ trans('modules/accounting::accounting.customer_refundable') }}</td>
+                                                <td colspan="@can('accountings.dashboard.cogs') 7 @else 5 @endcan" class="font-weight-bold text-end">{{ trans('modules/accounting::accounting.customer_refundable') }}</td>
                                                 <td class="font-weight-bold text-primary text-end">{{ number_format($payment->value) }}</td>
                                             </tr>
                                             <tr>
-                                                <td colspan="5" class="text-end">{{ trans('modules/accounting::accounting.customer_paid') }}</td>
+                                                <td colspan="@can('accountings.dashboard.cogs') 7 @else 5 @endcan" class="text-end">{{ trans('modules/accounting::accounting.customer_paid') }}</td>
                                                 <td class="text-end">{{ number_format($payment->value_payment) }}</td>
                                             </tr>
                                         </tfoot>

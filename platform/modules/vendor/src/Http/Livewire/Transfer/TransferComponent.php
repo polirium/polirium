@@ -218,7 +218,16 @@ class TransferComponent extends Component
                     $this->transfer->form_branch_id
                 );
 
-                change_product_amount($product_id, $value['amount'], true, $this->transfer->to_branch_id);
+                product_logs(
+                    $product_id,
+                    $this->transfer->id,
+                    Transfer::class,
+                    $value['amount'],
+                    0,
+                    0,
+                    true,
+                    $this->transfer->to_branch_id
+                );
             }
         }
 

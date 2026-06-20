@@ -35,9 +35,11 @@ class ProductSupport
 
         $logData = [
             'product_id' => $product_id,
+            'branch_id' => $branch_id,
             'productable_id' => $productable_id,
             'productable_type' => $productable_type,
             'amount' => $amount,
+            'direction' => $increase ? 'in' : 'out',
             'value_before' => $value_before,
             'value_after' => $value_after,
             'amount_before' => $after_amount['before'],

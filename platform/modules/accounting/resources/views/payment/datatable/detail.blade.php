@@ -166,13 +166,17 @@
             <table class="table table-sm table-vcenter table-striped" style="table-layout: fixed; width: 100%;">
                 <thead>
                     <tr class="text-muted small text-uppercase">
-                        <th style="width: 15%;">{{ trans('modules/accounting::accounting.product_code_full') }}</th>
-                        <th style="width: 35%;">{{ trans('modules/accounting::accounting.product_name_short') }}</th>
-                        <th class="text-end" style="width: 10%;">{{ trans('modules/accounting::accounting.quantity') }}</th>
+                        <th style="width: 12%;">{{ trans('modules/accounting::accounting.product_code_full') }}</th>
+                        <th style="width: 23%;">{{ trans('modules/accounting::accounting.product_name_short') }}</th>
+                        <th class="text-end" style="width: 7%;">{{ trans('modules/accounting::accounting.quantity') }}</th>
                         <th class="text-end" style="width: 10%;">{{ trans('modules/accounting::accounting.unit_price') }}</th>
                         <th class="text-end" style="width: 10%;">{{ trans('modules/accounting::accounting.discount') }}</th>
                         <th class="text-end" style="width: 10%;">{{ trans('modules/accounting::accounting.selling_price') }}</th>
-                        <th class="text-end" style="width: 10%;">{{ trans('modules/accounting::accounting.total') }}</th>
+                        @can('accountings.dashboard.cogs')
+                            <th class="text-end" style="width: 10%;">{{ trans('modules/accounting::accounting.cost_price') }}</th>
+                            <th class="text-end" style="width: 10%;">{{ __('Tổng vốn') }}</th>
+                        @endcan
+                        <th class="text-end" style="width: 8%;">{{ trans('modules/accounting::accounting.total') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -196,6 +200,8 @@
 
                                 // Giá bán = Original Price - Discount per item
                                 $salePrice = $amount > 0 ? ($total / $amount) : 0;
+                                $costPrice = is_array($product) ? ($product['product']['cost'] ?? 0) : ($product->product?->cost ?? 0);
+                                $costTotal = $costPrice * $amount;
                             @endphp
                             <tr>
                                 <td><a href="{{ route('products.index', ['code' => $productCode]) }}" class="text-primary" target="_blank">{{ $productCode }}</a></td>
@@ -204,10 +210,14 @@
                                 <td class="text-end">{{ core_number_format($originalPrice) }}</td>
                                 <td class="text-end text-danger">{{ $displayDiscount > 0 ? core_number_format($displayDiscount) : '' }}</td>
                                 <td class="text-end">{{ core_number_format($salePrice) }}</td>
+                                @can('accountings.dashboard.cogs')
+                                    <td class="text-end">{{ core_number_format($costPrice) }}</td>
+                                    <td class="text-end fw-medium">{{ core_number_format($costTotal) }}</td>
+                                @endcan
                                 <td class="text-end fw-bold">{{ core_number_format($total) }}</td>
                             </tr>
                     @empty
-                        <tr><td colspan="7" class="text-muted text-center py-4">{{ __('Không có sản phẩm') }}</td></tr>
+                        <tr><td colspan="@can('accountings.dashboard.cogs') 9 @else 7 @endcan" class="text-muted text-center py-4">{{ __('Không có sản phẩm') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>

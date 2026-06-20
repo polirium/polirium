@@ -2,10 +2,12 @@
 
 namespace Polirium\Modules\Accounting\Http\Livewire\Dashboard;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
-use Polirium\Modules\Product\Http\Model\Payment\PaymentProduct;
 
 class AccountingDashboardComponent extends Component
 {
@@ -20,14 +22,19 @@ class AccountingDashboardComponent extends Component
     public $channels = [];
     public $partners = [];
 
+    public ?string $dateFrom = null;
+    public ?string $dateTo = null;
+
     public function mount()
     {
+        $this->dateFrom = now()->toDateString();
+        $this->dateTo = now()->toDateString();
         $this->calculateStats();
     }
 
     public function calculateStats()
     {
-        $query = Payment::query()->where('product_payments.status', 'success');
+        $query = $this->invoiceQuery();
 
         // Revenue (Doanh thu - usually Price - Discount, i.e., Value)
         if (auth()->user()->can('accountings.dashboard.revenue')) {
@@ -57,9 +64,9 @@ class AccountingDashboardComponent extends Component
 
         // COGS
         if (auth()->user()->can('accountings.dashboard.cogs')) {
-            $this->cogs = PaymentProduct::join('products', 'product_payment_products.product_id', '=', 'products.id')
-               ->join('product_payments', 'product_payment_products.product_payment_id', '=', 'product_payments.id')
-               ->where('product_payments.status', 'success')
+            $this->cogs = (clone $query)
+               ->join('product_payment_products', 'product_payments.id', '=', 'product_payment_products.product_payment_id')
+               ->join('products', 'product_payment_products.product_id', '=', 'products.id')
                ->sum(DB::raw('product_payment_products.amount * products.cost'));
         }
 
@@ -104,6 +111,33 @@ class AccountingDashboardComponent extends Component
                 ->pluck('total', 'name')
                 ->toArray();
         }
+    }
+
+    #[On('accounting-dashboard-date-range')]
+    public function updateDateRange(?string $dateFrom = null, ?string $dateTo = null): void
+    {
+        $this->dateFrom = $dateFrom;
+        $this->dateTo = $dateTo;
+        $this->calculateStats();
+    }
+
+    private function invoiceQuery(): Builder
+    {
+        $query = Payment::query()
+            ->where('product_payments.status', 'success')
+            ->when(user_branch(), function (Builder $query) {
+                $query->where('product_payments.branch_id', user_branch());
+            });
+
+        if ($this->dateFrom) {
+            $query->where('product_payments.created_at', '>=', Carbon::parse($this->dateFrom)->startOfDay());
+        }
+
+        if ($this->dateTo) {
+            $query->where('product_payments.created_at', '<=', Carbon::parse($this->dateTo)->endOfDay());
+        }
+
+        return $query;
     }
 
     public function render()

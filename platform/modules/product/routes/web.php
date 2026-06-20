@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Polirium\Modules\Product\Http\Controllers\PaymentMethodController;
 use Polirium\Modules\Product\Http\Controllers\ProductController;
 use Polirium\Modules\Product\Http\Controllers\StockController;
+use Polirium\Modules\Product\Http\Controllers\InventoryReportController;
 
 Route::prefix(admin_prefix())
 ->middleware(['web', 'auth'])
@@ -18,6 +19,7 @@ Route::prefix(admin_prefix())
             Route::get('payment/refund/{id}', [ProductController::class, 'refund'])->name('payment.refund')->middleware('can:sales.payment.refund');
 
             Route::get('price-setting', [ProductController::class, 'priceSetting'])->name('price-setting')->middleware('can:products.price-setting');
+            Route::get('inventory-report', [InventoryReportController::class, 'index'])->name('inventory-report')->middleware('can:products.stock.index');
 
             Route::prefix('stock')->name('stock.')->group(function () {
                 Route::get('/', [StockController::class, 'index'])->name('index')->middleware('can:products.stock.index');

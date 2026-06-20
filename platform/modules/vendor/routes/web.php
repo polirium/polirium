@@ -13,7 +13,7 @@ Route::prefix(admin_prefix())
             Route::prefix('purchases')->name('purchases.')->group(function () {
                 Route::get('', 'PurchaseController@index')->name('index')->middleware('can:vendors.purchases.index');
                 Route::get('order/{id?}', 'PurchaseController@order')->name('order');
-                Route::get('show/{id}', 'PurchaseController@show')->name('show')->middleware('can:vendors.purchases.index');
+                Route::get('show/{id}', 'PurchaseController@show')->name('show')->middleware('can:vendors.purchases.view');
                 Route::get('export/{id}', 'PurchaseController@export')->name('export')->middleware('can:vendors.purchases.view');
 
                 Route::get('list-refunds', 'PurchaseController@listRefund')->name('list-refunds')->middleware('can:vendors.refunds.index');

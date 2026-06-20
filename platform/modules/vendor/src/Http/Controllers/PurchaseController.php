@@ -29,7 +29,7 @@ class PurchaseController extends BaseController
 
     public function show(int $id)
     {
-        $this->authorize('vendors.purchases.index');
+        $this->authorize('vendors.purchases.view');
         $purchase = \Polirium\Modules\Vendor\Http\Model\Purchase\Purchase::with(['vendor', 'branch', 'userCreated', 'products.product'])->findOrFail($id);
         page_title()->setTitle(__('Chi tiết phiếu nhập #:code', ['code' => $purchase->code]));
 

@@ -37,6 +37,15 @@ return [
         'permission' => 'products.stock',
     ],
     [
+        'id' => 'module_product_inventory_report',
+        'name' => trans('Báo cáo xuất nhập tồn'),
+        'route' => 'products.inventory-report',
+        'parent' => 'module_product',
+        'icon' => 'report-analytics',
+        'sort' => 4,
+        'permission' => 'products.stock.index',
+    ],
+    [
         'id' => 'module_product_sale_channel',
         'name' => trans('Kênh bán hàng'),
         'route' => 'products.sale-channel.index',
