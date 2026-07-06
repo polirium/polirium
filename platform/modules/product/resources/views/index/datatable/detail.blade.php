@@ -323,7 +323,7 @@
                 class="btn btn-primary btn-sm"
                 data-bs-toggle="tooltip"
                 title="Sửa"
-                wire:click="$dispatch('show-modal-create-product', { id: {{ $id }}, type: '{{ $row->type }}' })"
+                wire:click="$dispatch('show-modal-create-product', { id: {{ $id }}, type: '{{ $product->type }}' })"
             >
                 {!! tabler_icon('pencil', ['class' => 'icon']) !!}
                 Sửa
