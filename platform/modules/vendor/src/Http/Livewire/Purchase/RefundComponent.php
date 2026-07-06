@@ -7,8 +7,8 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Rule;
 use Livewire\Component;
 use Polirium\Modules\Product\Http\Model\Product;
+use Polirium\Modules\Product\Http\Model\ProductLog;
 use Polirium\Modules\Vendor\Http\Model\Purchase\Purchase;
-use Polirium\Modules\Vendor\Http\Model\Purchase\PurchaseProduct;
 use Polirium\Modules\Vendor\Http\Model\Refund\Refund;
 use Polirium\Modules\Vendor\Http\Model\Refund\RefundProduct;
 use Polirium\Modules\Vendor\Http\Model\Vendor;
@@ -40,9 +40,9 @@ class RefundComponent extends Component
         'products' => [],
     ];
 
-    public string $search = "";
+    public string $search = '';
 
-    protected function rules() : array
+    protected function rules(): array
     {
         return [
             'refund.code' => ['required', 'string', 'max:191', "unique:vendor_purchase_refunds,code,{$this->refund_id},id"],
@@ -59,7 +59,7 @@ class RefundComponent extends Component
         ];
     }
 
-    public function mount() : void
+    public function mount(): void
     {
         $this->order_id = request('purchase_id');
         $this->resetInput();
@@ -67,13 +67,13 @@ class RefundComponent extends Component
     }
 
     #[Computed]
-    public function vendor() : ?Vendor
+    public function vendor(): ?Vendor
     {
         return Vendor::find($this->refund->vendor_id);
     }
 
     #[Computed]
-    public function vendors() : array
+    public function vendors(): array
     {
         return Vendor::select('id', 'name')->pluck('name', 'id')->all();
     }
@@ -95,7 +95,8 @@ class RefundComponent extends Component
             $formattedOptions[] = ['id' => (string)$vid, 'label' => (string)$vname];
         }
 
-        $this->dispatch('update-payment-options',
+        $this->dispatch(
+            'update-payment-options',
             id: 'vendor_id_select',
             options: $formattedOptions,
             value: (string)$id
@@ -104,14 +105,15 @@ class RefundComponent extends Component
         \Log::info('RefundComponent onVendorSaved triggered', [
             'id' => $id,
             'vendor_exists' => (bool) Vendor::find($id),
-            'options_count' => count($formattedOptions)
+            'options_count' => count($formattedOptions),
         ]);
     }
 
     public function updatedSearch($value)
     {
-        if ( ! $value) {
+        if (! $value) {
             $this->lists['products'] = [];
+
             return;
         }
 
@@ -119,7 +121,7 @@ class RefundComponent extends Component
         $search = '%' . $value . '%';
 
         $this->lists['products'] = Product::with([
-            'branches' => fn ($q) => $q->where('branch_id', $branchId)->select('branch_id')
+            'branches' => fn ($q) => $q->where('branch_id', $branchId)->select('branch_id'),
         ])
             ->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('code', 'like', $search))
             ->select(['id', 'name', 'code', 'unit', 'cost', 'price'])
@@ -128,9 +130,9 @@ class RefundComponent extends Component
             ->toArray();
     }
 
-    public function updatedProducts(mixed $value, string $key) : void
+    public function updatedProducts(mixed $value, string $key): void
     {
-        $split = explode(".", $key);
+        $split = explode('.', $key);
         $id = $split[0];
         $col = $split[1];
 
@@ -145,7 +147,7 @@ class RefundComponent extends Component
         $this->updatedRefund();
     }
 
-    public function updatedRefund(mixed $value = null, string $key = null) : void
+    public function updatedRefund(mixed $value = null, string $key = null): void
     {
         $total = array_sum(array_column($this->products, 'value'));
 
@@ -168,7 +170,7 @@ class RefundComponent extends Component
         return view('modules/vendor::purchase.refund.view');
     }
 
-    public function resetInput() : void
+    public function resetInput(): void
     {
         $this->reset('refund', 'purchase', 'products', 'search');
 
@@ -191,7 +193,7 @@ class RefundComponent extends Component
             $this->vendor_id = $this->refund->vendor_id;
         } else {
 
-            $this->refund = new Refund;
+            $this->refund = new Refund();
             $this->refund->code = code_generate('THN', Refund::max('id'));
             $this->refund->branch_id = user_branch();
             $this->refund->discount_value = 0;
@@ -221,7 +223,7 @@ class RefundComponent extends Component
         $this->updatedRefund();
     }
 
-    public function selectProduct(int $id) : void
+    public function selectProduct(int $id): void
     {
         if (isset($this->products[$id]) && $this->products[$id]) {
             return;
@@ -235,13 +237,13 @@ class RefundComponent extends Component
             'price' => $product->cost,
             'value' => $product->cost,
             'note' => null,
-            'product' => array_merge($product->toArray(), ['amount' => $product->amount])
+            'product' => array_merge($product->toArray(), ['amount' => $product->amount]),
         ];
 
         $this->updatedRefund();
     }
 
-    public function removeProduct($id) : void
+    public function removeProduct($id): void
     {
         // Block removal on completed purchase returns for users without delete permission
         if (($this->refund->status ?? '') === 'success') {
@@ -257,17 +259,17 @@ class RefundComponent extends Component
     }
 
     #[On('import-refund-products')]
-    public function importProducts(array $products) : void
+    public function importProducts(array $products): void
     {
         foreach ($products as $id => $productData) {
-            if (!isset($this->products[$id])) {
+            if (! isset($this->products[$id])) {
                 $this->products[$id] = $productData;
             }
         }
         $this->updatedRefund();
     }
 
-    protected function validationAttributes() : array
+    protected function validationAttributes(): array
     {
         return [
             'refund.code' => trans('modules/vendor::purchase.refund.code'),
@@ -308,13 +310,13 @@ class RefundComponent extends Component
                 if ($this->refund->exists) {
                     $originalRefund = Refund::with(['products.product', 'purchase'])->find($this->refund->id);
                     if ($originalRefund && in_array($originalRefund->status, ['success', 'completed', 'paid'])) {
-                        // 1. Silently revert stock (a refund DECREASES stock, so reverting it INCREASES stock)
-                        foreach ($originalRefund->products as $item) {
-                            change_product_amount($item->product_id, $item->amount, true, $originalRefund->branch_id);
-                        }
+                        // 1. Silently revert the actual stock delta recorded by the stock card.
+                        // Refund quantities can be larger than available stock; stock is clamped at 0,
+                        // so reverting by document quantity would over-increase stock.
+                        $this->revertRefundStock($originalRefund);
 
                         // 2. Delete old product_logs for this refund (clean slate)
-                        \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Refund::class)
+                        ProductLog::where('productable_type', Refund::class)
                             ->where('productable_id', $originalRefund->id)
                             ->delete();
 
@@ -383,5 +385,36 @@ class RefundComponent extends Component
         }
 
         return redirect(route('vendors.purchases.list-refunds'));
+    }
+
+    private function revertRefundStock(Refund $refund): void
+    {
+        $logs = ProductLog::query()
+            ->where('productable_type', Refund::class)
+            ->where('productable_id', $refund->id)
+            ->get();
+
+        if ($logs->isNotEmpty()) {
+            foreach ($logs as $log) {
+                $delta = abs((int) $log->amount_after - (int) $log->amount_before);
+
+                if ($delta <= 0) {
+                    continue;
+                }
+
+                change_product_amount(
+                    (int) $log->product_id,
+                    $delta,
+                    $log->direction === 'out',
+                    $log->branch_id ?: $refund->branch_id
+                );
+            }
+
+            return;
+        }
+
+        foreach ($refund->products as $item) {
+            change_product_amount($item->product_id, $item->amount, true, $refund->branch_id);
+        }
     }
 }
