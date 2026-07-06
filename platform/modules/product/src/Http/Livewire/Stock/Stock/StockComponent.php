@@ -8,6 +8,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 use Polirium\Modules\Product\Http\Model\Product;
+use Polirium\Modules\Product\Http\Model\ProductBranch;
 use Polirium\Modules\Product\Http\Model\Stock\Stock;
 use Polirium\Modules\Product\Imports\StockImport;
 
@@ -182,7 +183,7 @@ class StockComponent extends Component
             'importFile' => 'required|file|mimes:xlsx,xls,csv|max:5120',
         ]);
 
-        $import = new StockImport();
+        $import = new StockImport((int) $this->stock->branch_id);
         Excel::import($import, $this->importFile->getRealPath());
 
         // Merge imported products vào danh sách hiện tại
@@ -239,9 +240,10 @@ class StockComponent extends Component
             $this->calculateDifferences($product_id);
         } else {
             $product = Product::find($product_id);
+            $branchStock = $this->getProductBranchStock((int) $product_id);
             $this->products[$product_id] = [
                 'product' => $product,
-                'amount' => $product->amount ?? 0,
+                'amount' => $branchStock,
                 'actual_stock' => 1,
                 'quantity_difference' => 0,
                 'value' => $product->cost ?? 0,
@@ -437,15 +439,18 @@ class StockComponent extends Component
             $quantityDifference = $productData['quantity_difference'] ?? 0;
 
             if ($this->stock->status === 'completed') {
-                product_logs(
-                    $productId,
-                    $this->stock->id,
-                    Stock::class,
-                    abs($quantityDifference),
-                    $product['cost'] ?? 0,
-                    $productData['value_difference'] ?? 0,
-                    $quantityDifference > 0 // true if increase, false if decrease
-                );
+                if ($quantityDifference !== 0) {
+                    product_logs(
+                        $productId,
+                        $this->stock->id,
+                        Stock::class,
+                        abs($quantityDifference),
+                        $product['cost'] ?? 0,
+                        abs($productData['value_difference'] ?? 0),
+                        $quantityDifference > 0, // true if increase, false if decrease
+                        $this->stock->branch_id
+                    );
+                }
             }
         }
 
@@ -478,5 +483,21 @@ class StockComponent extends Component
         $this->stock->increase_deviation = $increaseDeviation;
         $this->stock->decrease_deviation = abs($decreaseDeviation);
         $this->stock->deviation = $increaseDeviation + $decreaseDeviation;
+    }
+
+    private function getProductBranchStock(int $productId): int
+    {
+        if (empty($this->stock->branch_id)) {
+            $this->stock->branch_id = user_branch();
+        }
+
+        if (empty($this->stock->branch_id)) {
+            return 0;
+        }
+
+        return (int) ProductBranch::query()
+            ->where('product_id', $productId)
+            ->where('branch_id', $this->stock->branch_id)
+            ->value('qty');
     }
 }

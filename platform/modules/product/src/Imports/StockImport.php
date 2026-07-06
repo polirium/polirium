@@ -6,6 +6,7 @@ use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Polirium\Modules\Product\Http\Model\Product;
+use Polirium\Modules\Product\Http\Model\ProductBranch;
 
 class StockImport implements ToCollection, WithHeadingRow
 {
@@ -13,6 +14,10 @@ class StockImport implements ToCollection, WithHeadingRow
     public array $importedProducts = [];
 
     public array $errors = [];
+
+    public function __construct(private readonly ?int $branchId = null)
+    {
+    }
 
     private const CODE_COLUMNS = [
         'ma_hang',
@@ -53,7 +58,7 @@ class StockImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            $branchStock = $product->amount ?? 0;
+            $branchStock = $this->getProductBranchStock((int) $product->id);
             $quantityDifference = $actualStock - $branchStock;
             $valueDifference = $quantityDifference * ($product->cost ?? 0);
 
@@ -115,5 +120,17 @@ class StockImport implements ToCollection, WithHeadingRow
         }
 
         return is_numeric($value) ? (float) $value : 0;
+    }
+
+    private function getProductBranchStock(int $productId): int
+    {
+        if (empty($this->branchId)) {
+            return 0;
+        }
+
+        return (int) ProductBranch::query()
+            ->where('product_id', $productId)
+            ->where('branch_id', $this->branchId)
+            ->value('qty');
     }
 }

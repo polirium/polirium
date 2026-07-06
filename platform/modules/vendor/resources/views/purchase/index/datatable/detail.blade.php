@@ -1,4 +1,18 @@
 @php
+    $row = $row ?? $purchase ?? null;
+
+    if (! $row && isset($id)) {
+        $row = \Polirium\Modules\Vendor\Http\Model\Purchase\Purchase::with(['vendor', 'branch', 'userCreated', 'products.product', 'refunds'])
+            ->withCount('products')
+            ->find($id);
+    }
+
+    abort_if(! $row, 404);
+
+    $id = $id ?? $row->id;
+    $purchaseProducts = $row->products ?? collect();
+    $productsCount = $row->products_count ?? (is_countable($purchaseProducts) ? count($purchaseProducts) : 0);
+    $refundId = $row->refund_id ?? (method_exists($row, 'relationLoaded') && $row->relationLoaded('refunds') ? $row->refunds->last()?->id : null);
     $needPay = (float)($row->need_pay ?? 0) - (float)($row->value ?? 0);
     $canViewPrice = auth()->user()?->can('vendors.purchases.view-price');
     $statusColor = match($row->status ?? 'temp') {
@@ -99,7 +113,7 @@
                                     @endif
                                 </div>
                                 <div class="text-muted small mt-1">
-                                    {{ __('modules/vendor::purchase.products_count', ['count' => $row->products_count]) }}
+                                    {{ __('modules/vendor::purchase.products_count', ['count' => $productsCount]) }}
                                 </div>
                             </div>
                         </div>
@@ -149,7 +163,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse (is_array($row->products) ? $row->products : $row->products ?? [] as $item)
+                        @forelse (is_array($purchaseProducts) ? $purchaseProducts : $purchaseProducts ?? [] as $item)
                             <tr>
                                 <td>{{ $item['id'] ?? '-' }}</td>
                                 <td>
@@ -291,14 +305,14 @@
                     </x-ui::button>
                     @endcan
 
-                    @php($canManageRefund = $row->refund_id ? auth()->user()?->can('vendors.refunds.edit') : auth()->user()?->can('vendors.refunds.create'))
+                    @php($canManageRefund = $refundId ? auth()->user()?->can('vendors.refunds.edit') : auth()->user()?->can('vendors.refunds.create'))
                     @if ($canManageRefund)
                         {{-- Return Purchase Button --}}
                         <x-ui::button
                             color="white"
                             size="sm"
                             icon="arrow-back-up"
-                            :href="route('vendors.purchases.refund', ['id' => $row->refund_id ?? 0, 'purchase_id' => $row->id])"
+                            :href="route('vendors.purchases.refund', ['id' => $refundId ?? 0, 'purchase_id' => $row->id])"
                         >
                             {{ __('Trả hàng nhập') }}
                         </x-ui::button>
