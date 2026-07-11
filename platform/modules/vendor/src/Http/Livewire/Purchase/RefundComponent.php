@@ -2,6 +2,8 @@
 
 namespace Polirium\Modules\Vendor\Http\Livewire\Purchase;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Rule;
@@ -28,7 +30,7 @@ class RefundComponent extends Component
     #[Rule([
         'products' => ['required', 'array'],
         'products.*.product_id' => ['required', 'numeric', 'integer'],
-        'products.*.amount' => ['required', 'numeric', 'integer'],
+        'products.*.amount' => ['required', 'numeric', 'integer', 'min:1'],
         'products.*.price' => ['required', 'numeric'],
         'products.*.value' => ['required', 'numeric'],
         'products.*.note' => ['nullable', 'string', 'max:191'],
@@ -304,6 +306,10 @@ class RefundComponent extends Component
             $this->validationAttributes()
         );
 
+        if ($this->refund->status === 'success') {
+            $this->validateRefundStockAvailability();
+        }
+
         try {
             \Illuminate\Support\Facades\DB::transaction(function () {
                 // --- Revert previous state if editing an existing successful refund ---
@@ -385,6 +391,81 @@ class RefundComponent extends Component
         }
 
         return redirect(route('vendors.purchases.list-refunds'));
+    }
+
+    public function availableRefundStock(int $productId): int
+    {
+        $productType = $this->products[$productId]['product']['type']
+            ?? Product::whereKey($productId)->value('type');
+
+        if ($productType === 'service') {
+            return PHP_INT_MAX;
+        }
+
+        $branchId = (int) ($this->refund->branch_id ?: user_branch());
+
+        $available = (int) DB::table('product_branches')
+            ->where('product_id', $productId)
+            ->where('branch_id', $branchId)
+            ->value('qty');
+
+        if ($this->refund->exists && in_array($this->refund->status, ['success', 'completed', 'paid'], true)) {
+            $available += $this->appliedRefundStockDelta($productId, $branchId);
+        }
+
+        return $available;
+    }
+
+    private function validateRefundStockAvailability(): void
+    {
+        $errors = [];
+
+        foreach ($this->products as $key => $item) {
+            $productId = (int) ($item['product_id'] ?? $key);
+            $amount = (int) ($item['amount'] ?? 0);
+
+            if ($productId <= 0 || $amount <= 0) {
+                continue;
+            }
+
+            $available = $this->availableRefundStock($productId);
+
+            if ($available === PHP_INT_MAX || $amount <= $available) {
+                continue;
+            }
+
+            $productName = $item['product']['name']
+                ?? Product::whereKey($productId)->value('name')
+                ?? "#{$productId}";
+
+            $errors["products.{$key}.amount"] = trans(
+                'Số lượng trả hàng nhập của :product không được vượt quá tồn kho hiện tại (:available).',
+                ['product' => $productName, 'available' => $available]
+            );
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    private function appliedRefundStockDelta(int $productId, int $branchId): int
+    {
+        $logs = ProductLog::query()
+            ->where('productable_type', Refund::class)
+            ->where('productable_id', $this->refund->id)
+            ->where('product_id', $productId)
+            ->where('branch_id', $branchId)
+            ->get(['amount_before', 'amount_after']);
+
+        if ($logs->isNotEmpty()) {
+            return $logs->sum(fn (ProductLog $log) => abs((int) $log->amount_after - (int) $log->amount_before));
+        }
+
+        return (int) RefundProduct::query()
+            ->where('vendor_purchase_refund_id', $this->refund->id)
+            ->where('product_id', $productId)
+            ->value('amount');
     }
 
     private function revertRefundStock(Refund $refund): void

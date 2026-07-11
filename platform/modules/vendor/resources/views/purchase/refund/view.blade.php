@@ -94,7 +94,7 @@
                             </td>
                             <td>{{ $item['product']['unit'] }}</td>
                             <td>
-                                <x-form::input type="number" wire:model.live="products.{{ $key }}.amount" />
+                                <x-form::input type="number" min="1" max="{{ $this->availableRefundStock((int) $key) }}" wire:model.live="products.{{ $key }}.amount" />
                             </td>
                             <td>{{ isset($item['product']['amount']) ? $item['product']['amount'] : 0 }}</td>
                             @can('vendors.refunds.view-price')
