@@ -45,7 +45,7 @@ return [
         'parent' => 'module_accounting',
         'icon' => 'cash',
         'sort' => 1,
-        'permission' => 'accountings.payment',
+        'permission' => 'accountings.payments',
     ],
     [
         'id' => 'module_accounting_report_sales',
@@ -54,7 +54,7 @@ return [
         'parent' => 'module_accounting',
         'icon' => 'report-analytics',
         'sort' => 2,
-        'permission' => 'accountings.payment',
+        'permission' => 'accountings.payments',
     ],
     [
         'id' => 'module_accounting_payment_methods',
