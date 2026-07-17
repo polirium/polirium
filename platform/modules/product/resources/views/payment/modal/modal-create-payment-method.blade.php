@@ -58,6 +58,23 @@
                     </label>
                 </div>
             </div>
+            <div class="col-12 mb-3">
+                <label class="form-label">{{ __('Ngân hàng tạo QR (VietQR)') }}</label>
+                <select class="form-select" wire:model.defer="bank_account_id">
+                    <option value="">{{ __('— Không dùng QR —') }}</option>
+                    @foreach ($bankAccounts as $account)
+                        <option value="{{ $account->id }}">
+                            {{ $account->name }} ({{ $account->bank_name ?: $account->bank_code }} — {{ $account->account_number }})
+                        </option>
+                    @endforeach
+                </select>
+                <div class="form-hint">
+                    {{ __('Nếu chọn ngân hàng, POS sẽ hiện mã QR kèm số tiền khi chọn phương thức này.') }}
+                    @if ((int) auth()->id() === 1)
+                        <a href="{{ route('products.bank-accounts.index') }}">{{ __('Quản lý tài khoản NH') }}</a>
+                    @endif
+                </div>
+            </div>
         </div>
 
         <div class="modal-footer">

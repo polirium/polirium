@@ -379,3 +379,23 @@
         </div>
     </div>
 @endif
+
+{{-- VietQR when selected payment method has a bank account --}}
+@if ($this->vietQrUrl)
+    <div class="mt-3 text-center border rounded p-3 bg-white">
+        <div class="fw-semibold mb-2">
+            {!! tabler_icon('qrcode', ['class' => 'icon me-1']) !!}
+            {{ __('Quét QR để thanh toán') }}
+        </div>
+        <img
+            src="{{ $this->vietQrUrl }}"
+            alt="VietQR"
+            class="img-fluid"
+            style="max-width: 260px;"
+            wire:key="pos-vietqr-{{ md5($this->vietQrUrl) }}"
+        >
+        <div class="text-muted small mt-2">
+            {{ __('Số tiền') }}: <strong>{{ core_number_format((int) ($payment['value_payment'] ?: $total_payment)) }}</strong>
+        </div>
+    </div>
+@endif

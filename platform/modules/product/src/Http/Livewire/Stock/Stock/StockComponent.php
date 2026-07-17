@@ -183,7 +183,12 @@ class StockComponent extends Component
             'importFile' => 'required|file|mimes:xlsx,xls,csv|max:5120',
         ]);
 
-        $import = new StockImport((int) $this->stock->branch_id);
+        $branchId = $this->stock->branch_id ?: user_branch();
+        if ($branchId && empty($this->stock->branch_id)) {
+            $this->stock->branch_id = (int) $branchId;
+        }
+
+        $import = new StockImport($branchId ? (int) $branchId : null);
         Excel::import($import, $this->importFile->getRealPath());
 
         // Merge imported products vào danh sách hiện tại
@@ -196,13 +201,17 @@ class StockComponent extends Component
 
         $importedCount = count($import->importedProducts);
         $errorCount = count($import->errors);
+        $warningCount = count($import->warnings);
 
         $message = "Đã nhập {$importedCount} sản phẩm từ Excel.";
         if ($errorCount > 0) {
             $message .= " ({$errorCount} lỗi: " . implode('; ', array_slice($import->errors, 0, 3)) . ')';
         }
+        if ($warningCount > 0) {
+            $message .= ' ' . implode(' ', $import->warnings);
+        }
 
-        session()->flash($errorCount > 0 ? 'warning' : 'success', $message);
+        session()->flash(($errorCount > 0 || $warningCount > 0) ? 'warning' : 'success', $message);
 
         $this->reset('importFile');
     }

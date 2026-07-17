@@ -4,6 +4,7 @@ namespace Polirium\Modules\Product\Http\Model\Payment;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PaymentMethod extends Model
 {
@@ -26,6 +27,7 @@ class PaymentMethod extends Model
         'is_default',
         'sort_order',
         'target_payment_status',
+        'bank_account_id',
     ];
 
     public const STATUS_COMPLETED = 'completed';
@@ -35,4 +37,9 @@ class PaymentMethod extends Model
         'is_active' => 'boolean',
         'is_default' => 'boolean',
     ];
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'bank_account_id');
+    }
 }

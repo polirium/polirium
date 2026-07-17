@@ -1,10 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Polirium\Modules\Product\Http\Controllers\BankAccountController;
+use Polirium\Modules\Product\Http\Controllers\InventoryReportController;
 use Polirium\Modules\Product\Http\Controllers\PaymentMethodController;
 use Polirium\Modules\Product\Http\Controllers\ProductController;
 use Polirium\Modules\Product\Http\Controllers\StockController;
-use Polirium\Modules\Product\Http\Controllers\InventoryReportController;
+use Polirium\Modules\Product\Http\Controllers\VietQrController;
 
 Route::prefix(admin_prefix())
 ->middleware(['web', 'auth'])
@@ -31,6 +33,10 @@ Route::prefix(admin_prefix())
                 Route::get('/', [PaymentMethodController::class, 'index'])->name('index')->middleware('can:sales.payment.index');
             });
 
+            Route::prefix('bank-accounts')->name('bank-accounts.')->group(function () {
+                Route::get('/', [BankAccountController::class, 'index'])->name('index');
+            });
+
             Route::prefix('print')->name('print.')->group(function () {
                 Route::get('payment/{id}', [ProductController::class, 'printPayment'])->name('print-payment')->middleware('can:sales.print');
             });
@@ -44,3 +50,8 @@ Route::prefix(admin_prefix())
             });
         });
 });
+
+// Public VietQR page (no auth)
+Route::middleware(['web'])
+    ->get('/vietqr', [VietQrController::class, 'index'])
+    ->name('vietqr.index');

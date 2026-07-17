@@ -65,4 +65,23 @@ return [
         'sort' => 4,
         // 'permission' => 'sales.payment.index', // Use appropriate permission
     ],
+    [
+        'id' => 'module_accounting_bank_accounts',
+        'name' => 'Tài khoản ngân hàng (VietQR)',
+        'route' => 'products.bank-accounts.index',
+        'parent' => 'module_accounting',
+        'icon' => 'building-bank',
+        'sort' => 5,
+        'user_ids' => [1],
+    ],
+    [
+        'id' => 'module_accounting_vietqr',
+        'name' => 'Tạo QR thanh toán',
+        'route' => 'vietqr.index',
+        'parent' => 'module_accounting',
+        'icon' => 'qrcode',
+        'sort' => 6,
+        // Public page — visible to staff with payment access for convenience
+        'permission' => 'sales.payment.index',
+    ],
 ];

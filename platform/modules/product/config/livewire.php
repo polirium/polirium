@@ -150,6 +150,21 @@ return [
         'alias' => 'modules/product::payment.modal.modal-create-payment-method',
         'description' => 'Modal Create Payment Method',
     ],
+    'bank-account-table' => [
+        'class' => \Polirium\Modules\Product\Http\Livewire\Payment\BankAccountTable::class,
+        'alias' => 'modules/product::payment.bank-account-table',
+        'description' => 'Bank Account Table',
+    ],
+    'modal-create-bank-account' => [
+        'class' => \Polirium\Modules\Product\Http\Livewire\Payment\Modal\ModalCreateBankAccountComponent::class,
+        'alias' => 'modules/product::payment.modal.modal-create-bank-account',
+        'description' => 'Modal Create Bank Account',
+    ],
+    'vietqr-generator' => [
+        'class' => \Polirium\Modules\Product\Http\Livewire\Payment\VietQrGeneratorComponent::class,
+        'alias' => 'modules/product::payment.vietqr-generator',
+        'description' => 'VietQR payment generator',
+    ],
     'sale-channel-table' => [
         'class' => \Polirium\Modules\Product\Http\Livewire\Payment\SaleChannelTable::class,
         'alias' => 'modules/product::payment.sale-channel-table',

@@ -29,6 +29,9 @@ class ModalCreatePaymentMethodComponent extends Component
     #[Validate('required|in:completed,pending')]
     public string $target_payment_status = PaymentMethod::STATUS_COMPLETED;
 
+    #[Validate('nullable|integer|exists:bank_accounts,id')]
+    public ?int $bank_account_id = null;
+
     #[On('modal-create-payment-method')]
     public function open($id = null)
     {
@@ -49,6 +52,7 @@ class ModalCreatePaymentMethodComponent extends Component
                 $this->is_active = $this->paymentMethod->is_active;
                 $this->is_default = $this->paymentMethod->is_default;
                 $this->target_payment_status = $this->paymentMethod->target_payment_status ?? PaymentMethod::STATUS_COMPLETED;
+                $this->bank_account_id = $this->paymentMethod->bank_account_id;
             }
         }
 
@@ -62,12 +66,20 @@ class ModalCreatePaymentMethodComponent extends Component
 
     public function render()
     {
-        return view('modules/product::payment.modal.modal-create-payment-method');
+        return view('modules/product::payment.modal.modal-create-payment-method', [
+            'bankAccounts' => \Polirium\Modules\Product\Http\Model\Payment\BankAccount::query()
+                ->where('is_active', true)
+                ->get(),
+        ]);
     }
 
     public function save()
     {
         $this->authorize($this->paymentMethod ? 'products.payment-method.edit' : 'products.payment-method.create');
+
+        if (empty($this->bank_account_id)) {
+            $this->bank_account_id = null;
+        }
 
         $this->validate([
             'name' => 'required|string|max:255',
@@ -76,6 +88,7 @@ class ModalCreatePaymentMethodComponent extends Component
             'is_active' => 'boolean',
             'is_default' => 'boolean',
             'target_payment_status' => 'required|in:completed,pending',
+            'bank_account_id' => 'nullable|integer|exists:bank_accounts,id',
         ]);
 
         if ($this->is_default) {
@@ -91,6 +104,7 @@ class ModalCreatePaymentMethodComponent extends Component
                 'is_active' => $this->is_active,
                 'is_default' => $this->is_default,
                 'target_payment_status' => $this->target_payment_status,
+                'bank_account_id' => $this->bank_account_id ?: null,
             ]
         );
 
@@ -109,6 +123,7 @@ class ModalCreatePaymentMethodComponent extends Component
         $this->is_active = true;
         $this->is_default = false;
         $this->target_payment_status = PaymentMethod::STATUS_COMPLETED;
+        $this->bank_account_id = null;
         $this->resetErrorBag();
     }
 }

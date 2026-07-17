@@ -13,7 +13,7 @@ class ProductServiceProvider extends PoliriumBaseServiceProvider
     {
         $this
             ->setNamespace('modules/product')
-            ->loadConfigurations(['product', 'menu', 'livewire', 'permissions'])
+            ->loadConfigurations(['product', 'menu', 'livewire', 'permissions', 'vietqr_banks'])
             ->loadViews()
             ->loadTranslations()
             ->loadRoutes(['web'])

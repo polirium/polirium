@@ -17,6 +17,7 @@ use Polirium\Modules\Product\Http\Model\Payment\PaymentPartnerDelivery;
 use Polirium\Modules\Product\Http\Model\Payment\PaymentProduct;
 use Polirium\Modules\Product\Http\Model\Payment\SaleChannel;
 use Polirium\Modules\Product\Http\Model\Product;
+use Polirium\Modules\Product\Support\VietQrService;
 
 class PaymentComponent extends Component
 {
@@ -162,6 +163,9 @@ class PaymentComponent extends Component
             if (isset($state['payment_methods'])) {
                 $this->payment_methods = $state['payment_methods'];
             }
+
+            // Always refresh methods so bank_account / VietQR data stays current
+            $this->payment_methods = $this->loadActivePaymentMethods();
         } else {
             \Log::info("No session found for {$this->session_key}. Resetting inputs.");
             // Initial setup if no session data
@@ -191,7 +195,7 @@ class PaymentComponent extends Component
                 'delivery' => 'Đang giao hàng',
             ];
 
-            $this->payment_methods = PaymentMethod::where('is_active', true)->get()->toArray();
+            $this->payment_methods = $this->loadActivePaymentMethods();
 
             $this->resetInputs();
             \Log::info('After reset inputs. Product count: ' . count($this->products));
@@ -523,7 +527,55 @@ class PaymentComponent extends Component
             value: $this->payment['sale_channel_id']
         );
 
-        $this->payment_methods = PaymentMethod::where('is_active', true)->get()->toArray();
+        $this->payment_methods = $this->loadActivePaymentMethods();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function loadActivePaymentMethods(): array
+    {
+        return PaymentMethod::query()
+            ->where('is_active', true)
+            ->with('bankAccount')
+            ->get()
+            ->toArray();
+    }
+
+    #[Computed]
+    public function vietQrUrl(): ?string
+    {
+        $typePayment = $this->payment['type_payment'] ?? [];
+        if (! is_array($typePayment) || count($typePayment) !== 1) {
+            return null;
+        }
+
+        $first = $typePayment[0] ?? null;
+        $methodCode = is_array($first) ? ($first['method'] ?? null) : $first;
+        if (! $methodCode) {
+            return null;
+        }
+
+        $paymentMethod = collect($this->payment_methods)->firstWhere('code', $methodCode);
+        $bankAccount = $paymentMethod['bank_account'] ?? null;
+        if (! is_array($bankAccount) || empty($bankAccount['account_number']) || empty($bankAccount['bank_code'])) {
+            return null;
+        }
+
+        $amount = (int) ($this->payment['value_payment'] ?? 0);
+        if ($amount <= 0) {
+            $amount = (int) ($this->total_payment ?? 0);
+        }
+
+        if ($amount <= 0) {
+            return null;
+        }
+
+        $description = VietQrService::sanitizeDescription(
+            (string) ($this->payment['code'] ?? $this->methods_payment ?? 'Thanh toan')
+        );
+
+        return VietQrService::imageUrl($bankAccount, $amount, $description);
     }
 
     public function removeCustomer()

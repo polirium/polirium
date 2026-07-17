@@ -26,7 +26,7 @@ final class PaymentMethodTable extends BaseTable
 
     public function datasource(): Builder
     {
-        return PaymentMethod::query();
+        return PaymentMethod::query()->with('bankAccount');
     }
 
     public function fields(): PowerGridFields
@@ -50,6 +50,14 @@ final class PaymentMethodTable extends BaseTable
                     default => '<span class="badge bg-secondary-lt">' . $model->target_payment_status . '</span>',
                 };
             })
+            ->add('bank_account_label', function (PaymentMethod $model) {
+                $account = $model->bankAccount;
+                if (! $account) {
+                    return '<span class="text-muted">—</span>';
+                }
+
+                return e($account->name . ' (' . ($account->bank_name ?: $account->bank_code) . ')');
+            })
             ->add('created_at_formatted', function (PaymentMethod $model) {
                 return $model->created_at->format('d/m/Y H:i');
             });
@@ -65,6 +73,7 @@ final class PaymentMethodTable extends BaseTable
             Column::make('Active', 'is_active'),
             Column::make('Default', 'is_default'),
             Column::make('Target Status', 'target_payment_status', 'target_payment_status')->sortable(),
+            Column::make(__('VietQR'), 'bank_account_label'),
             Column::make(trans('modules/product::product.sort_order'), 'sort_order')->sortable()->editOnClick(hasPermission: auth()->user()?->can('products.payment-method.edit') ?? false),
             Column::make('Created At', 'created_at_formatted', 'created_at')->sortable(),
             Column::action(trans('core/base::general.action')),
