@@ -50,10 +50,11 @@ php artisan db:seed
 
 ## Tài liệu
 
-Xem hướng dẫn chi tiết tại: **[platform/docs](./platform/docs/README.md)**
+Xem hướng dẫn chi tiết tại: **[platform/docs](./platform/docs/README.md)** · **[Wiki (draft)](./wiki/README.md)**
 
 | Tài liệu                                                             | Mô tả                   |
 | -------------------------------------------------------------------- | ----------------------- |
+| [Wiki Home](./wiki/Home.md)                                          | Mục lục wiki            |
 | [Tổng quan](./platform/docs/01-overview.md)                          | Kiến trúc hệ thống      |
 | [Cấu trúc thư mục](./platform/docs/02-directory-structure.md)        | Cấu trúc project        |
 | [Cách viết Module](./platform/docs/03-creating-modules.md)           | Hướng dẫn tạo module    |
