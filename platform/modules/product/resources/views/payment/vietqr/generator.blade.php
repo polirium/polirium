@@ -1,83 +1,144 @@
-<div class="row">
-    <div class="col-lg-5">
-        <x-ui::card>
-            <div class="card-header">
-                <h3 class="card-title">{{ __('Thông tin thanh toán') }}</h3>
-            </div>
-            <div class="card-body">
-                @if ($this->accounts->isEmpty())
-                    <div class="alert alert-warning mb-0">
-                        {{ __('Chưa có tài khoản ngân hàng. Liên hệ admin (user ID 1) để cấu hình.') }}
-                    </div>
-                @else
-                    <div class="mb-3">
-                        <label class="form-label">{{ __('Tài khoản ngân hàng') }}</label>
-                        <select class="form-select" wire:model.live="bank_account_id">
-                            @foreach ($this->accounts as $account)
-                                <option value="{{ $account->id }}">
-                                    {{ $account->name }} — {{ $account->bank_name ?: $account->bank_code }} / {{ $account->account_number }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+<div class="vietqr-page">
+    <style>
+        .vietqr-page .vietqr-amount input {
+            font-size: 1.75rem;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 0.02em;
+            min-height: 3.25rem;
+        }
+        .vietqr-page .vietqr-desc input {
+            font-size: 1.05rem;
+            min-height: 2.75rem;
+        }
+        .vietqr-page .vietqr-frame {
+            min-height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border-radius: 1rem;
+            border: 1px solid var(--tblr-border-color, #e6e7e9);
+            padding: 1rem;
+        }
+        .vietqr-page .vietqr-frame img {
+            width: min(100%, 320px);
+            height: auto;
+            transition: opacity .15s ease;
+        }
+        .vietqr-page .vietqr-frame img.is-loading {
+            opacity: .4;
+        }
+        @media (min-width: 992px) {
+            .vietqr-page .vietqr-amount input {
+                font-size: 1.5rem;
+                text-align: left;
+            }
+        }
+    </style>
 
-                    <div class="mb-3">
-                        <x-form::input
-                            type="text"
-                            label="{{ __('Số tiền') }}"
-                            wire:model.live.debounce.300ms="amount"
-                            placeholder="100000"
-                        />
-                    </div>
+    @if ($this->accounts->isEmpty())
+        <div class="alert alert-warning">
+            {{ __('Chưa có tài khoản ngân hàng. Liên hệ admin để cấu hình.') }}
+        </div>
+    @else
+        <div class="row g-3 g-lg-4 flex-column-reverse flex-lg-row">
+            {{-- Form --}}
+            <div class="col-lg-5">
+                <div class="card">
+                    <div class="card-body">
+                        @if ($this->accounts->count() > 1)
+                            <div class="mb-3">
+                                <label class="form-label">{{ __('Tài khoản') }}</label>
+                                <select class="form-select form-select-lg" wire:model.live="bank_account_id">
+                                    @foreach ($this->accounts as $account)
+                                        <option value="{{ $account->id }}">
+                                            {{ $account->name }} — {{ $account->account_number }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @else
+                            @php $only = $this->accounts->first(); @endphp
+                            <div class="mb-3 text-center text-lg-start">
+                                <div class="text-secondary small">{{ __('Tài khoản nhận') }}</div>
+                                <div class="fw-semibold">{{ $only->name }}</div>
+                                <div class="text-secondary">{{ $only->bank_name ?: $only->bank_code }} · {{ $only->account_number }}</div>
+                            </div>
+                        @endif
 
-                    <div class="mb-3">
-                        <x-form::input
-                            label="{{ __('Nội dung chuyển khoản') }}"
-                            wire:model.live.debounce.300ms="description"
-                            placeholder="{{ __('Thanh toan don hang') }}"
-                        />
-                    </div>
+                        <div class="mb-3 vietqr-amount">
+                            <label class="form-label">{{ __('Số tiền') }}</label>
+                            <div class="input-group input-group-lg">
+                                <input
+                                    type="text"
+                                    inputmode="numeric"
+                                    class="form-control"
+                                    wire:model.live.debounce.500ms="amount"
+                                    placeholder="0"
+                                    autocomplete="off"
+                                    aria-label="{{ __('Số tiền') }}"
+                                >
+                                <span class="input-group-text">đ</span>
+                            </div>
+                        </div>
 
-                    <div class="mb-0">
-                        <label class="form-label">{{ __('Template') }}</label>
-                        <select class="form-select" wire:model.live="template">
-                            <option value="compact">compact</option>
-                            <option value="qronly">qronly</option>
-                            <option value="standee">standee</option>
-                        </select>
+                        <div class="mb-0 vietqr-desc">
+                            <label class="form-label">{{ __('Nội dung') }}</label>
+                            <input
+                                type="text"
+                                class="form-control form-control-lg"
+                                wire:model.live.debounce.500ms="description"
+                                placeholder="{{ __('Thanh toan don hang') }}"
+                                autocomplete="off"
+                                enterkeyhint="done"
+                            >
+                        </div>
                     </div>
-                @endif
+                </div>
             </div>
-        </x-ui::card>
-    </div>
 
-    <div class="col-lg-7">
-        <x-ui::card>
-            <div class="card-header">
-                <h3 class="card-title">{{ __('Mã QR') }}</h3>
-            </div>
-            <div class="card-body text-center">
-                @if ($this->qrUrl)
-                    <img
-                        src="{{ $this->qrUrl }}"
-                        alt="VietQR"
-                        class="img-fluid border rounded bg-white p-2"
-                        style="max-width: 420px;"
-                        wire:key="vietqr-{{ md5($this->qrUrl) }}"
-                    >
-                    <div class="mt-3">
-                        <a href="{{ $this->qrUrl }}&download=true" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">
-                            {!! tabler_icon('download') !!} {{ __('Tải QR') }}
-                        </a>
-                        <a href="{{ $this->qrUrl }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
-                            {!! tabler_icon('external-link') !!} {{ __('Mở ảnh') }}
-                        </a>
+            {{-- QR: trên cùng trên mobile, không remount khi Livewire re-render --}}
+            <div class="col-lg-7">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div
+                            class="vietqr-frame mb-2"
+                            wire:ignore
+                            x-data="{
+                                src: @js($qrUrl),
+                                ready: true,
+                            }"
+                            @vietqr-updated.window="
+                                if ($event.detail.url === src) return;
+                                ready = false;
+                                src = $event.detail.url;
+                            "
+                        >
+                            <img
+                                x-show="src"
+                                x-cloak
+                                :src="src"
+                                alt="VietQR"
+                                :class="{ 'is-loading': !ready }"
+                                @load="ready = true"
+                                @error="ready = true"
+                                decoding="async"
+                            >
+                            <div class="text-secondary py-5" x-show="!src" x-cloak>
+                                {{ __('Nhập số tiền để tạo QR') }}
+                            </div>
+                        </div>
+
+                        @if ($amount !== '')
+                            <div class="fw-bold fs-3 mb-0">{{ $amount }} đ</div>
+                        @endif
+                        @if ($description !== '')
+                            <div class="text-secondary mt-1">{{ $description }}</div>
+                        @endif
                     </div>
-                    <div class="text-muted small mt-2 text-break">{{ $this->qrUrl }}</div>
-                @else
-                    <div class="text-muted py-5">{{ __('Chọn tài khoản để xem QR') }}</div>
-                @endif
+                </div>
             </div>
-        </x-ui::card>
-    </div>
+        </div>
+    @endif
 </div>

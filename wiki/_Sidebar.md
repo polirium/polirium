@@ -1,11 +1,11 @@
-**Polirium Wiki**
+### Polirium Wiki
 
-- [[Home|Trang chủ]]
-- [[Getting-Started|Cài đặt]]
-- [[Architecture|Kiến trúc]]
-- [[Modules|Modules]]
-- [[Permissions-and-Menu|Phân quyền & Menu]]
-- [[POS-and-Payments|POS & VietQR]]
-- [[Stock-Check|Kiểm kho]]
-- [[Coding-Standards|Coding standards]]
-- [[Deployment|Deploy]]
+* [Trang chủ](Home)
+* [Cài đặt](Getting-Started)
+* [Kiến trúc](Architecture)
+* [Modules](Modules)
+* [Phân quyền & Menu](Permissions-and-Menu)
+* [POS & VietQR](POS-and-Payments)
+* [Kiểm kho](Stock-Check)
+* [Coding standards](Coding-Standards)
+* [Deploy](Deployment)

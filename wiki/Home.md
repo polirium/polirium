@@ -28,14 +28,16 @@ polirium/
 
 ## Mục lục wiki
 
-- [[Getting-Started|Cài đặt]]
-- [[Architecture|Kiến trúc]]
-- [[Modules|Modules nghiệp vụ]]
-- [[Permissions-and-Menu|Phân quyền & Menu]]
-- [[POS-and-Payments|POS & Thanh toán / VietQR]]
-- [[Stock-Check|Kiểm kho]]
-- [[Coding-Standards|Coding standards]]
-- [[Deployment|Deploy server]]
+> Nếu không thấy menu trái: mở **Pages** (góc phải trang Wiki) để xem toàn bộ trang.
+
+1. [Cài đặt](Getting-Started)
+2. [Kiến trúc](Architecture)
+3. [Modules nghiệp vụ](Modules)
+4. [Phân quyền & Menu](Permissions-and-Menu)
+5. [POS & Thanh toán / VietQR](POS-and-Payments)
+6. [Kiểm kho](Stock-Check)
+7. [Coding standards](Coding-Standards)
+8. [Deploy server](Deployment)
 
 ## Tài liệu trong repo
 
