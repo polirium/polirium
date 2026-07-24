@@ -109,7 +109,7 @@
                                 src: @js($qrUrl),
                                 ready: true,
                             }"
-                            @vietqr-updated.window="
+                            x-on:vietqr-updated.window="
                                 if ($event.detail.url === src) return;
                                 ready = false;
                                 src = $event.detail.url;
@@ -121,8 +121,8 @@
                                 :src="src"
                                 alt="VietQR"
                                 :class="{ 'is-loading': !ready }"
-                                @load="ready = true"
-                                @error="ready = true"
+                                x-on:load="ready = true"
+                                x-on:error="ready = true"
                                 decoding="async"
                             >
                             <div class="text-secondary py-5" x-show="!src" x-cloak>
