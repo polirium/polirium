@@ -46,7 +46,7 @@
             @foreach($customers as $customer)
                 @php
                     $rank = (($currentPage - 1) * $perPage) + $loop->iteration;
-                    $progress = min(100, round(((int) $customer->total_quantity / $maxQuantity) * 100));
+                    $progress = min(100, round(((int) $customer->total_spent / $maxSpent) * 100));
                 @endphp
                 <div class="list-group-item py-3">
                     <div class="d-flex align-items-center gap-3">
@@ -60,8 +60,7 @@
                                     <span class="text-muted small ms-1">{{ $customer->masked_phone }}</span>
                                 </div>
                                 <div class="text-nowrap">
-                                    <span class="fw-bold text-primary">{{ core_number_format($customer->total_quantity) }}</span>
-                                    <span class="text-muted small"> sản phẩm</span>
+                                    <span class="fw-bold text-primary">{{ core_number_format($customer->total_spent) }} đ</span>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2 mt-2">
@@ -71,7 +70,7 @@
                                 <span class="text-muted small text-nowrap">
                                     {{ core_number_format($customer->total_orders) }} đơn
                                     <span class="mx-1">·</span>
-                                    <span class="fw-semibold text-body">{{ core_number_format($customer->total_spent) }} đ</span>
+                                    <span class="fw-semibold text-body">{{ core_number_format($customer->total_quantity) }} sản phẩm</span>
                                 </span>
                             </div>
                         </div>

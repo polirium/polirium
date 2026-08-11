@@ -129,7 +129,7 @@
                                     <div class="text-muted small">{{ $item->product?->code ?? '' }}</div>
                                 </div>
                                 <div class="ms-auto">
-                                    <span class="badge bg-primary">{{ core_number_format($item->total_sold) }}</span>
+                                    <span class="badge text-bg-primary">{{ core_number_format($item->total_sold) }}</span>
                                 </div>
                             </div>
                         </div>

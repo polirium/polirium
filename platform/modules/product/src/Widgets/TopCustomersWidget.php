@@ -31,7 +31,7 @@ class TopCustomersWidget extends AbstractWidget
 
     public static function getDescription(): string
     {
-        return 'Xếp hạng khách hàng theo số lượng sản phẩm đã mua';
+        return 'Xếp hạng khách hàng theo tổng số tiền đã mua';
     }
 
     public static function getDefaultWidth(): int
@@ -126,9 +126,9 @@ class TopCustomersWidget extends AbstractWidget
             ->selectRaw('SUM(COALESCE(payment_lines.total_quantity, 0)) AS total_quantity')
             ->selectRaw('SUM(CASE WHEN product_payments.value > 0 THEN product_payments.value WHEN product_payments.total_cost > 0 THEN product_payments.total_cost ELSE COALESCE(payment_lines.line_total, 0) END) AS total_spent')
             ->groupBy('customers.id', 'customers.name', 'customers.phone')
-            ->orderByDesc('total_quantity')
             ->orderByDesc('total_spent')
             ->orderByDesc('total_orders')
+            ->orderByDesc('total_quantity')
             ->offset(($this->currentPage - 1) * self::PER_PAGE)
             ->limit(self::PER_PAGE)
             ->get()
@@ -142,7 +142,7 @@ class TopCustomersWidget extends AbstractWidget
             'period' => $this->period,
             'customers' => $customers,
             'totalCustomers' => $totalCustomers,
-            'maxQuantity' => max(1, (int) $customers->max('total_quantity')),
+            'maxSpent' => max(1, (int) $customers->max('total_spent')),
             'currentPage' => $this->currentPage,
             'totalPages' => $totalPages,
             'perPage' => self::PER_PAGE,
