@@ -29,7 +29,7 @@ class ProductLog extends BaseModel
     {
         if ($this->productable_type === Payment::class) {
             // Nếu tồn kho tăng lên (amount_after > amount_before), đây là log Hủy đơn hoàn kho
-            return $this->amount_after > $this->amount_before
+            return $this->direction === 'in' || $this->amount_after > $this->amount_before
                 ? __('Hủy đơn')
                 : __('Bán hàng');
         }
