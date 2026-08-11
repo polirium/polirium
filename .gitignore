@@ -6,6 +6,8 @@
 /public/uploads
 /storage/*.key
 /vendor
+/bootstrap/cache/packages.php
+/bootstrap/cache/services.php
 .env
 .env.backup
 .env.production

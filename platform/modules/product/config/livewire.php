@@ -135,6 +135,11 @@ return [
         'alias' => 'modules/product::widgets.sales-summary',
         'description' => 'Sales Summary Widget',
     ],
+    'widget-top-customers' => [
+        'class' => \Polirium\Modules\Product\Widgets\TopCustomersWidget::class,
+        'alias' => 'modules/product::widgets.top-customers',
+        'description' => 'Top Customers Widget',
+    ],
     'draft-payment-list' => [
         'class' => DraftPaymentListComponent::class,
         'alias' => 'modules/product::payment.draft-payment-list',
