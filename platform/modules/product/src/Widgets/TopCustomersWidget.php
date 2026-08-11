@@ -10,6 +10,10 @@ class TopCustomersWidget extends AbstractWidget
 {
     public string $period = 'today';
 
+    public int $currentPage = 1;
+
+    private const PER_PAGE = 5;
+
     public static function getWidgetId(): string
     {
         return 'product.top-customers';
@@ -55,6 +59,17 @@ class TopCustomersWidget extends AbstractWidget
         $this->period = in_array($period, ['today', 'week', 'month', 'year'], true)
             ? $period
             : 'today';
+        $this->currentPage = 1;
+    }
+
+    public function previousPage(): void
+    {
+        $this->currentPage = max(1, $this->currentPage - 1);
+    }
+
+    public function nextPage(): void
+    {
+        $this->currentPage++;
     }
 
     protected function getDateRange(): array
@@ -86,9 +101,15 @@ class TopCustomersWidget extends AbstractWidget
     {
         [$startDate, $endDate] = $this->getDateRange();
         $saleTime = DB::raw('COALESCE(product_payments.completed_at, product_payments.created_at)');
+        $paymentLines = DB::table('product_payment_products')
+            ->selectRaw('product_payment_id, SUM(amount) AS total_quantity, SUM(total) AS line_total')
+            ->groupBy('product_payment_id');
 
         $query = DB::table('product_payments')
             ->join('customers', 'customers.id', '=', 'product_payments.customer_id')
+            ->leftJoinSub($paymentLines, 'payment_lines', function ($join): void {
+                $join->on('payment_lines.product_payment_id', '=', 'product_payments.id');
+            })
             ->where('product_payments.status', 'success')
             ->whereBetween($saleTime, [$startDate, $endDate])
             ->when(user_branch(), function ($query, $branchId): void {
@@ -96,15 +117,20 @@ class TopCustomersWidget extends AbstractWidget
             });
 
         $totalCustomers = (clone $query)->distinct()->count('customers.id');
+        $totalPages = max(1, (int) ceil($totalCustomers / self::PER_PAGE));
+        $this->currentPage = min(max(1, $this->currentPage), $totalPages);
 
         $customers = $query
             ->select(['customers.id', 'customers.name', 'customers.phone'])
             ->selectRaw('COUNT(product_payments.id) AS total_orders')
-            ->selectRaw('SUM(COALESCE(product_payments.amount_products, 0)) AS total_quantity')
+            ->selectRaw('SUM(COALESCE(payment_lines.total_quantity, 0)) AS total_quantity')
+            ->selectRaw('SUM(CASE WHEN product_payments.value > 0 THEN product_payments.value WHEN product_payments.total_cost > 0 THEN product_payments.total_cost ELSE COALESCE(payment_lines.line_total, 0) END) AS total_spent')
             ->groupBy('customers.id', 'customers.name', 'customers.phone')
             ->orderByDesc('total_quantity')
+            ->orderByDesc('total_spent')
             ->orderByDesc('total_orders')
-            ->limit(5)
+            ->offset(($this->currentPage - 1) * self::PER_PAGE)
+            ->limit(self::PER_PAGE)
             ->get()
             ->map(function ($customer) {
                 $customer->masked_phone = self::maskPhone($customer->phone);
@@ -117,6 +143,9 @@ class TopCustomersWidget extends AbstractWidget
             'customers' => $customers,
             'totalCustomers' => $totalCustomers,
             'maxQuantity' => max(1, (int) $customers->max('total_quantity')),
+            'currentPage' => $this->currentPage,
+            'totalPages' => $totalPages,
+            'perPage' => self::PER_PAGE,
         ]);
     }
 }

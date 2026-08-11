@@ -45,7 +45,7 @@
         <div class="list-group list-group-flush">
             @foreach($customers as $customer)
                 @php
-                    $rank = $loop->iteration;
+                    $rank = (($currentPage - 1) * $perPage) + $loop->iteration;
                     $progress = min(100, round(((int) $customer->total_quantity / $maxQuantity) * 100));
                 @endphp
                 <div class="list-group-item py-3">
@@ -68,12 +68,44 @@
                                 <div class="progress progress-xs flex-fill">
                                     <div class="progress-bar {{ $rank === 1 ? 'bg-yellow' : 'bg-primary' }}" style="width: {{ $progress }}%"></div>
                                 </div>
-                                <span class="text-muted small text-nowrap">{{ core_number_format($customer->total_orders) }} đơn</span>
+                                <span class="text-muted small text-nowrap">
+                                    {{ core_number_format($customer->total_orders) }} đơn
+                                    <span class="mx-1">·</span>
+                                    <span class="fw-semibold text-body">{{ core_number_format($customer->total_spent) }} đ</span>
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
             @endforeach
         </div>
+
+        @if($totalPages > 1)
+            <div class="card-footer d-flex align-items-center justify-content-between gap-3 py-2">
+                <div class="text-muted small">
+                    {{ (($currentPage - 1) * $perPage) + 1 }}–{{ min($currentPage * $perPage, $totalCustomers) }}
+                    / {{ core_number_format($totalCustomers) }} khách
+                </div>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Phân trang khách hàng">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-icon"
+                            wire:click="previousPage"
+                            @disabled($currentPage <= 1)
+                            aria-label="Trang trước">
+                        {!! tabler_icon('chevron-left', ['class' => 'icon']) !!}
+                    </button>
+                    <span class="btn btn-outline-secondary disabled px-3">
+                        {{ $currentPage }} / {{ $totalPages }}
+                    </span>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-icon"
+                            wire:click="nextPage"
+                            @disabled($currentPage >= $totalPages)
+                            aria-label="Trang sau">
+                        {!! tabler_icon('chevron-right', ['class' => 'icon']) !!}
+                    </button>
+                </div>
+            </div>
+        @endif
     @endif
 </div>
