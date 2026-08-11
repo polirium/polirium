@@ -111,7 +111,10 @@
                                                          wire:model="product.cost"
                                                          x-init="if (window.PoliriumProduct) window.PoliriumProduct.initCurrencyInput($el.querySelector('input') || $el, $wire)"
                                                          data-inputmask-currency
-                                                         :disabled="$readonly" />
+                                                         :disabled="$readonly || ($product['type'] ?? null) === 'combo'" />
+                                        @if (($product['type'] ?? null) === 'combo')
+                                            <div class="form-hint">Tự động tính từ giá vốn và số lượng thành phần.</div>
+                                        @endif
                                     </div>
                                 @endcan
                             @endif
@@ -336,7 +339,7 @@
                                                              compact
                                                              :disabled="$readonly" />
                                         </td>
-                                        <td>{{ number_format($element['product']['price']) }}</td>
+                                        <td>{{ number_format($element['product']['cost'] ?? 0) }}</td>
                                         <td>{{ number_format($element['price']) }}</td>
                                         <td>
                                             <button

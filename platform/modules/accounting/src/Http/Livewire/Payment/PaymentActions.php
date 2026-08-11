@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
 use Polirium\Modules\Product\Http\Support\PaymentInventorySupport;
+use Polirium\Modules\Product\Http\Support\ProductInventorySupport;
 
 class PaymentActions extends Component
 {
@@ -159,18 +160,7 @@ class PaymentActions extends Component
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($payment) {
                 // Deduct Stock
-                foreach ($payment->products as $item) {
-                    product_logs(
-                        $item->product_id,
-                        $payment->id,
-                        Payment::class,
-                        $item->amount,
-                        $item->product?->price ?? $item->value ?? 0,
-                        $item->total ?? 0,
-                        false,
-                        $payment->branch_id
-                    );
-                }
+                ProductInventorySupport::exportPaymentItems($payment->products, $payment);
 
                 // Update Status
                 $payment->status = 'success';

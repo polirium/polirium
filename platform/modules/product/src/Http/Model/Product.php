@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Polirium\Core\Base\Http\Models\BaseModel;
 use Polirium\Core\Base\Http\Models\Branch\Branch;
 use Polirium\Modules\Product\Http\Model\Stock\StockProduct;
+use Polirium\Modules\Product\Http\Support\ProductInventorySupport;
 
 class Product extends BaseModel
 {
@@ -85,6 +86,10 @@ class Product extends BaseModel
                 // Dịch vụ không giới hạn tồn kho
                 if ($this->type === 'service') {
                     return PHP_INT_MAX;
+                }
+
+                if ($this->type === 'combo') {
+                    return ProductInventorySupport::availableQuantity($this, user_branch());
                 }
 
                 return $this->branches?->where('id', user_branch())->sum('pivot.qty') ?: 0;

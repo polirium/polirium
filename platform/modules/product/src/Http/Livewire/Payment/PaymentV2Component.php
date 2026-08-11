@@ -119,6 +119,8 @@ class PaymentV2Component extends PaymentComponent
             // For services, qty is unlimited
             if ($product->type === 'service') {
                 $product->branch_qty = -1; // -1 means unlimited
+            } elseif ($product->type === 'combo') {
+                $product->branch_qty = $product->amount;
             } else {
                 // Get qty from branch pivot, fallback to 0
                 $product->branch_qty = $product->branches->first()?->pivot?->qty ?? 0;
@@ -144,14 +146,18 @@ class PaymentV2Component extends PaymentComponent
             return;
         }
 
-        // Check stock for current branch
-        $qty = $product->branches->first()?->pivot->qty ?? 0;
+        // Combo stock is derived from its components; regular products use the branch pivot.
+        $qty = $product->type === 'combo'
+            ? $product->amount
+            : ($product->branches->first()?->pivot->qty ?? 0);
 
         if ($qty <= 0) {
             $this->dispatch('browser-event', [
                 'name' => 'toast',
                 'title' => 'Lỗi',
-                'message' => 'Sản phẩm đã hết hàng!',
+                'message' => $product->type === 'combo'
+                    ? 'Không đủ tồn kho thành phần của combo!'
+                    : 'Sản phẩm đã hết hàng!',
                 'type' => 'error',
             ]);
 

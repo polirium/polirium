@@ -106,7 +106,15 @@ class ModalCreateProductComponent extends Component
     public function updatedSearch($value)
     {
         if ($value) {
-            $this->lists['products'] = Product::select(['id', 'name', 'code', 'unit'])->where('name', 'like', '%' . $value . '%')->get();
+            $this->lists['products'] = Product::select(['id', 'name', 'code', 'unit', 'cost'])
+                ->where('type', 'product')
+                ->when($this->product_id, fn ($query) => $query->where('id', '!=', $this->product_id))
+                ->where(function ($query) use ($value): void {
+                    $query->where('name', 'like', '%' . $value . '%')
+                        ->orWhere('code', 'like', '%' . $value . '%');
+                })
+                ->limit(30)
+                ->get();
         } else {
             $this->lists['products'] = null;
         }
@@ -168,11 +176,17 @@ class ModalCreateProductComponent extends Component
 
         if ($type) {
             $this->product['type'] = $type;
+            if ($type === 'combo') {
+                $this->product['code'] = code_generate('CB', Product::max('id'));
+            }
         }
 
         if ($id) {
             $productModel = Product::findOrFail($id);
             $this->product = $productModel->toArray();
+            if ($productModel->type === 'combo' && str_starts_with($this->product['code'], 'HH/')) {
+                $this->product['code'] = 'CB/' . substr($this->product['code'], 3);
+            }
             $this->units = ProductUnit::select([
                 'product_id',
                 'name',
@@ -185,6 +199,7 @@ class ModalCreateProductComponent extends Component
 
             // Fetch danh sách ProductElement khi edit
             $this->loadProductElements($id);
+            $this->recalculateComboCost();
         }
 
         $this->dispatch('modal', 'modal-create-product');
@@ -196,7 +211,7 @@ class ModalCreateProductComponent extends Component
     private function loadProductElements($productId)
     {
         $productElements = ProductElement::where('product_id', $productId)
-            ->with('element:id,name,code,price')
+            ->with('element:id,name,code,cost,price,type')
             ->get();
 
         $this->elements = [];
@@ -207,7 +222,7 @@ class ModalCreateProductComponent extends Component
                 'product_id' => $element->product_id,
                 'product' => $element->element,
                 'qty' => $element->qty,
-                'price' => $element->price ?? $element->element->price ?? 0,
+                'price' => (int) $element->element->cost * (int) $element->qty,
             ];
         }
     }
@@ -242,20 +257,22 @@ class ModalCreateProductComponent extends Component
     public function addElement($productId)
     {
         $product = Product::find($productId);
-        if ($product) {
+        if ($product && $product->type === 'product') {
             $elementKey = $productId;
             $this->elements[$elementKey] = [
                 'product' => $product,
                 'element_id' => $productId,
                 'qty' => 1,
-                'price' => $product->price ?? 0,
+                'price' => $product->cost ?? 0,
             ];
+            $this->recalculateComboCost();
         }
     }
 
     public function removeElement($elementId)
     {
         unset($this->elements[$elementId]);
+        $this->recalculateComboCost();
     }
 
     public function updatedElements($value, $key)
@@ -265,10 +282,26 @@ class ModalCreateProductComponent extends Component
             $elementId = explode('.', $key)[0];
             if (isset($this->elements[$elementId])) {
                 $qty = $this->elements[$elementId]['qty'] ?? 1;
-                $price = $this->elements[$elementId]['product']['price'] ?? 0;
-                $this->elements[$elementId]['price'] = $qty * $price;
+                $cost = $this->elements[$elementId]['product']['cost'] ?? 0;
+                $this->elements[$elementId]['price'] = $qty * $cost;
+                $this->recalculateComboCost();
             }
         }
+    }
+
+    private function recalculateComboCost(): void
+    {
+        if (($this->product['type'] ?? null) !== 'combo') {
+            return;
+        }
+
+        $this->product['cost'] = collect($this->elements)->sum(function ($element): int {
+            $quantity = max(1, (int) ($element['qty'] ?? 1));
+            $cost = (int) ($element['product']['cost'] ?? 0);
+
+            return $quantity * $cost;
+        });
+        $this->product['qty'] = 0;
     }
 
     public function save()
@@ -297,6 +330,18 @@ class ModalCreateProductComponent extends Component
         try {
             $this->product['user_id'] = auth()->id();
 
+            if (($this->product['type'] ?? null) === 'combo') {
+                if ($this->elements === []) {
+                    throw new \RuntimeException('Combo phải có ít nhất một thành phần.');
+                }
+
+                if (str_starts_with((string) $this->product['code'], 'HH/')) {
+                    $this->product['code'] = 'CB/' . substr($this->product['code'], 3);
+                }
+
+                $this->recalculateComboCost();
+            }
+
             $this->validate();
 
             // Convert array to model for save
@@ -318,9 +363,14 @@ class ModalCreateProductComponent extends Component
 
             if (! $this->product_id) {
                 $productModel->branches()->sync($branches);
-                $productModel->branches()->updateExistingPivot($branches, ['qty' => $this->product['qty'] ?? 0]);
+                $productModel->branches()->updateExistingPivot($branches, [
+                    'qty' => ($this->product['type'] ?? null) === 'combo' ? 0 : ($this->product['qty'] ?? 0),
+                ]);
             } else {
                 $productModel->branches()->syncWithoutDetaching($branches);
+                if (($this->product['type'] ?? null) === 'combo') {
+                    $productModel->branches()->updateExistingPivot($branches, ['qty' => 0]);
+                }
             }
 
             if ($this->product['unit'] && count($this->units) > 0) {
@@ -336,6 +386,7 @@ class ModalCreateProductComponent extends Component
                 ProductElement::where('product_id', $productModel->id)->delete();
                 foreach ($this->elements as $element) {
                     $element['product_id'] = $productModel->id;
+                    $element['price'] = (int) ($element['product']['cost'] ?? 0);
                     unset($element['product']);
                     ProductElement::create($element);
                 }

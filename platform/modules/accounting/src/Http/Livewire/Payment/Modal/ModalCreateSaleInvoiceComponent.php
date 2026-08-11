@@ -17,6 +17,7 @@ use Polirium\Modules\Product\Http\Model\Payment\PaymentProduct;
 use Polirium\Modules\Product\Http\Model\Payment\SaleChannel;
 use Polirium\Modules\Product\Http\Model\Product;
 use Polirium\Modules\Product\Http\Model\ProductLog;
+use Polirium\Modules\Product\Http\Support\ProductInventorySupport;
 
 class ModalCreateSaleInvoiceComponent extends Component
 {
@@ -631,25 +632,16 @@ class ModalCreateSaleInvoiceComponent extends Component
                     $paymentModel = Payment::create($this->payment);
                 }
 
+                $savedItems = collect();
+
                 foreach ($this->products as $key => $value) {
-                    $product = $value['product'];
                     unset($value['product']);
                     $value['product_payment_id'] = $paymentModel->id;
-                    PaymentProduct::create($value);
+                    $savedItems->push(PaymentProduct::create($value));
+                }
 
-                    if (! in_array($paymentModel->status, ['temp', 'draft'], true)) {
-                        product_logs(
-                            $value['product_id'],
-                            $paymentModel->id,
-                            Payment::class,
-                            $value['amount'],
-                            $product['price'],
-                            $value['total'],
-                            false,
-                            $paymentModel->branch_id,
-                            now()
-                        );
-                    }
+                if (! in_array($paymentModel->status, ['temp', 'draft'], true)) {
+                    ProductInventorySupport::exportPaymentItems($savedItems, $paymentModel);
                 }
 
                 // Save Delivery

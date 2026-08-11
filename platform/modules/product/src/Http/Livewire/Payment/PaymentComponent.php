@@ -17,6 +17,7 @@ use Polirium\Modules\Product\Http\Model\Payment\PaymentPartnerDelivery;
 use Polirium\Modules\Product\Http\Model\Payment\PaymentProduct;
 use Polirium\Modules\Product\Http\Model\Payment\SaleChannel;
 use Polirium\Modules\Product\Http\Model\Product;
+use Polirium\Modules\Product\Http\Support\ProductInventorySupport;
 use Polirium\Modules\Product\Support\VietQrService;
 
 class PaymentComponent extends Component
@@ -863,33 +864,15 @@ class PaymentComponent extends Component
                     PaymentDelivery::create($this->payment_delivery);
                 }
 
+                $savedItems = collect();
+
                 foreach ($this->products as $key => $value) {
-                    $product = $value['product'];
                     unset($value['product']);
                     $value['product_payment_id'] = $paymentModel->id;
-                    PaymentProduct::create($value);
-
-                    // Kiểm tra tồn kho trước khi xuất (trừ sản phẩm dịch vụ)
-                    $productModel = Product::find($value['product_id']);
-                    if ($productModel && $productModel->type !== 'service') {
-                        $branchQty = $productModel->branches?->where('id', $paymentModel->branch_id)->first()?->pivot?->qty ?? 0;
-                        if ($branchQty <= 0 || $branchQty < $value['amount']) {
-                            throw new \Exception(__('modules/product::product.out_of_stock') . ': ' . ($productModel->name ?? ''));
-                        }
-                    }
-
-                    product_logs(
-                        $value['product_id'],
-                        $paymentModel->id,
-                        Payment::class,
-                        $value['amount'],
-                        $product['price'],
-                        $value['total'],
-                        false,
-                        $paymentModel->branch_id,
-                        now()
-                    );
+                    $savedItems->push(PaymentProduct::create($value));
                 }
+
+                ProductInventorySupport::exportPaymentItems($savedItems, $paymentModel);
             });
         } catch (\Exception $e) {
             $this->dispatch('error', 'Có lỗi xảy ra khi lưu hóa đơn: ' . $e->getMessage());
@@ -1140,36 +1123,20 @@ class PaymentComponent extends Component
             return;
         }
 
-        // Trừ tồn kho cho các sản phẩm
-        foreach ($payment->products as $paymentProduct) {
-            $product = $paymentProduct->product;
-            if ($product) {
-                // Nếu không phải dịch vụ, kiểm tra tồn kho
-                if ($product->type !== 'service') {
-                    $branchQty = $product->branches?->where('id', $payment->branch_id)->first()?->pivot?->qty ?? 0;
-                    if ($branchQty <= 0 || $branchQty < $paymentProduct->amount) {
-                        $this->dispatch('error', __('modules/product::product.out_of_stock'));
-                        return;
-                    }
-                }
-                product_logs(
-                    $paymentProduct->product_id,
-                    $payment->id,
-                    Payment::class,
-                    $paymentProduct->amount,
-                    $product->price ?? $paymentProduct->value,
-                    $paymentProduct->total,
-                    false,
-                    $payment->branch_id,
-                    now()
-                );
-            }
-        }
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($payment): void {
+                ProductInventorySupport::exportPaymentItems($payment->products, $payment);
 
-        // Cập nhật status thành 'success' và đánh dấu ngày hoàn thành
-        $payment->status = 'success';
-        $payment->completed_at = now();
-        $payment->save();
+                // Cập nhật status thành 'success' và đánh dấu ngày hoàn thành
+                $payment->status = 'success';
+                $payment->completed_at = now();
+                $payment->save();
+            });
+        } catch (\Throwable $exception) {
+            $this->dispatch('error', $exception->getMessage());
+
+            return;
+        }
 
         // Cập nhật status trong component để view hiển thị đúng các nút action
         $this->payment['status'] = 'success';
