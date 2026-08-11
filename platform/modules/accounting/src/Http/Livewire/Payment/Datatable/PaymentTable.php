@@ -11,6 +11,7 @@ use Polirium\Datatable\Facades\PowerGrid;
 use Polirium\Datatable\PowerGridFields;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
 use Polirium\Modules\Product\Http\Model\Payment\PaymentMethod;
+use Polirium\Modules\Product\Http\Support\PaymentInventorySupport;
 
 final class PaymentTable extends BaseTable
 {
@@ -823,21 +824,8 @@ final class PaymentTable extends BaseTable
             return;
         }
 
-        \DB::transaction(function () use ($payment) {
-            // Giữ log xuất kho và ghi log hoàn kho đối ứng. Việc xóa log rồi tính lại
-            // từ 0 làm mất tồn đầu khi sản phẩm không có đủ lịch sử product_logs.
-            foreach ($payment->products as $item) {
-                product_logs(
-                    $item->product_id,
-                    $payment->id,
-                    Payment::class,
-                    $item->amount,
-                    $item->product?->cost ?? 0,
-                    0,
-                    true,
-                    $payment->branch_id
-                );
-            }
+        $restored = \DB::transaction(function () use ($payment) {
+            $restored = PaymentInventorySupport::restoreExportedStock($payment);
 
             $payment->status = 'cancel';
             $payment->save();
@@ -846,9 +834,16 @@ final class PaymentTable extends BaseTable
                 $payment->finance->status = 'cancelled';
                 $payment->finance->save();
             }
+
+            return $restored;
         });
 
-        $this->dispatch('success', 'Đã hủy hóa đơn và hoàn lại tồn kho.');
+        $this->dispatch(
+            'success',
+            $restored > 0
+                ? 'Đã hủy hóa đơn và hoàn lại tồn kho đã xuất.'
+                : 'Đã hủy hóa đơn tạm; tồn kho không thay đổi.'
+        );
     }
 
     public array $filters = [

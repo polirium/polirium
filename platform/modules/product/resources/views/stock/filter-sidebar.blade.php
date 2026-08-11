@@ -24,8 +24,23 @@
             </div>
         </div>
 
+        {{-- Search by product code --}}
+        <div class="mb-3">
+            <label class="form-label small text-muted">{{ __('modules/product::product.product_code') }}</label>
+            <div class="input-icon">
+                <span class="input-icon-addon">
+                    {!! tabler_icon('barcode', ['class' => 'icon']) !!}
+                </span>
+                <input
+                       type="text"
+                       class="form-control"
+                       wire:model.live.debounce.300ms="search.product_code"
+                       placeholder="{{ __('core/base::general.search_placeholder') }}">
+            </div>
+        </div>
+
         {{-- Active filter indicator --}}
-        @if (!empty($search['name']))
+        @if (!empty($search['name']) || !empty($search['product_code']))
             <div class="bg-primary-lt d-flex align-items-center justify-content-between rounded p-2">
                 <span class="small text-primary">
                     {!! tabler_icon('filter-check', ['class' => 'icon icon-sm me-1']) !!}

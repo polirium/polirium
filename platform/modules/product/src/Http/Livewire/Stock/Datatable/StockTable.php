@@ -18,14 +18,36 @@ final class StockTable extends BaseTable
 
     protected int $tab = 1;
 
+    public array $sidebarFilters = [
+        'name' => '',
+        'product_code' => '',
+    ];
+
     protected function getListeners(): array
     {
         return array_merge(
             parent::getListeners(),
             [
                 'refresh-datatable-stocks' => '$refresh',
+                'datatable-stock-filter' => 'applyFilter',
+                'datatable-stock-filter-clear' => 'clearSidebarFilter',
             ]
         );
+    }
+
+    public function applyFilter($value, $key): void
+    {
+        if (array_key_exists($key, $this->sidebarFilters)) {
+            $this->sidebarFilters[$key] = $value;
+        }
+    }
+
+    public function clearSidebarFilter(): void
+    {
+        $this->sidebarFilters = [
+            'name' => '',
+            'product_code' => '',
+        ];
     }
 
     public function setUp(): array
@@ -46,6 +68,16 @@ final class StockTable extends BaseTable
         return Stock::query()
             ->when(user_branch(), function ($q) {
                 // filter by branch
+            })
+            ->when(! empty($this->sidebarFilters['name']), function ($query) {
+                $query->whereHas('products.product', function ($productQuery) {
+                    $productQuery->where('name', 'like', '%' . $this->sidebarFilters['name'] . '%');
+                });
+            })
+            ->when(! empty($this->sidebarFilters['product_code']), function ($query) {
+                $query->whereHas('products.product', function ($productQuery) {
+                    $productQuery->where('code', 'like', '%' . $this->sidebarFilters['product_code'] . '%');
+                });
             })
             ->orderByDesc('id');
     }

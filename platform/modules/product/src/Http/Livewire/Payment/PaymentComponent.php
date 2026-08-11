@@ -885,7 +885,9 @@ class PaymentComponent extends Component
                         $value['amount'],
                         $product['price'],
                         $value['total'],
-                        false
+                        false,
+                        $paymentModel->branch_id,
+                        now()
                     );
                 }
             });
@@ -1157,7 +1159,9 @@ class PaymentComponent extends Component
                     $paymentProduct->amount,
                     $product->price ?? $paymentProduct->value,
                     $paymentProduct->total,
-                    false
+                    false,
+                    $payment->branch_id,
+                    now()
                 );
             }
         }

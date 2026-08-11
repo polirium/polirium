@@ -8,6 +8,7 @@ class FilterSidebarComponent extends Component
 {
     public $search = [
         'name' => '',
+        'product_code' => '',
     ];
 
     public function updatedSearch($value, $key)
@@ -17,8 +18,11 @@ class FilterSidebarComponent extends Component
 
     public function clearFilter()
     {
-        $this->search = ['name' => ''];
-        $this->dispatch('datatable-stock-filter', '', 'name');
+        $this->search = [
+            'name' => '',
+            'product_code' => '',
+        ];
+        $this->dispatch('datatable-stock-filter-clear');
     }
 
     public function render()

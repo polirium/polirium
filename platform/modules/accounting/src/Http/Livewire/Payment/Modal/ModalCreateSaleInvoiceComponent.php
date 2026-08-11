@@ -617,7 +617,7 @@ class ModalCreateSaleInvoiceComponent extends Component
                                 ->get();
                             foreach ($oldLogs as $oldLog) {
                                 // Original log decreased stock (increase=false), so reverse by increasing back
-                                change_product_amount($oldLog->product_id, $oldLog->amount, true);
+                                change_product_amount($oldLog->product_id, $oldLog->amount, true, $oldLog->branch_id);
                             }
                             ProductLog::where('productable_id', $paymentModel->id)
                                 ->where('productable_type', Payment::class)
@@ -637,15 +637,19 @@ class ModalCreateSaleInvoiceComponent extends Component
                     $value['product_payment_id'] = $paymentModel->id;
                     PaymentProduct::create($value);
 
-                    product_logs(
-                        $value['product_id'],
-                        $paymentModel->id,
-                        Payment::class,
-                        $value['amount'],
-                        $product['price'],
-                        $value['total'],
-                        false
-                    );
+                    if (! in_array($paymentModel->status, ['temp', 'draft'], true)) {
+                        product_logs(
+                            $value['product_id'],
+                            $paymentModel->id,
+                            Payment::class,
+                            $value['amount'],
+                            $product['price'],
+                            $value['total'],
+                            false,
+                            $paymentModel->branch_id,
+                            now()
+                        );
+                    }
                 }
 
                 // Save Delivery

@@ -59,6 +59,7 @@ class AccountingController extends BaseController
         $newPayment = $original->replicate(['uuid', 'code', 'created_at', 'updated_at']);
         $newPayment->code = code_generate('HD', \Polirium\Modules\Product\Http\Model\Payment\Payment::max('id'));
         $newPayment->status = 'temp'; // Set as temp/draft
+        $newPayment->completed_at = null;
         $newPayment->created_at = now();
         $newPayment->save();
 

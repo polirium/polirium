@@ -5,6 +5,7 @@ namespace Polirium\Modules\Accounting\Http\Livewire\Payment;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
+use Polirium\Modules\Product\Http\Support\PaymentInventorySupport;
 
 class PaymentActions extends Component
 {
@@ -47,21 +48,8 @@ class PaymentActions extends Component
                 return;
             }
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($payment) {
-                // Giữ log xuất kho và ghi log hoàn kho đối ứng. Tính lại từ 0 sau khi
-                // xóa log không thể khôi phục tồn đầu không có trong product_logs.
-                foreach ($payment->products as $item) {
-                    product_logs(
-                        $item->product_id,
-                        $payment->id,
-                        Payment::class,
-                        $item->amount,
-                        $item->product?->cost ?? 0,
-                        0,
-                        true,
-                        $payment->branch_id
-                    );
-                }
+            $restored = \Illuminate\Support\Facades\DB::transaction(function () use ($payment) {
+                $restored = PaymentInventorySupport::restoreExportedStock($payment);
 
                 // Update Status
                 $payment->status = 'cancel';
@@ -71,10 +59,17 @@ class PaymentActions extends Component
                     $payment->finance->status = 'cancelled';
                     $payment->finance->save();
                 }
+
+                return $restored;
             });
 
             $this->status = 'cancel'; // Update local status
-            $this->dispatch('success', 'Đã hủy hóa đơn và hoàn lại tồn kho.');
+            $this->dispatch(
+                'success',
+                $restored > 0
+                    ? 'Đã hủy hóa đơn và hoàn lại tồn kho đã xuất.'
+                    : 'Đã hủy hóa đơn tạm; tồn kho không thay đổi.'
+            );
 
             // Refresh the parent table to update status badge
             $this->dispatch('refresh-datatable-product-payments');
@@ -108,20 +103,8 @@ class PaymentActions extends Component
                 return;
             }
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($payment) {
-                // Revert Stock (Add back to stock) with proper audit trail
-                foreach ($payment->products as $item) {
-                    product_logs(
-                        $item->product_id,
-                        $payment->id,
-                        Payment::class,
-                        $item->amount,
-                        $item->product?->cost ?? 0,
-                        0,
-                        true, // increase (revert sale)
-                        $payment->branch_id
-                    );
-                }
+            $restored = \Illuminate\Support\Facades\DB::transaction(function () use ($payment) {
+                $restored = PaymentInventorySupport::restoreExportedStock($payment);
 
                 // Update Status
                 $payment->status = 'delivery_failed';
@@ -131,10 +114,17 @@ class PaymentActions extends Component
                     $payment->finance->status = 'cancelled';
                     $payment->finance->save();
                 }
+
+                return $restored;
             });
 
             $this->status = 'delivery_failed';
-            $this->dispatch('success', 'Đã đánh dấu không giao được và hoàn lại tồn kho.');
+            $this->dispatch(
+                'success',
+                $restored > 0
+                    ? 'Đã đánh dấu không giao được và hoàn lại tồn kho đã xuất.'
+                    : 'Đã đánh dấu không giao được; tồn kho không thay đổi.'
+            );
 
             $this->dispatch('refresh-datatable-product-payments');
             $this->dispatch('pg:eventRefresh-product-payment-table');
@@ -170,10 +160,14 @@ class PaymentActions extends Component
             \Illuminate\Support\Facades\DB::transaction(function () use ($payment) {
                 // Deduct Stock
                 foreach ($payment->products as $item) {
-                    change_product_amount(
+                    product_logs(
                         $item->product_id,
+                        $payment->id,
+                        Payment::class,
                         $item->amount,
-                        false, // decrease (sale)
+                        $item->product?->price ?? $item->value ?? 0,
+                        $item->total ?? 0,
+                        false,
                         $payment->branch_id
                     );
                 }
@@ -270,6 +264,7 @@ class PaymentActions extends Component
                 $newPayment = $original->replicate(['uuid', 'code', 'created_at', 'updated_at']);
                 $newPayment->code = code_generate('HD', Payment::max('id'));
                 $newPayment->status = 'temp';
+                $newPayment->completed_at = null;
                 $newPayment->created_at = now();
                 $newPayment->save();
 
