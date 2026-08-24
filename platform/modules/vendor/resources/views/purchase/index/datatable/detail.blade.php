@@ -16,9 +16,9 @@
     $needPay = (float)($row->need_pay ?? 0) - (float)($row->value ?? 0);
     $canViewPrice = auth()->user()?->can('vendors.purchases.view-price');
     $statusColor = match($row->status ?? 'temp') {
-        'completed', 'paid' => 'success',
+        'success', 'completed', 'paid' => 'success',
         'pending', 'temp' => 'warning',
-        'cancelled' => 'danger',
+        'cancel', 'cancelled' => 'danger',
         default => 'secondary'
     };
 @endphp
@@ -36,9 +36,9 @@
             </div>
             <span class="badge bg-{{ $statusColor }}-lt text-{{ $statusColor }} fs-6">
                 {{ $row->status_name ?? match($row->status ?? 'temp') {
-                    'completed', 'paid' => __('modules/vendor::purchase.status.success'),
+                    'success', 'completed', 'paid' => __('modules/vendor::purchase.status.success'),
                     'pending', 'temp' => __('modules/vendor::purchase.status.temp'),
-                    'cancelled' => 'Đã hủy',
+                    'cancel', 'cancelled' => 'Đã hủy',
                     default => $row->status
                 } }}
             </span>
@@ -224,7 +224,7 @@
         {{-- Action Toolbar --}}
         <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
             <div class="d-flex gap-2">
-                @if(($row->status ?? '') !== 'cancelled')
+                @if(!in_array($row->status ?? '', ['cancel', 'cancelled'], true))
                     @can('vendors.purchases.edit')
                     {{-- Cancel Button (soft cancel - giữ record) --}}
                     <x-ui::button
@@ -254,7 +254,7 @@
                 </x-ui::button>
                 @endcan
 
-                @if(($row->status ?? '') !== 'cancelled')
+                @if(!in_array($row->status ?? '', ['cancel', 'cancelled'], true))
                     @can('vendors.purchases.create')
                     {{-- Copy Button --}}
                     <x-ui::button
@@ -283,7 +283,7 @@
             </div>
 
             <div class="d-flex gap-2">
-                @if(($row->status ?? '') !== 'cancelled')
+                @if(!in_array($row->status ?? '', ['cancel', 'cancelled'], true))
                     @can('vendors.purchases.edit')
                     {{-- Open/Edit Button --}}
                     <x-ui::button

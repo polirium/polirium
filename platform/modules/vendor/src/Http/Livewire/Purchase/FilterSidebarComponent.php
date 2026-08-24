@@ -17,21 +17,21 @@ class FilterSidebarComponent extends Component
     public function mount()
     {
         $this->statuses = [
-            'pending' => trans('pending'),
-            'completed' => trans('completed'),
-            'cancelled' => trans('cancelled'),
+            'temp' => trans('pending'),
+            'success' => trans('completed'),
+            'cancel' => trans('cancelled'),
         ];
     }
 
     public function updatedSearch($value, $key)
     {
-        $this->dispatch("datatable-purchase-filter", $value, $key);
+        $this->dispatch('datatable-purchase-filter', $value, $key);
     }
 
     public function clearFilter()
     {
         $this->search = ['code' => '', 'status' => '', 'date' => ''];
-        $this->dispatch("datatable-purchase-filter-clear");
+        $this->dispatch('datatable-purchase-filter-clear');
     }
 
     public function render()

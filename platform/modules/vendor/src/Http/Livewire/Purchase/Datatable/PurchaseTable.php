@@ -3,14 +3,14 @@
 namespace Polirium\Modules\Vendor\Http\Livewire\Purchase\Datatable;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
-use Polirium\Datatable\Button;
 use Polirium\Datatable\Column;
-use Polirium\Datatable\Facades\PowerGrid;
 use Polirium\Datatable\Components\SetUp\Exportable;
+use Polirium\Datatable\Facades\PowerGrid;
 use Polirium\Datatable\PowerGridFields;
-use Polirium\Modules\Product\Http\Model\Product;
+use Polirium\Modules\Product\Http\Model\ProductLog;
 use Polirium\Modules\Vendor\Http\Model\Purchase\Purchase;
 use Polirium\Modules\Vendor\Http\Model\Vendor;
 
@@ -89,7 +89,7 @@ final class PurchaseTable extends BaseTable
                     $q->whereDate('created_at', $dates[0]);
                 }
             })
-            ->orderByDesc("id");
+            ->orderByDesc('id');
     }
 
     public function relationSearch(): array
@@ -107,22 +107,22 @@ final class PurchaseTable extends BaseTable
             ->add('id')
             ->add('code')
             ->add('created_at')
-            ->add('vendor_name', fn(Purchase $model) => $model->vendor?->name ?? '-')
-            ->add('branch_name', fn(Purchase $model) => $model->branch?->name ?? '-')
-            ->add('user_created_name', fn(Purchase $model) => $model->userCreated?->name ?? '-')
-            ->add('total_value', fn(Purchase $model) => auth()->user()?->can('vendors.purchases.view-price') ? core_number_format($model->total_value_sum ?? $model->total ?? 0) : '***')
+            ->add('vendor_name', fn (Purchase $model) => $model->vendor?->name ?? '-')
+            ->add('branch_name', fn (Purchase $model) => $model->branch?->name ?? '-')
+            ->add('user_created_name', fn (Purchase $model) => $model->userCreated?->name ?? '-')
+            ->add('total_value', fn (Purchase $model) => auth()->user()?->can('vendors.purchases.view-price') ? core_number_format($model->total_value_sum ?? $model->total ?? 0) : '***')
             ->add('products_count')
-            ->add('products', fn(Purchase $model) => $model->products)
-            ->add('payment_formatted', fn(Purchase $model) => auth()->user()?->can('vendors.purchases.view-price') ? core_number_format($model->value ?? 0) : '***')
-            ->add('need_pay_formatted', fn(Purchase $model) => auth()->user()?->can('vendors.purchases.view-price') ? core_number_format($model->need_pay ?? 0) : '***')
+            ->add('products', fn (Purchase $model) => $model->products)
+            ->add('payment_formatted', fn (Purchase $model) => auth()->user()?->can('vendors.purchases.view-price') ? core_number_format($model->value ?? 0) : '***')
+            ->add('need_pay_formatted', fn (Purchase $model) => auth()->user()?->can('vendors.purchases.view-price') ? core_number_format($model->need_pay ?? 0) : '***')
             ->add('status')
-            ->add('status_name', fn(Purchase $model) => match($model->status ?? 'temp') {
-                'completed', 'paid' => __('modules/vendor::purchase.status.success'),
+            ->add('status_name', fn (Purchase $model) => match($model->status ?? 'temp') {
+                'success', 'completed', 'paid' => __('modules/vendor::purchase.status.success'),
                 'pending', 'temp' => __('modules/vendor::purchase.status.temp'),
-                'cancelled' => 'Đã hủy',
+                'cancel', 'cancelled' => 'Đã hủy',
                 default => $model->status ?? 'temp'
             })
-            ->add('refund_id', fn(Purchase $model) => $model->refunds->last()?->id)
+            ->add('refund_id', fn (Purchase $model) => $model->refunds->last()?->id)
             ->add('total')
             ->add('note')
             ->add('value')
@@ -169,7 +169,7 @@ final class PurchaseTable extends BaseTable
     }
 
     /**
-     * Hủy phiếu nhập: chuyển status → cancelled, revert tồn kho nhưng GIỮ record.
+     * Hủy phiếu nhập: chuyển status → cancel, revert tồn kho nhưng GIỮ record.
      */
     public function cancel($id): void
     {
@@ -189,43 +189,28 @@ final class PurchaseTable extends BaseTable
             return;
         }
 
-        if ($purchase->status === 'cancelled') {
+        if (in_array($purchase->status, ['cancel', 'cancelled'], true)) {
             $this->dispatch('error', 'Phiếu nhập đã bị hủy trước đó.');
 
             return;
         }
 
-        // If status is success/completed, revert stock and vendor stats
-        if (in_array($purchase->status, ['success', 'completed'])) {
-            // Delete associated ProductLogs to clean up "Thẻ kho"
-            \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Purchase::class)
-                ->where('productable_id', $purchase->id)
-                ->delete();
+        try {
+            DB::transaction(function () use ($purchase): void {
+                $this->revertCompletedPurchase($purchase);
 
-            foreach ($purchase->products as $item) {
-                change_product_amount(
-                    $item->product_id,
-                    $item->amount,
-                    false, // decrease (revert addition)
-                    $purchase->branch_id
-                );
-            }
+                // vendor_purchases.status only accepts: temp, success, refund, cancel.
+                $purchase->update(['status' => 'cancel']);
+            });
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->dispatch('error', 'Không thể hủy phiếu nhập. Dữ liệu chưa bị thay đổi, vui lòng thử lại.');
 
-            // Revert vendor stats
-            if ($purchase->vendor_id) {
-                $vendor = Vendor::find($purchase->vendor_id);
-                if ($vendor) {
-                    $vendor->decrement('debt', ((float) $purchase->need_pay - (float) $purchase->value));
-                    $vendor->decrement('total', $purchase->need_pay);
-                    $vendor->decrement('total_purchase', $purchase->need_pay);
-                }
-            }
+            return;
         }
 
-        // Chuyển status sang cancelled (giữ record + products)
-        $purchase->update(['status' => 'cancelled']);
-
         $this->dispatch('success', 'Đã hủy phiếu nhập hàng và cập nhật tồn kho.');
+        $this->dispatch('pg:eventRefresh-' . $this->tableName);
     }
 
     /**
@@ -247,42 +232,70 @@ final class PurchaseTable extends BaseTable
             return;
         }
 
-        // If status is success, we need to revert the stock and vendor stats
-        if (in_array($purchase->status, ['success', 'completed'])) {
-            // Delete associated ProductLogs first to clean up "Thẻ kho"
-            \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Purchase::class)
-                ->where('productable_id', $purchase->id)
-                ->delete();
-
-            foreach ($purchase->products as $item) {
-                // Revert stock quantity directly without creating a new log
-                change_product_amount(
-                    $item->product_id,
-                    $item->amount,
-                    false, // decrease (revert addition)
-                    $purchase->branch_id
-                );
-            }
-
-            // Revert vendor stats
-            if ($purchase->vendor_id) {
-                $vendor = Vendor::find($purchase->vendor_id);
-                if ($vendor) {
-                    $vendor->decrement('debt', ((float) $purchase->need_pay - (float) $purchase->value));
-                    $vendor->decrement('total', $purchase->need_pay);
-                    $vendor->decrement('total_purchase', $purchase->need_pay);
-                }
-            }
-        }
-
-        // Delete products
-        $purchase->products()->delete();
-
-        // Delete purchase
-        $purchase->delete();
+        DB::transaction(function () use ($purchase): void {
+            $this->revertCompletedPurchase($purchase);
+            $purchase->products()->delete();
+            $purchase->delete();
+        });
 
         $this->dispatch('success', 'Đã xóa phiếu nhập hàng và cập nhật tồn kho.');
     }
 
     public string $bulkDeletePermission = 'vendors.purchases.delete';
+
+    /**
+     * Reverse only stock that is still represented by this purchase's logs.
+     *
+     * An earlier failed cancel could already have deleted the logs and reduced
+     * stock before the invalid `cancelled` status caused the request to fail.
+     * Skipping a second reversal when no logs remain prevents double deduction.
+     */
+    private function revertCompletedPurchase(Purchase $purchase): bool
+    {
+        if (! in_array($purchase->status, ['success', 'completed', 'paid'], true)) {
+            return false;
+        }
+
+        $logs = ProductLog::query()
+            ->where('productable_type', Purchase::class)
+            ->where('productable_id', $purchase->id)
+            ->lockForUpdate()
+            ->get();
+
+        if ($logs->isEmpty()) {
+            return false;
+        }
+
+        foreach ($logs as $log) {
+            $quantity = abs((int) $log->amount_after - (int) $log->amount_before);
+
+            if ($quantity <= 0) {
+                continue;
+            }
+
+            $wasInbound = $log->direction === 'in'
+                || ($log->direction === null && $log->amount_after > $log->amount_before);
+
+            change_product_amount(
+                (int) $log->product_id,
+                $quantity,
+                ! $wasInbound,
+                $log->branch_id ?: $purchase->branch_id
+            );
+        }
+
+        ProductLog::whereKey($logs->pluck('id'))->delete();
+
+        if ($purchase->vendor_id) {
+            $vendor = Vendor::query()->lockForUpdate()->find($purchase->vendor_id);
+
+            if ($vendor) {
+                $vendor->decrement('debt', (float) $purchase->need_pay - (float) $purchase->value);
+                $vendor->decrement('total', (float) $purchase->need_pay);
+                $vendor->decrement('total_purchase', (float) $purchase->need_pay);
+            }
+        }
+
+        return true;
+    }
 }
