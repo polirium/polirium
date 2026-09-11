@@ -4,6 +4,7 @@ namespace Polirium\Modules\Product\Http\Support;
 
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Polirium\Modules\Product\Http\Model\Product;
 use Polirium\Modules\Product\Http\Model\ProductBranch;
 use Polirium\Modules\Product\Http\Model\ProductLog;
@@ -31,27 +32,40 @@ class ProductSupport
             $branch_id = user_branch() ?: 1; // Fallback to branch 1
         }
 
-        $after_amount = self::changeProductAmount($product, $amount, $increase, $branch_id);
+        DB::transaction(function () use (
+            $product,
+            $product_id,
+            $productable_id,
+            $productable_type,
+            $amount,
+            $value_before,
+            $value_after,
+            $increase,
+            $branch_id,
+            $logged_at
+        ) {
+            $after_amount = self::changeProductAmount($product, $amount, $increase, $branch_id);
 
-        $logData = [
-            'product_id' => $product_id,
-            'branch_id' => $branch_id,
-            'productable_id' => $productable_id,
-            'productable_type' => $productable_type,
-            'amount' => $amount,
-            'direction' => $increase ? 'in' : 'out',
-            'value_before' => $value_before,
-            'value_after' => $value_after,
-            'amount_before' => $after_amount['before'],
-            'amount_after' => $after_amount['current'],
-        ];
+            $logData = [
+                'product_id' => $product_id,
+                'branch_id' => $branch_id,
+                'productable_id' => $productable_id,
+                'productable_type' => $productable_type,
+                'amount' => $amount,
+                'direction' => $increase ? 'in' : 'out',
+                'value_before' => $value_before,
+                'value_after' => $value_after,
+                'amount_before' => $after_amount['before'],
+                'amount_after' => $after_amount['current'],
+            ];
 
-        if ($logged_at) {
-            $logData['created_at'] = $logged_at;
-            $logData['updated_at'] = $logged_at;
-        }
+            if ($logged_at) {
+                $logData['created_at'] = $logged_at;
+                $logData['updated_at'] = $logged_at;
+            }
 
-        (new ProductLog())->forceFill($logData)->save();
+            (new ProductLog())->forceFill($logData)->save();
+        });
     }
 
     public function changeProductAmount(int|Product $product, int $amount, bool $increase = true, ?int $branch_id = null): array
@@ -79,37 +93,36 @@ class ProductSupport
             $branch_id = user_branch() ?: 1; // Fallback to branch 1
         }
 
-        $product_branch = ProductBranch::where('branch_id', $branch_id)->where('product_id', $product->id)->first();
+        return DB::transaction(function () use ($product, $amount, $increase, $branch_id) {
+            $product_branch = ProductBranch::where('branch_id', $branch_id)
+                ->where('product_id', $product->id)
+                ->lockForUpdate()
+                ->first();
 
-        if (! $product_branch) {
-            $product_branch = new ProductBranch();
-            $product_branch->product_id = $product->id;
-            $product_branch->branch_id = $branch_id;
-            $product_branch->qty = 0;
+            if (! $product_branch) {
+                $product_branch = new ProductBranch();
+                $product_branch->product_id = $product->id;
+                $product_branch->branch_id = $branch_id;
+                $product_branch->qty = 0;
+                $product_branch->save();
+
+                $product_branch = ProductBranch::where('id', $product_branch->id)
+                    ->lockForUpdate()
+                    ->first();
+            }
+
+            $previous_amount = (int) ($product_branch->qty ?: 0);
+            $newQty = $increase
+                ? $previous_amount + $amount
+                : max(0, $previous_amount - $amount);
+
+            $product_branch->qty = $newQty;
             $product_branch->save();
 
-            $product_branch->refresh();
-        }
-
-        $previous_amount = $product_branch?->qty ?: 0;
-
-        if ($increase) {
-            $product_branch->increment('qty', $amount);
-        } else {
-            // Không cho tồn kho xuống dưới 0
-            $newQty = $previous_amount - $amount;
-            if ($newQty < 0) {
-                $product_branch->update(['qty' => 0]);
-            } else {
-                $product_branch->decrement('qty', $amount);
-            }
-        }
-
-        $product_branch->refresh();
-
-        return [
-            'before' => $previous_amount,
-            'current' => $product_branch->qty,
-        ];
+            return [
+                'before' => $previous_amount,
+                'current' => $newQty,
+            ];
+        });
     }
 }
