@@ -245,7 +245,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @forelse($this->paymentBreakdown as $code => $info)
+                                            @forelse(collect($this->paymentBreakdown)->where('count', '>', 0) as $code => $info)
                                                 <tr
                                                     wire:click="$set('paymentMethod', '{{ $paymentMethod === $code ? '' : $code }}')"
                                                     style="cursor: pointer;"
@@ -292,7 +292,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @forelse($this->statusBreakdown as $statusKey => $info)
+                                            @forelse(collect($this->statusBreakdown)->where('count', '>', 0) as $statusKey => $info)
                                                 <tr
                                                     wire:click="$set('status', '{{ $this->status === $statusKey ? 'all' : $statusKey }}')"
                                                     style="cursor: pointer;"
@@ -345,7 +345,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @forelse($this->channelBreakdown as $channelId => $info)
+                                            @forelse(collect($this->channelBreakdown)->where('count', '>', 0) as $channelId => $info)
                                                 <tr
                                                     wire:click="toggleChannelFilter({{ $channelId }})"
                                                     style="cursor: pointer;"
@@ -391,7 +391,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @forelse($this->authorBreakdown as $aId => $info)
+                                            @forelse(collect($this->authorBreakdown)->where('count', '>', 0) as $aId => $info)
                                                 <tr
                                                     wire:click="$set('authorId', {{ $authorId == $aId ? 'null' : $aId }})"
                                                     style="cursor: pointer;"
@@ -436,7 +436,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @forelse($this->deliveryPartnerBreakdown as $dpId => $info)
+                                            @forelse(collect($this->deliveryPartnerBreakdown)->where('count', '>', 0) as $dpId => $info)
                                                 <tr
                                                     wire:click="toggleDeliveryPartnerFilter({{ $dpId }})"
                                                     style="cursor: pointer;"
@@ -675,7 +675,7 @@
                                     @php
                                         $totalPaymentAll = collect($this->paymentBreakdown)->sum('total');
                                     @endphp
-                                    @forelse($this->paymentBreakdown as $code => $info)
+                                    @forelse(collect($this->paymentBreakdown)->where('count', '>', 0) as $code => $info)
                                         <tr>
                                             <td>
                                                 <span class="badge bg-blue-lt me-1">{{ $info['label'] }}</span>
@@ -718,7 +718,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse($this->statusBreakdown as $status => $info)
+                                    @forelse(collect($this->statusBreakdown)->where('count', '>', 0) as $status => $info)
                                         <tr>
                                             <td>
                                                 @switch($status)
@@ -770,7 +770,7 @@
                                     @php
                                         $totalChannelAll = collect($this->channelBreakdown)->sum('total');
                                     @endphp
-                                    @forelse($this->channelBreakdown as $channelId => $info)
+                                    @forelse(collect($this->channelBreakdown)->where('count', '>', 0) as $channelId => $info)
                                         <tr>
                                             <td>{{ $info['name'] }}</td>
                                             <td class="text-center">{{ $info['count'] }}</td>
