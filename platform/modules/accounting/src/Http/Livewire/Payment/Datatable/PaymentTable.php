@@ -174,27 +174,39 @@ final class PaymentTable extends BaseTable
     private function recalculateProductInventory(int $productId): void
     {
         $logs = \Polirium\Modules\Product\Http\Model\ProductLog::where('product_id', $productId)
+            ->orderBy('branch_id')
             ->orderBy('created_at')
             ->orderBy('id')
             ->get();
 
-        $runningQty = 0;
+        $runningByBranch = [];
         foreach ($logs as $log) {
-            $before = $runningQty;
-            $delta = $log->amount_after - $log->amount_before; // giữ nguyên dấu gốc
-            $runningQty = $before + $delta;
+            $branchId = (int) ($log->branch_id ?: 1);
+            $before = $runningByBranch[$branchId] ?? 0;
+            $amount = abs((int) $log->amount);
+            $after = $log->direction === 'in'
+                ? $before + $amount
+                : ($log->direction === 'out' ? max(0, $before - $amount) : (int) $log->amount_after);
 
-            if ($log->amount_before !== $before || $log->amount_after !== $runningQty) {
+            if ((int) $log->amount_before !== $before || (int) $log->amount_after !== $after) {
                 $log->update([
                     'amount_before' => $before,
-                    'amount_after' => $runningQty,
+                    'amount_after' => $after,
                 ]);
             }
+
+            $runningByBranch[$branchId] = $after;
         }
 
-        // Sync products.qty và product_branches.qty
-        \Polirium\Modules\Product\Http\Model\Product::where('id', $productId)->update(['qty' => $runningQty]);
-        \DB::table('product_branches')->where('product_id', $productId)->update(['qty' => $runningQty]);
+        foreach ($runningByBranch as $branchId => $quantity) {
+            \DB::table('product_branches')
+                ->where('product_id', $productId)
+                ->where('branch_id', $branchId)
+                ->update(['qty' => $quantity]);
+        }
+
+        \Polirium\Modules\Product\Http\Model\Product::where('id', $productId)
+            ->update(['qty' => \DB::table('product_branches')->where('product_id', $productId)->sum('qty')]);
     }
 
     public string $sortField = 'id';
