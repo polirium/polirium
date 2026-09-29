@@ -46,12 +46,20 @@ class ProductSupport
         ) {
             $after_amount = self::changeProductAmount($product, $amount, $increase, $branch_id);
 
+            // Log the quantity that actually changed. Outbound operations are
+            // clamped at zero, so recording the requested amount would create
+            // fake stock movements when the requested quantity exceeds stock.
+            $actualAmount = abs($after_amount['current'] - $after_amount['before']);
+            if ($actualAmount === 0) {
+                return;
+            }
+
             $logData = [
                 'product_id' => $product_id,
                 'branch_id' => $branch_id,
                 'productable_id' => $productable_id,
                 'productable_type' => $productable_type,
-                'amount' => $amount,
+                'amount' => $actualAmount,
                 'direction' => $increase ? 'in' : 'out',
                 'value_before' => $value_before,
                 'value_after' => $value_after,
