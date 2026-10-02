@@ -25,7 +25,7 @@ class ProductSupport
         $product = Product::select(['id', 'type'])->find($product_id);
 
         if (! $product) {
-            return;
+            throw \Illuminate\Validation\ValidationException::withMessages(['products' => 'Hàng hóa không còn tồn tại. Không thể ghi nhận biến động kho.']);
         }
 
         if (is_null($branch_id)) {
@@ -84,10 +84,7 @@ class ProductSupport
         }
 
         if (! $product) {
-            return [
-                'before' => 0,
-                'current' => 0,
-            ];
+            throw \Illuminate\Validation\ValidationException::withMessages(['products' => 'Hàng hóa không còn tồn tại. Không thể thay đổi tồn kho.']);
         }
 
         // Dịch vụ không quản lý tồn kho

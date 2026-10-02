@@ -24,7 +24,27 @@ DB::transaction(function () use (&$report,$tables,$gz,$cutoff,$branchType,$logTy
     $stockLines=DB::table('product_stock_products')->get()->groupBy('stock_id');
     $verifiedPairs=[];
     foreach($branches->groupBy(fn($b)=>$b->product_id.':'.$b->branch_id) as $key=>$rows) if($rows->count()>1) $report['integrity_errors'][]=['duplicate_branch'=>$key];
+    foreach($branches as $branch) if(!$products->has($branch->product_id)) $report['integrity_errors'][]=['orphan_branch'=>$branch->id,'product'=>$branch->product_id,'qty'=>$branch->qty];
     foreach($logs as $log) if(!$products->has($log->product_id)) $report['integrity_errors'][]=['orphan_log'=>$log->id,'product'=>$log->product_id];
+    $relations=[
+        ['product_payment_products','product_payment_id','product_payments'],
+        ['product_refund_products','product_refund_id','product_refunds'],
+        ['product_payment_refund_products','product_payment_refund_id','product_payment_refunds'],
+        ['product_stock_products','stock_id','product_stocks'],
+        ['vendor_purchase_products','vendor_purchase_id','vendor_purchases'],
+        ['vendor_purchase_refund_products','vendor_purchase_refund_id','vendor_purchase_refunds'],
+        ['vendor_transfer_products','vendor_transfer_id','vendor_transfers'],
+    ];
+    foreach($relations as [$child,$foreign,$parent]) {
+        $parents=DB::table($parent)->pluck('id')->flip();
+        foreach(DB::table($child)->get() as $line) {
+            if(!$parents->has($line->$foreign)) $report['integrity_errors'][]=['table'=>$child,'row'=>$line->id,'missing_parent'=>$parent,'parent_id'=>$line->$foreign];
+            if($child!=='product_payment_products' && !$products->has($line->product_id)) $report['integrity_errors'][]=['table'=>$child,'row'=>$line->id,'product'=>$line->product_id];
+        }
+    }
+    foreach(DB::table('product_elements')->get() as $element) {
+        if(!$products->has($element->product_id) || !$products->has($element->element_id)) $report['integrity_errors'][]=['table'=>'product_elements','row'=>$element->id,'combo'=>$element->product_id,'element'=>$element->element_id];
+    }
     foreach(DB::table('product_stocks')->where('status','completed')->whereNull('deleted_at')->get() as $stock) {
         $lines=$stockLines->get($stock->id,collect())->filter(fn($line)=>$line->deleted_at===null);
         $increase=0; $decrease=0; $quantity=0; $value=0;

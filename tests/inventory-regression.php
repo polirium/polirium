@@ -6,7 +6,7 @@ $root = $argv[1] ?? dirname(__DIR__);
 require $root . '/vendor/autoload.php';
 $app = require $root . '/bootstrap/app.php';
 if (isset($argv[2])) {
-    foreach (['ProductLog', 'ProductSupport', 'DocumentInventorySupport', 'StockInventorySupport', 'PaymentInventorySupport'] as $class) {
+    foreach (['ProductLog', 'ProductSupport', 'ProductInventorySupport', 'DocumentInventorySupport', 'StockInventorySupport', 'PaymentInventorySupport'] as $class) {
         require $argv[2] . '/' . $class . '.php';
     }
 }
@@ -32,11 +32,12 @@ if (DB::connection()->getDriverName() !== 'sqlite' || DB::connection()->getDatab
     throw new RuntimeException('Unsafe test connection');
 }
 activity()->disableLogging();
-foreach (['products', 'product_branches', 'product_logs', 'product_stocks', 'product_stock_products', 'product_payments', 'vendor_purchases', 'vendor_transfers','product_refunds','product_payment_refunds'] as $table) {
+foreach (['products', 'product_elements', 'product_branches', 'product_logs', 'product_stocks', 'product_stock_products', 'product_payments', 'vendor_purchases', 'vendor_transfers','product_refunds','product_payment_refunds'] as $table) {
     Schema::create($table, function ($t) use ($table) {
         $t->id(); $t->string('uuid')->nullable(); $t->timestamps(); $t->softDeletes();
         switch ($table) {
             case 'products': $t->string('code'); $t->string('type'); $t->integer('cost')->default(10); break;
+            case 'product_elements': $t->integer('product_id'); $t->integer('element_id'); $t->integer('qty'); break;
             case 'product_branches': $t->integer('product_id'); $t->integer('branch_id'); $t->integer('qty'); $t->unique(['product_id','branch_id']); break;
             case 'product_logs':
                 foreach (['product_id','branch_id','productable_id','amount','amount_before','amount_after','value_before','value_after'] as $col) $t->integer($col);
@@ -127,6 +128,7 @@ product_logs($service->id,1,Purchase::class,3,0,0,true,1);
 $equal($qty($service->id),0,'service receipt changes no stock');
 $equal(ProductLog::count(),$beforeLogs,'service has no stock movement');
 $reject(fn () => product_logs($p->id,1,Purchase::class,-1,0,0,true,1),'negative movement amount');
+$reject(fn () => product_logs(999999,1,Purchase::class,1,0,0,true,1),'missing goods cannot silently skip stock');
 $reject(fn () => product_logs($p->id,1,Payment::class,13,0,0,false,1),'insufficient outbound is rejected instead of clamped');
 $equal($qty($p->id),12,'failed outbound cannot silently remove partial stock');
 
@@ -160,6 +162,14 @@ $equal($qty($p->id),20,'draft cancellation cannot fabricate stock');
 DB::table('product_refunds')->insert(['product_payment_id'=>$payment->id]);
 $reject(fn () => PaymentInventorySupport::restoreExportedStock($payment),'cannot restore full invoice after a return');
 $equal($qty($p->id),20,'return guard leaves stock intact');
+$missingRejected=false;
+try { Polirium\Modules\Product\Http\Support\ProductInventorySupport::exportPaymentItems([(object)['product_id'=>999999,'amount'=>1]], $payment); } catch (RuntimeException) { $missingRejected=true; }
+$equal($missingRejected,true,'invoice cannot export missing goods');
+$combo=Product::create(['code'=>'BAD-COMBO','type'=>'combo']);
+Polirium\Modules\Product\Http\Model\ProductElement::create(['product_id'=>$combo->id,'element_id'=>999999,'qty'=>1]);
+$missingElementRejected=false;
+try { Polirium\Modules\Product\Http\Support\ProductInventorySupport::requirements($combo,1); } catch (RuntimeException) { $missingElementRejected=true; }
+$equal($missingElementRejected,true,'combo cannot skip a deleted component');
 
 // A log-save failure rolls back the stock update itself.
 $failLog = true;

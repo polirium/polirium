@@ -52,7 +52,7 @@ final class ProductInventorySupport
             $product = $item->product ?? Product::find($item->product_id);
 
             if (! $product) {
-                continue;
+                throw new RuntimeException('Hàng hóa trên hóa đơn không còn tồn tại. Vui lòng kiểm tra lại trước khi xuất kho.');
             }
 
             self::mergeRequirements(
@@ -114,7 +114,7 @@ final class ProductInventorySupport
 
         foreach ($elements as $element) {
             if (! $element->element) {
-                continue;
+                throw new RuntimeException("Combo {$product->name} có thành phần đã bị xóa. Vui lòng kiểm tra lại cấu hình combo.");
             }
 
             self::mergeRequirements(
