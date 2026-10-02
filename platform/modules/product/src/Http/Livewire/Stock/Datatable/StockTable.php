@@ -146,33 +146,6 @@ final class StockTable extends BaseTable
     {
         $this->authorize('products.stock.delete');
 
-        $stock = Stock::with('products')->find($id);
-
-        if (! $stock) {
-            return;
-        }
-
-        // Chỉ revert nếu phiếu đã completed (đã thay đổi qty)
-        if ($stock->status === 'completed') {
-            // Xóa ProductLog liên quan
-            \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Stock::class)
-                ->where('productable_id', $stock->id)
-                ->delete();
-
-            // Revert số lượng sản phẩm
-            foreach ($stock->products as $item) {
-                $quantityDifference = $item->quantity_difference ?? 0;
-                if ($quantityDifference != 0) {
-                    change_product_amount(
-                        $item->product_id,
-                        abs($quantityDifference),
-                        $quantityDifference < 0, // reverse: nếu tăng thì giảm lại
-                        $stock->branch_id
-                    );
-                }
-            }
-        }
-
-        $stock->delete();
+        \Polirium\Modules\Product\Http\Support\StockInventorySupport::cancel((int) $id, true);
     }
 }

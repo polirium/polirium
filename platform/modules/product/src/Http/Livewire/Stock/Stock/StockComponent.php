@@ -326,7 +326,8 @@ class StockComponent extends Component
         }
 
         $this->validateOnly('stock.note');
-        $this->stock->save();
+        $this->authorize('products.stock.manage');
+        Stock::whereKey($this->stock_id)->where('status', 'completed')->update(['note' => $this->stock->note]);
 
         session()->flash('success', trans('modules/product::stock.note_updated'));
     }
@@ -340,33 +341,8 @@ class StockComponent extends Component
             return;
         }
 
-        if ($this->stock->status === 'cancelled') {
-            session()->flash('error', 'Phiếu kiểm kho đã bị hủy trước đó.');
-
-            return;
-        }
-
-        // Revert product logs nếu phiếu đã completed
-        if ($this->stock->status === 'completed') {
-            \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Stock::class)
-                ->where('productable_id', $this->stock->id)
-                ->delete();
-
-            // Revert số lượng sản phẩm
-            foreach ($this->products as $productId => $productData) {
-                $quantityDifference = $productData['quantity_difference'] ?? 0;
-                if ($quantityDifference != 0) {
-                    change_product_amount(
-                        $productId,
-                        abs($quantityDifference),
-                        $quantityDifference < 0, // reverse: nếu tăng thì giảm lại, nếu giảm thì tăng lại
-                        $this->stock->branch_id
-                    );
-                }
-            }
-        }
-
-        $this->stock->update(['status' => 'cancelled']);
+        $this->authorize('products.stock.delete');
+        \Polirium\Modules\Product\Http\Support\StockInventorySupport::cancel($this->stock_id);
 
         session()->flash('success', 'Đã hủy phiếu kiểm kho.');
 
@@ -431,37 +407,7 @@ class StockComponent extends Component
         // Validate all data with custom rules
         $this->validate();
 
-        // Save stock record
-        $this->stock->save();
-
-        // Save stock products
-        $this->stock->products()->forceDelete();
-        foreach ($this->products as $productId => $productData) {
-            $product = $productData['product'];
-            unset($productData['product']);
-
-            $productData['product_id'] = $product['id'];
-
-            $this->stock->products()->create($productData);
-
-            // Log product stock changes
-            $quantityDifference = $productData['quantity_difference'] ?? 0;
-
-            if ($this->stock->status === 'completed') {
-                if ($quantityDifference !== 0) {
-                    product_logs(
-                        $productId,
-                        $this->stock->id,
-                        Stock::class,
-                        abs($quantityDifference),
-                        $product['cost'] ?? 0,
-                        abs($productData['value_difference'] ?? 0),
-                        $quantityDifference > 0, // true if increase, false if decrease
-                        $this->stock->branch_id
-                    );
-                }
-            }
-        }
+        \Polirium\Modules\Product\Http\Support\StockInventorySupport::save($this->stock, $this->products);
 
         // Show success message
         session()->flash('success', trans('modules/product::stock.saved_successfully'));

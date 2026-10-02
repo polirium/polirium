@@ -148,6 +148,7 @@ final class RefundTable extends BaseTable
         }
 
         DB::transaction(function () use ($refund) {
+            $refund = Refund::with(['products', 'purchase'])->lockForUpdate()->findOrFail($refund->id);
             $this->revertCompletedRefund($refund);
 
             $refund->update(['status' => 'cancel']);
@@ -172,6 +173,7 @@ final class RefundTable extends BaseTable
         }
 
         DB::transaction(function () use ($refund) {
+            $refund = Refund::with(['products', 'purchase'])->lockForUpdate()->findOrFail($refund->id);
             $this->revertCompletedRefund($refund);
 
             $refund->products()->delete();
@@ -189,40 +191,7 @@ final class RefundTable extends BaseTable
             return;
         }
 
-        $logs = ProductLog::query()
-            ->where('productable_type', Refund::class)
-            ->where('productable_id', $refund->id)
-            ->get();
-
-        if ($logs->isNotEmpty()) {
-            foreach ($logs as $log) {
-                $delta = abs((int) $log->amount_after - (int) $log->amount_before);
-
-                if ($delta <= 0) {
-                    continue;
-                }
-
-                change_product_amount(
-                    (int) $log->product_id,
-                    $delta,
-                    $log->direction === 'out',
-                    $log->branch_id ?: $refund->branch_id
-                );
-            }
-        } else {
-            foreach ($refund->products as $item) {
-                change_product_amount(
-                    $item->product_id,
-                    $item->amount,
-                    true,
-                    $refund->branch_id
-                );
-            }
-        }
-
-        ProductLog::where('productable_type', Refund::class)
-            ->where('productable_id', $refund->id)
-            ->delete();
+        \Polirium\Modules\Product\Http\Support\DocumentInventorySupport::reverseDocument($refund);
 
         if ($refund->vendor_id && $refund->purchase?->status === 'refund') {
             $vendor = Vendor::find($refund->vendor_id);

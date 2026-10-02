@@ -36,6 +36,7 @@ class ProductLog extends BaseModel
 
         return match ($this->productable_type) {
             \Polirium\Modules\Product\Http\Model\Refund\Refund::class => __('Trả hàng'),
+            \Polirium\Modules\Accounting\Http\Model\Refund\Refund::class => __('Trả hàng'),
             Purchase::class => trans('modules/product::product.purchase_import'),
             Transfer::class => __('Chuyển hàng'),
             Stock::class => trans('modules/product::product.stock_check'),
@@ -60,7 +61,7 @@ class ProductLog extends BaseModel
      */
     public function getSignedAmountAttribute(): int
     {
-        return ($this->amount_after >= $this->amount_before)
+        return ($this->direction === 'in' || ($this->direction === null && $this->amount_after > $this->amount_before))
             ? abs($this->amount)
             : -abs($this->amount);
     }

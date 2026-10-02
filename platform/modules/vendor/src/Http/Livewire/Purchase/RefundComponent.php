@@ -306,25 +306,16 @@ class RefundComponent extends Component
             $this->validationAttributes()
         );
 
-        if ($this->refund->status === 'success') {
-            $this->validateRefundStockAvailability();
-        }
-
         try {
             \Illuminate\Support\Facades\DB::transaction(function () {
+                $previousLines = [];
                 // --- Revert previous state if editing an existing successful refund ---
                 if ($this->refund->exists) {
-                    $originalRefund = Refund::with(['products.product', 'purchase'])->find($this->refund->id);
+                    $originalRefund = Refund::with(['products.product', 'purchase'])->lockForUpdate()->findOrFail($this->refund->id);
                     if ($originalRefund && in_array($originalRefund->status, ['success', 'completed', 'paid'])) {
-                        // 1. Silently revert the actual stock delta recorded by the stock card.
-                        // Refund quantities can be larger than available stock; stock is clamped at 0,
-                        // so reverting by document quantity would over-increase stock.
-                        $this->revertRefundStock($originalRefund);
-
-                        // 2. Delete old product_logs for this refund (clean slate)
-                        ProductLog::where('productable_type', Refund::class)
-                            ->where('productable_id', $originalRefund->id)
-                            ->delete();
+                        foreach ($originalRefund->products as $line) {
+                            $previousLines[] = ['product_id'=>$line->product_id, 'branch_id'=>$originalRefund->branch_id, 'amount'=>$line->amount, 'increase'=>false];
+                        }
 
                         // 3. Revert Vendor Stats
                         if ($originalRefund->vendor_id && $originalRefund->purchase?->status === 'success') {
@@ -339,6 +330,10 @@ class RefundComponent extends Component
                 // -----------------------------------------------------------------------
 
                 $this->refund->save();
+                $newLines = $this->refund->status === 'success'
+                    ? array_map(fn ($line) => ['product_id'=>$line['product_id'], 'branch_id'=>$this->refund->branch_id, 'amount'=>$line['amount'], 'increase'=>false], array_values($this->products))
+                    : [];
+                \Polirium\Modules\Product\Http\Support\DocumentInventorySupport::amendReceipt($this->refund, $previousLines, $newLines);
 
                 $this->refund->products()->delete();
 
@@ -349,18 +344,6 @@ class RefundComponent extends Component
                     $value['purchase_id'] = $this->order_id;
                     RefundProduct::create($value);
 
-                    if ($this->refund->status === 'success') {
-                        product_logs(
-                            $value['product_id'],
-                            $this->refund->id,
-                            Refund::class,
-                            $value['amount'],
-                            $product['cost'],
-                            $value['value'],
-                            false,
-                            $this->refund->branch_id
-                        );
-                    }
                 }
 
                 if ($this->refund->status === 'success' && $this->refund->vendor_id) {

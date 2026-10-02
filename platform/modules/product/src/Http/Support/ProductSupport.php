@@ -22,7 +22,7 @@ class ProductSupport
         ?int $branch_id = null,
         DateTimeInterface|string|null $logged_at = null
     ): void {
-        $product = Product::select(['id'])->find($product_id);
+        $product = Product::select(['id', 'type'])->find($product_id);
 
         if (! $product) {
             return;
@@ -46,9 +46,7 @@ class ProductSupport
         ) {
             $after_amount = self::changeProductAmount($product, $amount, $increase, $branch_id);
 
-            // Log the quantity that actually changed. Outbound operations are
-            // clamped at zero, so recording the requested amount would create
-            // fake stock movements when the requested quantity exceeds stock.
+            // Quantity and its movement are committed together.
             $actualAmount = abs($after_amount['current'] - $after_amount['before']);
             if ($actualAmount === 0) {
                 return;
@@ -78,6 +76,9 @@ class ProductSupport
 
     public function changeProductAmount(int|Product $product, int $amount, bool $increase = true, ?int $branch_id = null): array
     {
+        if ($amount < 0) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['products' => 'Số lượng biến động kho không được âm.']);
+        }
         if (is_int($product)) {
             $product = Product::select(['id', 'type'])->find($product);
         }
@@ -108,6 +109,14 @@ class ProductSupport
                 ->first();
 
             if (! $product_branch) {
+                // Serialize creation of a branch balance, including installations
+                // whose legacy pivot table has no unique product/branch index.
+                Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+                $product_branch = ProductBranch::where('branch_id', $branch_id)
+                    ->where('product_id', $product->id)->lockForUpdate()->first();
+            }
+
+            if (! $product_branch) {
                 $product_branch = new ProductBranch();
                 $product_branch->product_id = $product->id;
                 $product_branch->branch_id = $branch_id;
@@ -122,7 +131,13 @@ class ProductSupport
             $previous_amount = (int) ($product_branch->qty ?: 0);
             $newQty = $increase
                 ? $previous_amount + $amount
-                : max(0, $previous_amount - $amount);
+                : $previous_amount - $amount;
+
+            if (! $increase && $newQty < 0) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'products' => "Không đủ tồn kho cho sản phẩm #{$product->id}: còn {$previous_amount}, cần {$amount}. Vui lòng kiểm tra lại phiếu.",
+                ]);
+            }
 
             $product_branch->qty = $newQty;
             $product_branch->save();

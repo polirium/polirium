@@ -22,7 +22,7 @@ class TransferComponent extends Component
         'products' => ['required', 'array'],
         'products.*.product_id' => ['required', 'numeric', 'integer'],
         'products.*.vendor_transfer_id' => ['nullable', 'numeric', 'integer'],
-        'products.*.amount' => ['required', 'numeric', 'integer'],
+        'products.*.amount' => ['required', 'numeric', 'integer', 'min:1'],
         'products.*.price' => ['required', 'numeric'],
         'products.*.value' => ['required', 'numeric'],
         'products.*.note' => ['nullable', 'string', 'max:191'],
@@ -193,43 +193,39 @@ class TransferComponent extends Component
             $this->state['date_take'] = now();
         }
 
-        $this->transfer->fill($this->state);
-        $this->transfer->save();
+        \Illuminate\Support\Facades\DB::transaction(function () {
+            $previous = $this->transfer->exists
+                ? Transfer::with('products')->lockForUpdate()->findOrFail($this->transfer->id)
+                : null;
+            $movementLines = static function ($document, $products) {
+                $lines = [];
+                if ($document?->status !== 'success') return $lines;
+                if ($document->form_branch_id === $document->to_branch_id) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['state.to_branch_id' => 'Chi nhánh nhận phải khác chi nhánh chuyển.']);
+                }
+                foreach ($products as $line) {
+                    $lines[] = ['product_id' => $line['product_id'], 'branch_id' => $document->form_branch_id, 'amount' => $line['amount'], 'increase' => false];
+                    $lines[] = ['product_id' => $line['product_id'], 'branch_id' => $document->to_branch_id, 'amount' => $line['amount'], 'increase' => true];
+                }
+                return $lines;
+            };
+            $before = $movementLines($previous, $previous?->products ?? []);
+            $this->transfer->fill($this->state);
+            $this->transfer->save();
+            \Polirium\Modules\Product\Http\Support\DocumentInventorySupport::amendReceipt($this->transfer, $before, $movementLines($this->transfer, $this->products));
 
-        $this->transfer->products()->delete();
+            $this->transfer->products()->delete();
 
-        foreach ($this->products as $key => $value) {
-            $product = $value['product'];
-            $product_id = $value['product_id'];
+            foreach ($this->products as $key => $value) {
+                $product = $value['product'];
+                $product_id = $value['product_id'];
 
-            unset($value['product']);
-            $value['vendor_transfer_id'] = $this->transfer->id;
-            TransferProduct::create($value);
+                unset($value['product']);
+                $value['vendor_transfer_id'] = $this->transfer->id;
+                TransferProduct::create($value);
 
-            if ($this->transfer->status === 'success') {
-                product_logs(
-                    $product_id,
-                    $this->transfer->id,
-                    Transfer::class,
-                    $value['amount'],
-                    0,
-                    0,
-                    false,
-                    $this->transfer->form_branch_id
-                );
-
-                product_logs(
-                    $product_id,
-                    $this->transfer->id,
-                    Transfer::class,
-                    $value['amount'],
-                    0,
-                    0,
-                    true,
-                    $this->transfer->to_branch_id
-                );
             }
-        }
+        });
 
         $this->resetInput();
 

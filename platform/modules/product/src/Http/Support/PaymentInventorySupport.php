@@ -5,6 +5,7 @@ namespace Polirium\Modules\Product\Http\Support;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
 use Polirium\Modules\Product\Http\Model\Product;
 use Polirium\Modules\Product\Http\Model\ProductLog;
+use Illuminate\Support\Facades\DB;
 
 final class PaymentInventorySupport
 {
@@ -13,6 +14,20 @@ final class PaymentInventorySupport
      * Draft/temp payments have no outbound logs, so cancelling them cannot alter stock.
      */
     public static function restoreExportedStock(Payment $payment): int
+    {
+        return DB::transaction(function () use ($payment) {
+            Payment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            if (DB::table('product_refunds')->where('product_payment_id', $payment->id)->exists()
+                || DB::table('product_payment_refunds')->where('product_payment_id', $payment->id)->where('status', 'success')->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'payment' => 'Hóa đơn đã có trả hàng. Không thể hoàn lại toàn bộ kho lần nữa; vui lòng xử lý phiếu trả hàng trước khi sửa/hủy hóa đơn.',
+                ]);
+            }
+            return self::restoreLockedStock($payment);
+        });
+    }
+
+    private static function restoreLockedStock(Payment $payment): int
     {
         $logs = ProductLog::query()
             ->where('productable_type', Payment::class)

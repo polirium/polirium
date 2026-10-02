@@ -197,6 +197,7 @@ final class PurchaseTable extends BaseTable
 
         try {
             DB::transaction(function () use ($purchase): void {
+                $purchase = Purchase::with('products')->lockForUpdate()->findOrFail($purchase->id);
                 $this->revertCompletedPurchase($purchase);
 
                 // vendor_purchases.status only accepts: temp, success, refund, cancel.
@@ -233,6 +234,7 @@ final class PurchaseTable extends BaseTable
         }
 
         DB::transaction(function () use ($purchase): void {
+            $purchase = Purchase::with('products')->lockForUpdate()->findOrFail($purchase->id);
             $this->revertCompletedPurchase($purchase);
             $purchase->products()->delete();
             $purchase->delete();
@@ -266,25 +268,7 @@ final class PurchaseTable extends BaseTable
             return false;
         }
 
-        foreach ($logs as $log) {
-            $quantity = abs((int) $log->amount_after - (int) $log->amount_before);
-
-            if ($quantity <= 0) {
-                continue;
-            }
-
-            $wasInbound = $log->direction === 'in'
-                || ($log->direction === null && $log->amount_after > $log->amount_before);
-
-            change_product_amount(
-                (int) $log->product_id,
-                $quantity,
-                ! $wasInbound,
-                $log->branch_id ?: $purchase->branch_id
-            );
-        }
-
-        ProductLog::whereKey($logs->pluck('id'))->delete();
+        \Polirium\Modules\Product\Http\Support\DocumentInventorySupport::reverseDocument($purchase);
 
         if ($purchase->vendor_id) {
             $vendor = Vendor::query()->lockForUpdate()->find($purchase->vendor_id);

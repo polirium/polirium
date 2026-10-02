@@ -22,7 +22,7 @@ class OrderComponent extends Component
         'products.*.branch_id' => ['required', 'numeric', 'integer'],
         'products.*.product_id' => ['required', 'numeric', 'integer'],
         'products.*.vendor_purchase_id' => ['nullable', 'numeric', 'integer'],
-        'products.*.amount' => ['required', 'numeric', 'integer'],
+        'products.*.amount' => ['required', 'numeric', 'integer', 'min:1'],
         'products.*.price' => ['required', 'numeric'],
         'products.*.discount_value' => ['nullable', 'numeric'],
         'products.*.discount_type' => ['nullable', 'string', 'in:percent,number'],
@@ -282,19 +282,17 @@ class OrderComponent extends Component
 
         try {
             \Illuminate\Support\Facades\DB::transaction(function () {
+                $previousLines = [];
                 // --- Revert previous state if editing an existing successful purchase ---
                 if ($this->purchase->exists) {
-                    $originalPurchase = Purchase::with('products.product')->find($this->purchase->id);
+                    $originalPurchase = Purchase::with('products.product')->lockForUpdate()->findOrFail($this->purchase->id);
+                    if ($originalPurchase->status === 'refund') {
+                        throw \Illuminate\Validation\ValidationException::withMessages(['purchase' => 'Phiếu nhập đã có trả hàng. Vui lòng xử lý phiếu trả trước khi sửa phiếu nhập.']);
+                    }
                     if ($originalPurchase && in_array($originalPurchase->status, ['success', 'completed', 'paid'])) {
-                        // 1. Silently revert stock (no log entries created)
                         foreach ($originalPurchase->products as $item) {
-                            change_product_amount($item->product_id, $item->amount, false, $originalPurchase->branch_id);
+                            $previousLines[] = ['product_id' => $item->product_id, 'branch_id' => $originalPurchase->branch_id, 'amount' => $item->amount];
                         }
-
-                        // 2. Delete old product_logs for this purchase (clean slate)
-                        \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Purchase::class)
-                            ->where('productable_id', $originalPurchase->id)
-                            ->delete();
 
                         // 3. Revert Vendor Stats
                         if ($originalPurchase->vendor_id) {
@@ -311,26 +309,15 @@ class OrderComponent extends Component
 
                 $this->purchase->fill($this->state);
                 $this->purchase->save();
-                $productLogDate = $this->purchase->created_at ?: now();
+                $newLines = $this->purchase->status === 'success'
+                    ? array_map(fn ($line) => ['product_id' => $line['product_id'], 'branch_id' => $this->purchase->branch_id, 'amount' => $line['amount']], array_values($this->products))
+                    : [];
+                \Polirium\Modules\Product\Http\Support\DocumentInventorySupport::amendReceipt($this->purchase, $previousLines, $newLines);
 
                 $this->purchase->products()->delete();
 
                 foreach ($this->products as $key => $value) {
                     $product = $value['product'];
-
-                    if ($this->purchase->status === 'success') {
-                        product_logs(
-                            $value['product_id'],
-                            $this->purchase->id,
-                            Purchase::class,
-                            $value['amount'],
-                            $product['cost'],
-                            $value['value'],
-                            true,
-                            $this->purchase->branch_id,
-                            $productLogDate
-                        );
-                    }
 
                     unset($value['product']);
                     $value['vendor_purchase_id'] = $this->purchase->id;

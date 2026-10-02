@@ -24,7 +24,7 @@ class RefundComponent extends Component
     #[Rule([
         'products' => ['required', 'array'],
         'products.*.product_id' => ['required', 'numeric', 'integer'],
-        'products.*.amount' => ['required', 'numeric', 'integer'],
+        'products.*.amount' => ['required', 'numeric', 'integer', 'min:1'],
         'products.*.price' => ['required', 'numeric'],
         'products.*.value' => ['required', 'numeric'],
         'products.*.note' => ['nullable', 'string', 'max:191'],
@@ -229,49 +229,33 @@ class RefundComponent extends Component
             $this->validationAttributes()
         );
 
-        $this->refund->save();
+        \Illuminate\Support\Facades\DB::transaction(function () {
+            $previous = $this->refund->exists
+                ? Refund::with('products')->lockForUpdate()->findOrFail($this->refund->id)
+                : null;
+            $before = $previous?->status === 'success'
+                ? $previous->products->map(fn ($line) => ['product_id' => $line->product_id, 'branch_id' => $previous->branch_id, 'amount' => $line->amount])->all()
+                : [];
+            $this->refund->save();
+            $after = $this->refund->status === 'success'
+                ? array_map(fn ($line) => ['product_id' => $line['product_id'], 'branch_id' => $this->refund->branch_id, 'amount' => $line['amount']], array_values($this->products))
+                : [];
+            \Polirium\Modules\Product\Http\Support\DocumentInventorySupport::amendReceipt($this->refund, $before, $after);
 
-        $this->refund->products()->delete(); // Simple way to handle updates: delete old lines and re-create.
-        // Note: If ID persistence matters, this is destructive.
+            $this->refund->products()->delete(); // Simple way to handle updates: delete old lines and re-create.
+            // Note: If ID persistence matters, this is destructive.
 
-        foreach ($this->products as $key => $value) {
-            $product = $value['product'];
-            unset($value['product']); // Remove object before saving
+            foreach ($this->products as $key => $value) {
+                $product = $value['product'];
+                unset($value['product']); // Remove object before saving
 
-            $value['product_payment_refund_id'] = $this->refund->id;
-            $value['product_payment_id'] = $this->payment_id;
+                $value['product_payment_refund_id'] = $this->refund->id;
+                $value['product_payment_id'] = $this->payment_id;
 
-            RefundProduct::create($value);
+                RefundProduct::create($value);
 
-            if ($this->refund->status === 'success') {
-                // Return stock = Increase stock
-                change_product_amount(
-                    $value['product_id'],
-                    $value['amount'],
-                    true, // increase
-                    $this->refund->branch_id
-                );
-
-                product_logs(
-                    $value['product_id'],
-                    $this->refund->id,
-                    Refund::class,
-                    $value['amount'],
-                    $value['price'], // Log value
-                    $value['value'],
-                    true // true = increase? Need to verify change function usage.
-                    // change_product_amount 3rd arg: $increase (bool).
-                    // product_logs 7th arg: $increase (bool).
-                );
             }
-        }
-
-        if ($this->refund->status === 'success') {
-            // Optionally update original payment status or add note?
-            // For now, let's just save.
-            // Maybe update customer balance if credit/wallet system exists?
-            // Currently no clear wallet system found, so just stock update.
-        }
+        });
 
         $this->dispatch('success', 'Đã lưu phiếu trả hàng thành công.');
 

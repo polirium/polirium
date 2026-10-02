@@ -120,42 +120,14 @@ final class TransferTable extends BaseTable
             return;
         }
 
-        $item = Transfer::with('products')->find($id);
-
-        if (! $item) {
-            return;
-        }
-
-        // Revert stock if status is success
-        if ($item->status == 'success') {
-            foreach ($item->products as $product) {
-                // 1. Revert decrease at form_branch_id (so we INCREASE)
-                product_logs(
-                    $product->product_id,
-                    $item->id,
-                    Transfer::class,
-                    $product->amount,
-                    0,
-                    0,
-                    true, // INCREASE back at form_branch
-                    $item->form_branch_id
-                );
-
-                // 2. Revert increase at to_branch_id (so we DECREASE)
-                change_product_amount(
-                    $product->product_id,
-                    $product->amount,
-                    false, // DECREASE at to_branch
-                    $item->to_branch_id
-                );
+        \Illuminate\Support\Facades\DB::transaction(function () use ($id) {
+            $item = Transfer::with('products')->lockForUpdate()->find($id);
+            if (! $item) return;
+            if ($item->status === 'success') {
+                \Polirium\Modules\Product\Http\Support\DocumentInventorySupport::reverseDocument($item);
             }
-
-            \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Transfer::class)
-            ->where('productable_id', $item->id)
-            ->delete();
-        }
-
-        $item->products()->delete();
-        $item->delete();
+            $item->products()->delete();
+            $item->delete();
+        });
     }
 }

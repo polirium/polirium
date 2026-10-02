@@ -603,7 +603,7 @@ class ModalCreateSaleInvoiceComponent extends Component
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use (&$paymentModel, $allCollected) {
                 if (! empty($this->payment['id'])) {
-                    $paymentModel = Payment::find($this->payment['id']);
+                    $paymentModel = Payment::lockForUpdate()->find($this->payment['id']);
                     if ($paymentModel) {
                         $paymentModel->update($this->payment);
 
@@ -612,17 +612,7 @@ class ModalCreateSaleInvoiceComponent extends Component
                             // Clear old products
                             PaymentProduct::where('product_payment_id', $paymentModel->id)->delete();
 
-                            // Reverse old stock changes and delete old logs to prevent duplicates
-                            $oldLogs = ProductLog::where('productable_id', $paymentModel->id)
-                                ->where('productable_type', Payment::class)
-                                ->get();
-                            foreach ($oldLogs as $oldLog) {
-                                // Original log decreased stock (increase=false), so reverse by increasing back
-                                change_product_amount($oldLog->product_id, $oldLog->amount, true, $oldLog->branch_id);
-                            }
-                            ProductLog::where('productable_id', $paymentModel->id)
-                                ->where('productable_type', Payment::class)
-                                ->delete();
+                            \Polirium\Modules\Product\Http\Support\PaymentInventorySupport::restoreExportedStock($paymentModel);
                         }
                     } else {
                         // Fallback if ID exists but not found (unlikely)
@@ -640,7 +630,7 @@ class ModalCreateSaleInvoiceComponent extends Component
                     $savedItems->push(PaymentProduct::create($value));
                 }
 
-                if (! in_array($paymentModel->status, ['temp', 'draft'], true)) {
+                if (! in_array($paymentModel->status, ['temp', 'draft', 'cancel', 'cancelled', 'failed', 'delivery_failed'], true)) {
                     ProductInventorySupport::exportPaymentItems($savedItems, $paymentModel);
                 }
 

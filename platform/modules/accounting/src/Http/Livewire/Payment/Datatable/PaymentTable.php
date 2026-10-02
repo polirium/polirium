@@ -139,74 +139,17 @@ final class PaymentTable extends BaseTable
             return;
         }
 
-        $item = Payment::find($id);
-        if (! $item) {
-            return;
-        }
-
-        // Lấy danh sách product_id bị ảnh hưởng trước khi xóa logs
-        $affectedProductIds = \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Payment::class)
-            ->where('productable_id', $item->id)
-            ->pluck('product_id')
-            ->unique();
-
-        // Xóa tất cả product_logs liên quan đến payment này
-        \Polirium\Modules\Product\Http\Model\ProductLog::where('productable_type', Payment::class)
-            ->where('productable_id', $item->id)
-            ->delete();
-
-        // Xóa product_refunds liên quan
-        \DB::table('product_refunds')
-            ->where('payment_id', $item->id)
-            ->delete();
-
-        // Recalculate inventory cho các sản phẩm bị ảnh hưởng
-        foreach ($affectedProductIds as $productId) {
-            $this->recalculateProductInventory($productId);
-        }
-
-        $item->delete();
-    }
-
-    /**
-     * Tính lại toàn bộ chuỗi tồn kho cho 1 sản phẩm sau khi xóa logs.
-     */
-    private function recalculateProductInventory(int $productId): void
-    {
-        $logs = \Polirium\Modules\Product\Http\Model\ProductLog::where('product_id', $productId)
-            ->orderBy('branch_id')
-            ->orderBy('created_at')
-            ->orderBy('id')
-            ->get();
-
-        $runningByBranch = [];
-        foreach ($logs as $log) {
-            $branchId = (int) ($log->branch_id ?: 1);
-            $before = $runningByBranch[$branchId] ?? 0;
-            $amount = abs((int) $log->amount);
-            $after = $log->direction === 'in'
-                ? $before + $amount
-                : ($log->direction === 'out' ? max(0, $before - $amount) : (int) $log->amount_after);
-
-            if ((int) $log->amount_before !== $before || (int) $log->amount_after !== $after) {
-                $log->update([
-                    'amount_before' => $before,
-                    'amount_after' => $after,
-                ]);
+        \DB::transaction(function () use ($id) {
+            $item = Payment::lockForUpdate()->find($id);
+            if (! $item) return;
+            if ($item->refunds()->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['payment' => 'Hóa đơn đã có trả hàng. Vui lòng xử lý phiếu trả hàng trước khi xóa.']);
             }
-
-            $runningByBranch[$branchId] = $after;
-        }
-
-        foreach ($runningByBranch as $branchId => $quantity) {
-            \DB::table('product_branches')
-                ->where('product_id', $productId)
-                ->where('branch_id', $branchId)
-                ->update(['qty' => $quantity]);
-        }
-
-        \Polirium\Modules\Product\Http\Model\Product::where('id', $productId)
-            ->update(['qty' => \DB::table('product_branches')->where('product_id', $productId)->sum('qty')]);
+            PaymentInventorySupport::restoreExportedStock($item);
+            // Keep the export and reversal as an audit trail. Never replay an
+            // incomplete history from zero or overwrite a completed stock count.
+            $item->delete();
+        });
     }
 
     public string $sortField = 'id';
