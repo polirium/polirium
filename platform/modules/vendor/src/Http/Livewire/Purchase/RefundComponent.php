@@ -264,9 +264,14 @@ class RefundComponent extends Component
     public function importProducts(array $products): void
     {
         foreach ($products as $id => $productData) {
-            if (! isset($this->products[$id])) {
-                $this->products[$id] = $productData;
-            }
+            // An opened refund is pre-filled from the purchase. Imported rows
+            // must replace those values, otherwise Excel appears to import
+            // successfully while the quantities on screen stay unchanged.
+            $this->products[$id] = array_merge(
+                $this->products[$id] ?? [],
+                $productData,
+                ['product_id' => (int) $id, 'purchase_id' => $this->order_id]
+            );
         }
         $this->updatedRefund();
     }

@@ -91,8 +91,10 @@ class ModalImportRefundComponent extends Component
             $products = $import->getProducts();
 
             $this->importResult = [
-                'success' => true,
-                'message' => 'Đã đọc ' . count($products) . ' sản phẩm từ file.',
+                'success' => count($products) > 0,
+                'message' => count($products) > 0
+                    ? 'Đã đọc ' . count($products) . ' sản phẩm từ file.'
+                    : 'Không có dòng hợp lệ trong file Excel.',
                 'count' => count($products),
                 'errors' => $import->getErrors(),
             ];

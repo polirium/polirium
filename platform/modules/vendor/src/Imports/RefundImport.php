@@ -27,7 +27,7 @@ class RefundImport implements ToCollection, WithHeadingRow
 
     protected function processRow(Collection $row, int $rowNumber): void
     {
-        $code = trim($row['ma_hang'] ?? $row['mã_hàng'] ?? '');
+        $code = trim((string) ($row['ma_hang'] ?? $row['mã_hàng'] ?? $row['ma'] ?? ''));
 
         if (empty($code)) {
             $this->errors[] = "Dòng {$rowNumber}: Mã hàng không được để trống";
@@ -42,9 +42,17 @@ class RefundImport implements ToCollection, WithHeadingRow
             return;
         }
 
-        $amount = $this->parseNumber($row['so_luong'] ?? $row['số_lượng'] ?? 1);
-        $price = $this->parseNumber($row['gia_tra_lai'] ?? $row['giá_trả_lại'] ?? $product->cost);
+        $amount = $this->parseNumber($row['so_luong'] ?? $row['số_lượng'] ?? 0);
+        $price = $this->parseNumber($row['gia_tra_lai'] ?? $row['giá_trả_lại'] ?? $row['gia_nhap'] ?? $row['giá_nhập'] ?? $product->cost);
         $discount = $this->parseNumber($row['giam_gia_tra_lai'] ?? $row['giảm_giá_trả_lại'] ?? 0);
+        $discountPercent = $this->parseNumber($row['giam_gia_tra_lai_'] ?? $row['giảm_giá_trả_lại_'] ?? 0);
+
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Số lượng phải lớn hơn 0');
+        }
+        if ($price < 0 || $discount < 0 || $discountPercent < 0 || $discountPercent > 100) {
+            throw new \InvalidArgumentException('Giá hoặc giảm giá không hợp lệ');
+        }
 
         // Calculate value
         $value = ($price * $amount) - $discount; // Assuming discount is total amount, or per item?
@@ -56,13 +64,17 @@ class RefundImport implements ToCollection, WithHeadingRow
                                                  // Actually, let's keep it safe: ($price - $discount) * $amount.
 
         $value = ($price - $discount) * $amount;
+        if ($discountPercent > 0) {
+            $value = ($price * $amount) * (1 - $discountPercent / 100);
+        }
 
         $this->products[$product->id] = [
             'product_id' => $product->id,
             'amount' => $amount,
             'price' => $price,
             'value' => $value, // Total value after discount
-            'discount' => $discount, // Store discount unit value if needed by component
+            'discount_value' => $discountPercent > 0 ? $discountPercent : $discount,
+            'discount_type' => $discountPercent > 0 ? 'percent' : 'number',
             'note' => null,
             'product' => $product->toArray(),
         ];
@@ -70,10 +82,35 @@ class RefundImport implements ToCollection, WithHeadingRow
 
     protected function parseNumber($value): float
     {
-        if (is_numeric($value)) {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        // Keep native Excel numeric cells as-is. Numeric-looking strings may
+        // still use Vietnamese thousands separators (for example 41.000).
+        if (is_int($value) || is_float($value)) {
             return (float) $value;
         }
-        return 0;
+
+        $value = trim((string) $value);
+        $value = preg_replace('/[^0-9,.\-]/u', '', $value) ?? '';
+        if ($value === '') {
+            return 0;
+        }
+
+        // Vietnamese-formatted values: 1.234.567 or 1,234,567.
+        if (substr_count($value, ',') > 1 || substr_count($value, '.') > 1) {
+            $value = str_replace([',', '.'], '', $value);
+        } elseif (str_contains($value, ',') && str_contains($value, '.')) {
+            $value = str_replace(',', '', $value);
+        } elseif (str_contains($value, ',')) {
+            $parts = explode(',', $value);
+            $value = strlen(end($parts)) === 3 ? implode('', $parts) : implode('.', $parts);
+        } elseif (str_contains($value, '.')) {
+            $parts = explode('.', $value);
+            $value = strlen(end($parts)) === 3 ? implode('', $parts) : $value;
+        }
+
+        return is_numeric($value) ? (float) $value : 0;
     }
 
     public function getProducts(): array
