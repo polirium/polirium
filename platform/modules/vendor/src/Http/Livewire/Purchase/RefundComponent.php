@@ -373,9 +373,10 @@ class RefundComponent extends Component
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            session()->flash('error', 'Có lỗi xảy ra khi lưu phiếu trả: ' . $e->getMessage());
-
-            return redirect(route('vendors.purchases.list-refunds'));
+            // Keep the user on the form so stock/validation failures can be
+            // corrected. The transaction has already rolled back at this point.
+            $this->addError('products', 'Không thể hoàn thành phiếu trả: ' . $e->getMessage());
+            return;
         }
 
         return redirect(route('vendors.purchases.list-refunds'));
