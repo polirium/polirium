@@ -42,6 +42,7 @@ final class RefundTable extends BaseTable
     public function datasource(): Builder
     {
         return Refund::query()
+        ->with('vendor')
         ->when(user_branch(), function ($q) {
             $q->where('branch_id', user_branch()); // lấy theo chi nhánh đăng nhập
         })
@@ -50,12 +51,16 @@ final class RefundTable extends BaseTable
 
     public function relationSearch(): array
     {
-        return [];
+        return ['vendor' => ['name']];
     }
 
     public function fields(): PowerGridFields
     {
-        return PowerGrid::fields();
+        return PowerGrid::fields()
+            ->add('id')
+            ->add('code')
+            ->add('created_at')
+            ->add('vendor_name', fn (Refund $model) => $model->vendor?->name ?? '-');
     }
 
     public function columns(): array
@@ -63,6 +68,8 @@ final class RefundTable extends BaseTable
         return [
             Column::make(trans('core/base::general.id'), 'id')->sortable()->searchable(),
             Column::make(trans('modules/vendor::purchase.refund.code'), 'code')->sortable()->searchable(),
+            Column::make(trans('modules/vendor::purchase.created_at'), 'created_at')->sortable()->searchable(),
+            Column::make(trans('modules/vendor::vendor.name'), 'vendor_name')->searchable(),
             Column::action(trans('core/base::general.action')),
         ];
     }
