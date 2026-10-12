@@ -18,6 +18,7 @@ Route::prefix(admin_prefix())
 
                 Route::get('list-refunds', 'PurchaseController@listRefund')->name('list-refunds')->middleware('can:vendors.refunds.index');
                 Route::get('refund/{id?}', 'PurchaseController@refund')->name('refund');
+                Route::get('refund-export/{id}', 'PurchaseController@exportRefund')->name('refund-export')->middleware('can:vendors.refunds.export');
             });
 
             Route::prefix('transfers')->name('transfers.')->group(function () {

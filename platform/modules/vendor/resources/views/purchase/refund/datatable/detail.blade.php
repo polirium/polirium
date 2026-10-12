@@ -145,9 +145,21 @@
         </x-ui::tab>
 
         {{-- Action Buttons --}}
-        @if (auth()->user()?->can('vendors.refunds.edit') || auth()->user()?->can('vendors.refunds.delete'))
+        @if (auth()->user()?->canAny(['vendors.refunds.edit', 'vendors.refunds.delete', 'vendors.refunds.create', 'vendors.refunds.export']))
             <hr>
             <div class="btn-list mt-3">
+                @if (auth()->user()?->can('vendors.refunds.create') && auth()->user()?->can('vendors.refunds.view'))
+                    <x-ui::button color="outline-primary" size="sm" icon="copy"
+                        :href="route('vendors.purchases.refund', ['copy_id' => $refund->id])">
+                        {{ __('Sao chép phiếu') }}
+                    </x-ui::button>
+                @endif
+                @can('vendors.refunds.export')
+                    <x-ui::button color="outline-success" size="sm" icon="file-export"
+                        :href="route('vendors.purchases.refund-export', $refund->id)">
+                        {{ __('Tải Excel chi tiết') }}
+                    </x-ui::button>
+                @endcan
                 @can('vendors.refunds.edit')
                 <x-ui::button
                               color="primary"

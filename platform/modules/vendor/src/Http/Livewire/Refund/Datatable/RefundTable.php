@@ -26,7 +26,9 @@ final class RefundTable extends BaseTable
         $this->showCheckBox();
 
         return [
-            PowerGrid::exportable('export')->striped()->type(Exportable::TYPE_XLS, Exportable::TYPE_CSV),
+            ...(auth()->user()?->can('vendors.refunds.export') ? [
+                PowerGrid::exportable('export')->striped()->type(Exportable::TYPE_XLS, Exportable::TYPE_CSV),
+            ] : []),
 
             PowerGrid::header()->showSearchInput()->showToggleColumns(),
             PowerGrid::footer()->showPerPage()->showRecordCount(),
@@ -37,6 +39,18 @@ final class RefundTable extends BaseTable
     public function header(): array
     {
         return [];
+    }
+
+    public function exportToXLS(bool $selected = false): \Symfony\Component\HttpFoundation\BinaryFileResponse|bool
+    {
+        $this->authorize('vendors.refunds.export');
+        return parent::exportToXLS($selected);
+    }
+
+    public function exportToCsv(bool $selected = false): \Symfony\Component\HttpFoundation\BinaryFileResponse|bool
+    {
+        $this->authorize('vendors.refunds.export');
+        return parent::exportToCsv($selected);
     }
 
     public function datasource(): Builder

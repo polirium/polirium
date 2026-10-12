@@ -204,6 +204,32 @@ class RefundComponent extends Component
             $this->refund->value = 0;
             $this->refund->purchase_id = $this->order_id;
 
+            if (request()->query('copy_id')) {
+                $this->authorize('vendors.refunds.create');
+                $this->authorize('vendors.refunds.view');
+                $source = Refund::with('products.product')
+                    ->when(user_branch(), fn ($query) => $query->where('branch_id', user_branch()))
+                    ->findOrFail(request()->query('copy_id'));
+                $this->order_id = $source->purchase_id;
+                $this->refund->purchase_id = $source->purchase_id;
+                $this->refund->vendor_id = $source->vendor_id;
+                $this->vendor_id = $source->vendor_id;
+                $this->refund->discount_value = $source->discount_value;
+                $this->refund->discount_type = $source->discount_type;
+                $this->refund->note = $source->note;
+                foreach ($source->products as $item) {
+                    $this->products[$item->product_id] = [
+                        'product_id' => $item->product_id, 'purchase_id' => $source->purchase_id,
+                        'amount' => $item->amount, 'price' => $item->price,
+                        'value' => $item->value, 'note' => $item->note,
+                        'product' => $item->product?->toArray(),
+                    ];
+                }
+                $this->purchase = $this->order_id ? Purchase::find($this->order_id) : null;
+                $this->updatedRefund();
+                return;
+            }
+
             if ($this->order_id) {
                 $this->purchase = Purchase::with('products.product')->find($this->order_id);
 

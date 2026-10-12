@@ -103,6 +103,11 @@ return [
         'parent_flag' => 'vendors',
     ],
     [
+        'name' => 'Tải Excel phiếu trả hàng nhập',
+        'flag' => 'vendors.refunds.export',
+        'parent_flag' => 'vendors',
+    ],
+    [
         'name' => 'Xem giá trả',
         'flag' => 'vendors.refunds.view-price',
         'parent_flag' => 'vendors',

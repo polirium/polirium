@@ -62,4 +62,17 @@ class PurchaseController extends BaseController
         // $this->authorize('vendors.purchases.export'); // Assuming generic perm or index for now
         return \Maatwebsite\Excel\Facades\Excel::download(new \Polirium\Modules\Vendor\Exports\PurchaseExport($id), 'phieu_nhap_' . $id . '.xlsx');
     }
+
+    public function exportRefund(int $id)
+    {
+        $this->authorize('vendors.refunds.export');
+        $refund = \Polirium\Modules\Vendor\Http\Model\Refund\Refund::with('products.product')
+            ->when(user_branch(), fn ($query) => $query->where('branch_id', user_branch()))
+            ->findOrFail($id);
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \Polirium\Modules\Vendor\Exports\RefundExport($refund, auth()->user()->can('vendors.refunds.view-price')),
+            'tra_hang_nhap_' . $id . '.xlsx'
+        );
+    }
 }
