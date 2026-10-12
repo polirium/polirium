@@ -102,6 +102,7 @@
                             <th class="w-1">{{ trans('core/base::general.id') }}</th>
                             <th>{{ trans('modules/product::product.code') }}</th>
                             <th>{{ trans('modules/product::product.name') }}</th>
+                            <th>{{ __('Đơn vị tính') }}</th>
                             <th class="text-end">{{ __('modules/vendor::purchase.quantity') }}</th>
                             @if ($canViewPrice)
                                 <th class="text-end">{{ __('modules/vendor::purchase.unit_price') }}</th>
@@ -116,6 +117,7 @@
                                 <td>{{ $loop->iteration }}</td>
                                 <td><span class="badge bg-muted-lt user-select-all">{{ $item->product?->code ?? 'N/A' }}</span></td>
                                 <td><strong>{{ $item->product?->name ?? 'N/A' }}</strong></td>
+                                <td>{{ $item->product?->unit ?? '-' }}</td>
                                 <td class="text-end">{{ core_number_format($item->amount) }}</td>
                                 @if ($canViewPrice)
                                     <td class="text-end">{{ core_number_format($item->price) }}</td>
@@ -131,7 +133,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="py-4 text-center">
+                                <td colspan="{{ $canViewPrice ? 8 : 5 }}" class="py-4 text-center">
                                     <span class="text-muted">
                                         {!! tabler_icon('box', ['class' => 'icon icon-md mb-2']) !!}
                                         <br>{{ __('modules/vendor::purchase.no_products') }}
