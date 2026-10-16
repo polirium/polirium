@@ -239,7 +239,8 @@
                         </thead>
                         <tbody>
                             @if ($product->logs && $product->logs->count() > 0)
-                                @foreach ($product->logs as $item)
+                                @php $cardLogs = $product->logs->values(); @endphp
+                                @foreach ($cardLogs as $index => $item)
                                     <tr>
                                         <td>
                                             @php
@@ -277,6 +278,27 @@
                                             <strong>{{ core_number_format($item->amount_after ?? 0) }}</strong>
                                         </td>
                                     </tr>
+                                    @php
+                                        // Legacy history can skip movements; show the gap instead of a silent jump.
+                                        $older = $cardLogs->get($index + 1);
+                                        $gap = $older && (int) $older->branch_id === (int) $item->branch_id
+                                            ? (int) $item->amount_before - (int) $older->amount_after
+                                            : 0;
+                                    @endphp
+                                    @if ($gap !== 0)
+                                        <tr class="table-warning">
+                                            <td><span class="text-muted">-</span></td>
+                                            <td class="small">{{ core_format_date($older->created_at) }} – {{ core_format_date($item->created_at) }}</td>
+                                            <td colspan="{{ auth()->user()->can('products.view-cost') ? 5 : 3 }}">
+                                                {{ __('Chênh lệch dữ liệu cũ') }}
+                                                <span class="text-muted small">{{ __('(biến động không có chứng từ trên thẻ kho)') }}</span>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="badge bg-warning-lt text-warning">{{ $gap > 0 ? '+' : '' }}{{ core_number_format($gap) }}</span>
+                                            </td>
+                                            <td class="text-end">{{ core_number_format($item->amount_before ?? 0) }}</td>
+                                        </tr>
+                                    @endif
                                 @endforeach
                             @endif
                         </tbody>

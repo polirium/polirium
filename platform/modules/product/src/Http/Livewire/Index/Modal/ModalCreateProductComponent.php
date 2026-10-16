@@ -363,9 +363,12 @@ class ModalCreateProductComponent extends Component
 
             if (! $this->product_id) {
                 $productModel->branches()->sync($branches);
-                $productModel->branches()->updateExistingPivot($branches, [
-                    'qty' => ($this->product['type'] ?? null) === 'combo' ? 0 : ($this->product['qty'] ?? 0),
-                ]);
+                $productModel->branches()->updateExistingPivot($branches, ['qty' => 0]);
+
+                // Opening stock is recorded on the stock card, not written silently.
+                foreach ((array) $branches as $branchId) {
+                    \Polirium\Modules\Product\Http\Support\ProductSupport::setBranchQuantity($productModel, (int) $branchId, (int) ($this->product['qty'] ?? 0));
+                }
             } else {
                 $productModel->branches()->syncWithoutDetaching($branches);
                 if (($this->product['type'] ?? null) === 'combo') {

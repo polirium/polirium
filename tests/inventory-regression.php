@@ -6,7 +6,7 @@ $root = $argv[1] ?? dirname(__DIR__);
 require $root . '/vendor/autoload.php';
 $app = require $root . '/bootstrap/app.php';
 if (isset($argv[2])) {
-    foreach (['ProductLog', 'ProductSupport', 'ProductInventorySupport', 'DocumentInventorySupport', 'StockInventorySupport', 'PaymentInventorySupport'] as $class) {
+    foreach (['Product', 'ProductLog', 'ProductSupport', 'ProductInventorySupport', 'DocumentInventorySupport', 'StockInventorySupport', 'PaymentInventorySupport'] as $class) {
         require $argv[2] . '/' . $class . '.php';
     }
 }
@@ -36,7 +36,7 @@ foreach (['products', 'product_elements', 'product_branches', 'product_logs', 'p
     Schema::create($table, function ($t) use ($table) {
         $t->id(); $t->string('uuid')->nullable(); $t->timestamps(); $t->softDeletes();
         switch ($table) {
-            case 'products': $t->string('code'); $t->string('type'); $t->integer('cost')->default(10); break;
+            case 'products': $t->string('code'); $t->string('type'); $t->integer('cost')->default(10); $t->integer('qty')->default(0); break;
             case 'product_elements': $t->integer('product_id'); $t->integer('element_id'); $t->integer('qty'); break;
             case 'product_branches': $t->integer('product_id'); $t->integer('branch_id'); $t->integer('qty'); $t->unique(['product_id','branch_id']); break;
             case 'product_logs':
@@ -177,4 +177,58 @@ ProductLog::creating(function () use (&$failLog) { if ($failLog) throw new Runti
 try { product_logs($p->id,999,Purchase::class,2,0,0,true,1); } catch (RuntimeException $e) { if ($e->getMessage() !== 'simulated log failure') throw $e; }
 $failLog=false;
 $equal($qty($p->id),20,'log write failure rolls back balance');
+
+// Editing an invoice writes only the per-product difference (16/10 stock card noise).
+$sync = fn (Payment $sale, array $lines) => Polirium\Modules\Product\Http\Support\ProductInventorySupport::syncPaymentItems(
+    array_map(fn ($l) => (object) ['product_id' => $l[0], 'amount' => $l[1]], $lines), $sale);
+$logsFor = fn (Payment $sale) => ProductLog::where('productable_type',Payment::class)->where('productable_id',$sale->id)->count();
+$sale = Payment::create(['branch_id'=>1, 'code'=>'TEST-EDIT']);
+$set($p->id,20); $set($p2->id,10);
+$sync($sale, [[$p->id,5],[$p2->id,2]]);
+$equal([$qty($p->id),$qty($p2->id),$logsFor($sale)],[15,8,2],'new invoice exports its lines');
+$sync($sale, [[$p->id,5],[$p2->id,2]]);
+$equal([$qty($p->id),$qty($p2->id),$logsFor($sale)],[15,8,2],'unchanged invoice edit writes no stock card line');
+$sync($sale, [[$p->id,2],[$p->id,1],[$p2->id,2]]);
+$equal([$qty($p->id),$logsFor($sale)],[17,3],'invoice decrease returns only the difference, duplicate lines merged');
+$sync($sale, [[$p2->id,4]]);
+$equal([$qty($p->id),$qty($p2->id),$logsFor($sale)],[20,6,5],'removed line restored, increased line exported by difference');
+$stockRejected=false; try { $sync($sale, [[$p2->id,99]]); } catch (RuntimeException) { $stockRejected=true; }
+$equal($stockRejected,true,'invoice edit beyond stock');
+$equal([$qty($p2->id),$logsFor($sale)],[6,5],'rejected invoice edit leaves stock and card intact');
+DB::table('product_payment_refunds')->insert(['product_payment_id'=>$sale->id,'status'=>'success']);
+$sync($sale, [[$p2->id,4]]);
+$equal($qty($p2->id),6,'returned invoice may be saved without quantity change');
+$reject(fn () => $sync($sale, [[$p2->id,3]]),'returned invoice cannot change exported quantity');
+DB::table('product_payment_refunds')->where('product_payment_id',$sale->id)->delete();
+$sale->status = 'cancel'; $sale->save();
+$sync($sale, [[$p2->id,4]]);
+$equal($qty($p2->id),10,'cancelled invoice restores everything exported');
+$equal((int) Product::find($p2->id)->qty, 10, 'products.qty mirrors branch balance');
+$inLog = ProductLog::where('productable_type',Payment::class)->where('productable_id',$sale->id)->where('direction','in')->orderByDesc('id')->first();
+$equal($inLog->type_name, 'Hủy đơn', 'cancelled invoice reversal is labelled as cancellation');
+$live = Payment::create(['branch_id'=>1, 'code'=>'TEST-ADJ']);
+$sync($live, [[$p->id,3]]); $sync($live, [[$p->id,1]]);
+$equal(ProductLog::where('productable_type',Payment::class)->where('productable_id',$live->id)->where('direction','in')->first()->type_name, 'Điều chỉnh hóa đơn', 'edit of a live invoice is not labelled as cancellation');
+
+// Import and opening stock go through the stock card as a difference.
+$set($p->id,20);
+$before = ProductLog::count();
+Polirium\Modules\Product\Http\Support\ProductSupport::setBranchQuantity($p, 1, 25);
+$equal([$qty($p->id), ProductLog::count() - $before], [25, 1], 'import increase is logged');
+Polirium\Modules\Product\Http\Support\ProductSupport::setBranchQuantity($p, 1, 25);
+$equal(ProductLog::count() - $before, 1, 'import without change logs nothing');
+Polirium\Modules\Product\Http\Support\ProductSupport::setBranchQuantity($p, 1, 4);
+$last = ProductLog::orderByDesc('id')->first();
+$equal([$qty($p->id), $last->direction, (int) $last->amount_before, (int) $last->amount_after], [4, 'out', 25, 4], 'import decrease is logged with balances');
+$set($service->id, 3);
+Polirium\Modules\Product\Http\Support\ProductSupport::setBranchQuantity($service, 1, 9);
+$equal($qty($service->id), 0, 'service cannot receive stock through import');
+
+// Products with history cannot be hard-deleted; unused products take their balances along.
+$reject(fn () => $p->delete(), 'product with stock card cannot be deleted');
+$equal(Product::whereKey($p->id)->exists(), true, 'rejected delete keeps product');
+$unused = Product::create(['code'=>'UNUSED', 'type'=>'goods']);
+$set($unused->id, 0);
+$unused->delete();
+$equal(ProductBranch::where('product_id',$unused->id)->exists(), false, 'deleting unused product removes its balances');
 echo "REGRESSION_PASS {$checks} checks, SQLite :memory:\n";

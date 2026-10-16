@@ -39,6 +39,52 @@ class Product extends BaseModel
 
     private $recursive_parent = [];
 
+    /**
+     * Tables whose rows keep referring to a product after it is used. Deleting
+     * such a product orphans the stock card, invoices and receipts.
+     */
+    public const HISTORY_TABLES = [
+        'product_logs' => 'product_id',
+        'product_payment_products' => 'product_id',
+        'product_payment_refund_products' => 'product_id',
+        'product_refund_products' => 'product_id',
+        'product_stock_products' => 'product_id',
+        'product_elements' => 'element_id',
+        'vendor_purchase_products' => 'product_id',
+        'vendor_purchase_refund_products' => 'product_id',
+        'vendor_transfer_products' => 'product_id',
+    ];
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Product $product) {
+            if ($product->hasInventoryHistory()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'product' => "Hàng hóa {$product->code} đã có tồn kho hoặc chứng từ nên không thể xóa. Hãy tắt \"Cho phép bán\" để ngừng kinh doanh.",
+                ]);
+            }
+
+            \Illuminate\Support\Facades\DB::table('product_branches')->where('product_id', $product->id)->delete();
+            \Illuminate\Support\Facades\DB::table('product_elements')->where('product_id', $product->id)->delete();
+        });
+    }
+
+    public function hasInventoryHistory(): bool
+    {
+        if (\Illuminate\Support\Facades\DB::table('product_branches')->where('product_id', $this->id)->where('qty', '!=', 0)->exists()) {
+            return true;
+        }
+
+        foreach (self::HISTORY_TABLES as $table => $column) {
+            if (\Illuminate\Support\Facades\Schema::hasTable($table)
+                && \Illuminate\Support\Facades\DB::table($table)->where($column, $this->id)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function recursiveCategoryParent($category)
     {
         $this->recursive_parent[] = $category->name;

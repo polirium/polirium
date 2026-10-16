@@ -186,9 +186,10 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
             $branchId = $firstBranch->id;
         }
 
-        // Sync product to branch
+        // Sync product to branch. Stock changes go through the stock card as a
+        // difference so the card never jumps without a recorded movement.
         $product->branches()->syncWithoutDetaching([$branchId]);
-        $product->branches()->updateExistingPivot($branchId, ['qty' => $qty]);
+        \Polirium\Modules\Product\Http\Support\ProductSupport::setBranchQuantity($product, $branchId, $qty);
     }
 
     protected function processImages(Product $product, ?string $imageUrls): void

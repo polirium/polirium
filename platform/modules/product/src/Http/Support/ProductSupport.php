@@ -11,6 +11,44 @@ use Polirium\Modules\Product\Http\Model\ProductLog;
 
 class ProductSupport
 {
+    /**
+     * Set a branch balance outside a document (product import, opening stock)
+     * by logging the difference on the stock card instead of overwriting it.
+     */
+    public static function setBranchQuantity(Product $product, int $branchId, int $quantity): void
+    {
+        if (in_array($product->type, ['service', 'combo'], true)) {
+            DB::table('product_branches')->where('product_id', $product->id)->where('branch_id', $branchId)->update(['qty' => 0]);
+
+            return;
+        }
+
+        DB::transaction(function () use ($product, $branchId, $quantity) {
+            $current = (int) DB::table('product_branches')
+                ->where('product_id', $product->id)
+                ->where('branch_id', $branchId)
+                ->lockForUpdate()
+                ->value('qty');
+            $difference = max(0, $quantity) - $current;
+
+            if ($difference === 0) {
+                return;
+            }
+
+            product_logs(
+                $product->id,
+                $product->id,
+                Product::class,
+                abs($difference),
+                (int) $product->cost,
+                (int) $product->cost * abs($difference),
+                $difference > 0,
+                $branchId,
+                now(),
+            );
+        });
+    }
+
     public function productLogs(
         int $product_id,
         int $productable_id,
@@ -138,6 +176,11 @@ class ProductSupport
 
             $product_branch->qty = $newQty;
             $product_branch->save();
+
+            // products.qty mirrors the branch balances; branch rows stay the source of truth.
+            DB::table('products')->where('id', $product->id)->update([
+                'qty' => (int) DB::table('product_branches')->where('product_id', $product->id)->sum('qty'),
+            ]);
 
             return [
                 'before' => $previous_amount,

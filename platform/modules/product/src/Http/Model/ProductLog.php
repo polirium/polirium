@@ -28,10 +28,16 @@ class ProductLog extends BaseModel
     public function getTypeNameAttribute()
     {
         if ($this->productable_type === Payment::class) {
-            // Nếu tồn kho tăng lên (amount_after > amount_before), đây là log Hủy đơn hoàn kho
-            return $this->direction === 'in' || $this->amount_after > $this->amount_before
+            // Tồn tăng trên hóa đơn: hủy đơn, hoặc hoàn kho khi sửa hóa đơn còn hiệu lực
+            if (! ($this->direction === 'in' || ($this->direction === null && $this->amount_after > $this->amount_before))) {
+                return __('Bán hàng');
+            }
+
+            $status = $this->productable?->status;
+
+            return $status === null || in_array($status, ['cancel', 'cancelled', 'failed', 'delivery_failed'], true)
                 ? __('Hủy đơn')
-                : __('Bán hàng');
+                : __('Điều chỉnh hóa đơn');
         }
 
         return match ($this->productable_type) {
@@ -41,6 +47,7 @@ class ProductLog extends BaseModel
             Transfer::class => __('Chuyển hàng'),
             Stock::class => trans('modules/product::product.stock_check'),
             PurchaseRefund::class => trans('modules/product::product.purchase_refund'),
+            Product::class => __('Cập nhật tồn từ hàng hóa'),
             default => $this->productable_type,
         };
     }

@@ -607,12 +607,10 @@ class ModalCreateSaleInvoiceComponent extends Component
                     if ($paymentModel) {
                         $paymentModel->update($this->payment);
 
-                        // Only clear and re-create products/logs if user has products in cart
+                        // Only re-create lines if user has products in cart; stock is
+                        // synced by difference below, never reversed and re-exported.
                         if (count($this->products) > 0) {
-                            // Clear old products
                             PaymentProduct::where('product_payment_id', $paymentModel->id)->delete();
-
-                            \Polirium\Modules\Product\Http\Support\PaymentInventorySupport::restoreExportedStock($paymentModel);
                         }
                     } else {
                         // Fallback if ID exists but not found (unlikely)
@@ -630,9 +628,10 @@ class ModalCreateSaleInvoiceComponent extends Component
                     $savedItems->push(PaymentProduct::create($value));
                 }
 
-                if (! in_array($paymentModel->status, ['temp', 'draft', 'cancel', 'cancelled', 'failed', 'delivery_failed'], true)) {
-                    ProductInventorySupport::exportPaymentItems($savedItems, $paymentModel);
-                }
+                ProductInventorySupport::syncPaymentItems(
+                    count($this->products) > 0 ? $savedItems : PaymentProduct::where('product_payment_id', $paymentModel->id)->get(),
+                    $paymentModel
+                );
 
                 // Save Delivery
                 if (! empty($this->payment_delivery['partner_delivery_id']) || ! empty($this->payment_delivery['code'])) {

@@ -9,6 +9,8 @@ use RuntimeException;
 
 final class ProductInventorySupport
 {
+    private const INACTIVE_STATUSES = ['temp', 'draft', 'cancel', 'cancelled', 'failed', 'delivery_failed'];
+
     /**
      * Return the maximum number of units that can be sold from a branch.
      * A combo has no stock of its own; its availability is derived from its
@@ -79,6 +81,100 @@ final class ProductInventorySupport
                 now(),
             );
         }
+    }
+
+    /**
+     * Bring the stock exported for a payment in line with its current lines,
+     * writing only the per-product difference. Editing an invoice without
+     * changing quantities must not produce a reversal and re-export on the
+     * stock card. Callers save the payment lines in the same transaction.
+     */
+    public static function syncPaymentItems(iterable $items, Payment $payment): void
+    {
+        DB::transaction(function () use ($items, $payment) {
+            Payment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+            $branchId = (int) ($payment->branch_id ?: 1);
+            $desired = [];
+
+            if (! in_array($payment->status, self::INACTIVE_STATUSES, true)) {
+                foreach ($items as $item) {
+                    $product = $item->product ?? Product::find($item->product_id);
+
+                    if (! $product) {
+                        throw new RuntimeException('Hàng hóa trên hóa đơn không còn tồn tại. Vui lòng kiểm tra lại trước khi xuất kho.');
+                    }
+
+                    self::mergeRequirements($desired, self::requirements($product, (int) $item->amount));
+                }
+            }
+
+            $exported = [];
+            $logs = \Polirium\Modules\Product\Http\Model\ProductLog::query()
+                ->where('productable_type', Payment::class)
+                ->where('productable_id', $payment->id)
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($logs as $log) {
+                $key = (int) ($log->branch_id ?: $branchId) . ':' . $log->product_id;
+                $exported[$key] = ($exported[$key] ?? 0) - $log->signed_amount;
+            }
+
+            $deltas = [];
+
+            foreach ($desired as $productId => $requirement) {
+                $deltas[$branchId . ':' . $productId] = $requirement['quantity'];
+            }
+
+            foreach ($exported as $key => $quantity) {
+                $deltas[$key] = ($deltas[$key] ?? 0) - $quantity;
+            }
+
+            $deltas = array_filter($deltas);
+
+            if ($deltas === []) {
+                return;
+            }
+
+            if (DB::table('product_refunds')->where('product_payment_id', $payment->id)->exists()
+                || DB::table('product_payment_refunds')->where('product_payment_id', $payment->id)->where('status', 'success')->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'payment' => 'Hóa đơn đã có trả hàng. Không thể thay đổi số lượng xuất kho; vui lòng xử lý phiếu trả hàng trước khi sửa hóa đơn.',
+                ]);
+            }
+
+            ksort($deltas);
+
+            // Return stock first so a swap between lines never fails for lack of stock.
+            foreach ([true, false] as $increase) {
+                foreach ($deltas as $key => $delta) {
+                    if (($delta < 0) !== $increase) {
+                        continue;
+                    }
+
+                    [$deltaBranch, $productId] = array_map('intval', explode(':', $key));
+                    $product = $desired[$productId]['product'] ?? Product::find($productId);
+                    $quantity = abs($delta);
+
+                    if (! $increase) {
+                        self::assertAvailable([$productId => ['product' => $product, 'quantity' => $quantity]], $deltaBranch);
+                    }
+
+                    product_logs(
+                        $productId,
+                        $payment->id,
+                        Payment::class,
+                        $quantity,
+                        (int) ($product?->cost ?? 0),
+                        (int) ($product?->cost ?? 0) * $quantity,
+                        $increase,
+                        $deltaBranch,
+                        now(),
+                    );
+                }
+            }
+        });
     }
 
     /**

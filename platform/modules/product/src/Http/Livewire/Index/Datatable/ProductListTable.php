@@ -89,7 +89,14 @@ class ProductListTable extends BaseTable
             return;
         }
 
-        Product::destroy($id);
+        try {
+            Product::destroy($id);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('error', $e->validator->errors()->first());
+
+            return;
+        }
+
         $this->dispatch('refresh-datatable-products');
     }
 
@@ -116,15 +123,23 @@ class ProductListTable extends BaseTable
         }
 
         $count = 0;
+        $kept = [];
         foreach ($products as $product) {
-            $product->delete();
-            $count++;
+            try {
+                $product->delete();
+                $count++;
+            } catch (\Illuminate\Validation\ValidationException) {
+                $kept[] = $product->code;
+            }
         }
 
         $this->checkboxValues = [];
         $this->checkboxAll = false;
 
         $this->dispatch('success', "Đã xóa {$count} sản phẩm thành công.");
+        if ($kept !== []) {
+            $this->dispatch('error', 'Không xóa ' . count($kept) . ' hàng hóa đã có tồn kho hoặc chứng từ: ' . implode(', ', $kept) . '. Hãy tắt "Cho phép bán" để ngừng kinh doanh.');
+        }
         $this->dispatch('refresh-datatable-products');
         $this->dispatch('pg:eventRefresh-table-product-list');
     }

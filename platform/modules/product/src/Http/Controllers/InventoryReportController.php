@@ -25,24 +25,44 @@ class InventoryReportController extends BaseController
         $branchId = user_branch();
         $mode = $request->string('mode')->toString() ?: 'movement';
 
+        // Opening and closing come from the balances recorded on the stock card,
+        // never from summing movements from zero: legacy history is incomplete.
+        $balanceAt = fn (string $operator) => "(SELECT l.amount_after FROM product_logs l
+            WHERE l.product_id = products.id AND l.branch_id = product_branches.branch_id AND l.created_at {$operator} ?
+            ORDER BY l.created_at DESC, l.id DESC LIMIT 1)";
+        $balanceAfter = fn (string $operator) => "(SELECT l.amount_before FROM product_logs l
+            WHERE l.product_id = products.id AND l.branch_id = product_branches.branch_id AND l.created_at {$operator} ?
+            ORDER BY l.created_at ASC, l.id ASC LIMIT 1)";
+
         $logs = DB::table('product_branches')
             ->join('products', 'products.id', '=', 'product_branches.product_id')
-            ->leftJoin('product_logs', function ($join) use ($to) {
-                $join->on('product_logs.product_id', '=', 'products.id')
-                    ->whereColumn('product_logs.branch_id', 'product_branches.branch_id')
-                    ->where('product_logs.created_at', '<=', $to);
-            })
+            ->whereNotIn('products.type', ['service', 'combo'])
             ->when($branchId, fn ($query) => $query->where('product_branches.branch_id', $branchId))
             ->when($request->filled('search'), fn ($query) => $query->where(fn ($q) => $q
                 ->where('products.code', 'like', '%' . $request->string('search') . '%')
                 ->orWhere('products.name', 'like', '%' . $request->string('search') . '%')))
             ->selectRaw('products.id, products.code, products.name, products.unit, products.cost, product_branches.qty AS current_qty,
-                SUM(CASE WHEN product_logs.created_at < ? THEN CASE WHEN product_logs.direction = \'in\' THEN product_logs.amount ELSE -product_logs.amount END ELSE 0 END) AS opening_qty,
-                SUM(CASE WHEN product_logs.created_at BETWEEN ? AND ? AND product_logs.direction = \'in\' THEN product_logs.amount ELSE 0 END) AS inbound_qty,
-                SUM(CASE WHEN product_logs.created_at BETWEEN ? AND ? AND product_logs.direction = \'out\' THEN product_logs.amount ELSE 0 END) AS outbound_qty', [$from, $from, $to, $from, $to])
-            ->groupBy('products.id', 'products.code', 'products.name', 'products.unit', 'products.cost', 'product_branches.branch_id', 'product_branches.qty')
+                COALESCE(' . $balanceAt('<') . ', ' . $balanceAfter('>=') . ', product_branches.qty) AS opening_qty,
+                COALESCE(' . $balanceAt('<=') . ', ' . $balanceAfter('>') . ', product_branches.qty) AS closing_qty,
+                (SELECT COALESCE(SUM(l.amount), 0) FROM product_logs l WHERE l.product_id = products.id AND l.branch_id = product_branches.branch_id
+                    AND l.direction = \'in\' AND l.created_at BETWEEN ? AND ?) AS inbound_qty,
+                (SELECT COALESCE(SUM(l.amount), 0) FROM product_logs l WHERE l.product_id = products.id AND l.branch_id = product_branches.branch_id
+                    AND l.direction = \'out\' AND l.created_at BETWEEN ? AND ?) AS outbound_qty',
+                [$from, $from, $to, $to, $from, $to, $from, $to])
             ->orderBy('products.code')
-            ->get();
+            ->get()
+            ->each(function ($row) use ($to) {
+                if ($to->isFuture() || $to->isToday()) {
+                    $row->closing_qty = $row->current_qty;
+                }
+
+                foreach (['current_qty', 'opening_qty', 'closing_qty', 'inbound_qty', 'outbound_qty'] as $field) {
+                    $row->{$field} = (int) $row->{$field};
+                }
+
+                // Gaps left by legacy history are shown, not silently absorbed.
+                $row->adjustment_qty = $row->closing_qty - ($row->opening_qty + $row->inbound_qty - $row->outbound_qty);
+            });
 
         $valueRows = DB::table('product_branches')
             ->join('products', 'products.id', '=', 'product_branches.product_id')

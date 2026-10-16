@@ -101,11 +101,13 @@ final class PriceSettingTable extends BaseTable
         $this->authorize('products.price-setting');
         $old = Product::findOrFail($id);
         $new = $old->replicate();
+        $new->qty = 0;
         $new->save();
 
         $branches_id = $old->branches->pluck('id')->toArray();
         $new->branches()->sync($branches_id);
-        $new->branches()->updateExistingPivot($branches_id, ['qty' => $old->qty]);
+        // A copy starts without stock; stock only changes through documents.
+        $new->branches()->updateExistingPivot($branches_id, ['qty' => 0]);
 
         $this->dispatch('refresh-datatable-products-price-setting');
     }
@@ -114,7 +116,14 @@ final class PriceSettingTable extends BaseTable
         $id
     ): void {
         $this->authorize('products.price-setting');
-        Product::destroy($id);
+        try {
+            Product::destroy($id);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('error', $e->validator->errors()->first());
+
+            return;
+        }
+
         $this->dispatch('refresh-datatable-products-price-setting');
     }
 }
