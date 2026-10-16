@@ -65,13 +65,7 @@
                                             {{-- Priority Badge --}}
                                             @if($task->priority !== 'medium')
                                                 <div class="mb-2">
-                                                    @php
-                                                        $colors = ['low' => 'muted', 'high' => 'warning', 'urgent' => 'danger'];
-                                                        $color = $colors[$task->priority] ?? 'muted';
-                                                    @endphp
-                                                    <span class="badge bg-{{ $color }}-lt text-{{ $color }}">
-                                                        {{ $task->priority_label }}
-                                                    </span>
+                                                    <span class="badge bg-{{ $task->priority_color }}-lt">{{ $task->priority_label }}</span>
                                                 </div>
                                             @endif
 
@@ -86,12 +80,15 @@
                                             {{-- Task Code --}}
                                             <div class="text-muted mb-2" style="font-size: 0.75rem;">
                                                 <code>{{ $task->code }}</code>
+                                                @if($task->parent)
+                                                    <span class="ms-1" title="{{ __('modules/task::task.parent_task') }}">{!! tabler_icon('subtask', ['class' => 'icon icon-sm']) !!} {{ \Illuminate\Support\Str::limit($task->parent->name, 20) }}</span>
+                                                @endif
                                             </div>
 
                                             {{-- Description preview --}}
                                             @if($task->description)
                                                 <p class="card-text text-muted mb-2" style="font-size: 0.75rem;">
-                                                    {!! Str::limit(strip_tags($task->description), 60) !!}
+                                                    {{ \Illuminate\Support\Str::limit(strip_tags($task->description), 60) }}
                                                 </p>
                                             @endif
 
@@ -115,16 +112,15 @@
                                             @endif
 
                                             {{-- Progress --}}
-                                            @if(($task->progress_percentage ?? 0) > 0)
+                                            @php($progress = $task->status === 'done' ? 100 : $task->progress)
+                                            @if($progress > 0)
                                                 <div class="mb-2">
                                                     <div class="progress progress-sm mb-1" style="height: 4px;">
-                                                        <div class="progress-bar"
-                                                             style="width: {{ $task->progress_percentage }}%"
+                                                        <div class="progress-bar bg-{{ $progress >= 100 ? 'success' : 'primary' }}"
+                                                             style="width: {{ $progress }}%"
                                                              role="progressbar"></div>
                                                     </div>
-                                                    <small class="text-muted" style="font-size: 0.7rem;">
-                                                        {{ $task->progress_percentage }}%
-                                                    </small>
+                                                    <small class="text-muted" style="font-size: 0.7rem;">{{ $progress }}%</small>
                                                 </div>
                                             @endif
 
@@ -133,7 +129,7 @@
                                                 <div>
                                                     @if($task->project)
                                                         <span class="badge bg-primary-lt text-primary" style="font-size: 0.65rem;">
-                                                            {!! Str::limit($task->project->name, 15) !!}
+                                                            {{ \Illuminate\Support\Str::limit($task->project->name, 18) }}
                                                         </span>
                                                     @endif
                                                 </div>
@@ -142,7 +138,7 @@
                                                          title="{{ $task->assignedTo->name }}"
                                                          style="width: 24px; height: 24px; font-size: 0.6rem;">
                                                         <span class="avatar-placeholder">
-                                                            {{ mb_substr($task->assignedTo->name, 0, 2) }}
+                                                            {{ mb_strtoupper(mb_substr($task->assignedTo->name, 0, 2)) }}
                                                         </span>
                                                     </div>
                                                 @endif
@@ -156,8 +152,7 @@
                             @if(empty($tasks[$column['id']]) || count($tasks[$column['id']]) === 0)
                                 <div class="kanban-empty-state text-center py-4">
                                     <div class="text-muted" style="font-size: 0.8rem;">
-                                        {!! tabler_icon('drag-drop', ['class' => 'icon icon-lg text-muted mb-2']) !!}
-                                        <p class="mb-0">{{ __('modules/task::task.drag_to_add') }}</p>
+                                        <p class="mb-0">{{ __('modules/task::task.empty_column') }}</p>
                                     </div>
                                 </div>
                             @endif
@@ -170,7 +165,7 @@
 
     {{-- SortableJS + Alpine --}}
     @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+    <script src="{{ asset('vendor/polirium/core/ui/libs/sortablejs/Sortable.min.js') }}"></script>
     <script>
         function kanbanBoard() {
             return {
@@ -190,7 +185,9 @@
                                     const newStatus = evt.to.getAttribute('data-status');
 
                                     if (taskId && newStatus) {
-                                        @this.updateTaskStatus(parseInt(taskId), newStatus);
+                                        if (evt.from !== evt.to) {
+                                            @this.updateTaskStatus(parseInt(taskId), newStatus);
+                                        }
 
                                         const orderedIds = Array.from(evt.to.querySelectorAll('.kanban-card'))
                                             .map(child => parseInt(child.getAttribute('data-id')))

@@ -55,7 +55,7 @@ class FilterSidebarComponent extends Component
         // Reload parent tasks when project changes
         if (! empty($value)) {
             $this->parentTasks = ['root' => __('modules/task::task.root_tasks_only')];
-            $this->parentTasks += Task::where('project_id', $value)
+            $this->parentTasks += Task::query()->visible()->where('project_id', $value)
                 ->whereNull('parent_id')
                 ->orderBy('name')
                 ->pluck('name', 'id')

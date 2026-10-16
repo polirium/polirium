@@ -8,9 +8,22 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Polirium\Core\Base\Http\Models\BaseModel;
 use Polirium\Core\Base\Http\Models\Branch\Branch;
 use Polirium\Core\Base\Http\Models\User;
+use Polirium\Modules\Task\Models\Concerns\BelongsToCurrentBranch;
 
 class Project extends BaseModel
 {
+    use BelongsToCurrentBranch;
+
+    public const STATUSES = ['planning', 'active', 'on_hold', 'completed', 'cancelled'];
+
+    public const STATUS_COLORS = [
+        'planning' => 'secondary',
+        'active' => 'primary',
+        'on_hold' => 'warning',
+        'completed' => 'success',
+        'cancelled' => 'danger',
+    ];
+
     protected $table = 'projects';
 
     protected $fillable = [
@@ -131,6 +144,27 @@ class Project extends BaseModel
         return now()->greaterThan($this->planned_end_date);
     }
 
+    public function getStatusColorAttribute(): string
+    {
+        return self::STATUS_COLORS[$this->status] ?? 'secondary';
+    }
+
+    /**
+     * Progress follows the work: average progress of the project's top-level
+     * tasks, a finished task counting as 100%, cancelled tasks ignored.
+     */
+    public function getProgressAttribute(): int
+    {
+        $tasks = $this->relationLoaded('tasks') ? $this->tasks : $this->tasks()->get();
+        $tasks = $tasks->whereNull('parent_id')->where('status', '!=', 'cancelled');
+
+        if ($tasks->isEmpty()) {
+            return (int) round((float) $this->progress_percentage);
+        }
+
+        return (int) round($tasks->avg(fn (Task $task) => $task->status === 'done' ? 100 : (float) $task->progress_percentage));
+    }
+
     /**
      * Auto-generate code if not set.
      */
@@ -140,7 +174,7 @@ class Project extends BaseModel
 
         static::creating(function ($project) {
             if (empty($project->code)) {
-                $project->code = 'PRJ-' . str_pad(static::max('id') + 1, 5, '0', STR_PAD_LEFT);
+                $project->code = static::nextCode('PRJ');
             }
         });
     }

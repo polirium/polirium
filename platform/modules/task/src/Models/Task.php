@@ -8,9 +8,32 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Polirium\Core\Base\Http\Models\BaseModel;
 use Polirium\Core\Base\Http\Models\Branch\Branch;
 use Polirium\Core\Base\Http\Models\User;
+use Polirium\Modules\Task\Models\Concerns\BelongsToCurrentBranch;
 
 class Task extends BaseModel
 {
+    use BelongsToCurrentBranch;
+
+    public const STATUSES = ['backlog', 'todo', 'in_progress', 'review', 'done', 'cancelled'];
+
+    public const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+
+    public const STATUS_COLORS = [
+        'backlog' => 'secondary',
+        'todo' => 'azure',
+        'in_progress' => 'primary',
+        'review' => 'purple',
+        'done' => 'success',
+        'cancelled' => 'danger',
+    ];
+
+    public const PRIORITY_COLORS = [
+        'low' => 'secondary',
+        'medium' => 'info',
+        'high' => 'warning',
+        'urgent' => 'danger',
+    ];
+
     protected $table = 'tasks';
 
     protected $fillable = [
@@ -237,6 +260,49 @@ class Task extends BaseModel
     }
 
     /**
+     * Ids of every task below this one (children, grandchildren, ...).
+     *
+     * @return list<int>
+     */
+    public function descendantIds(): array
+    {
+        $ids = [];
+        $frontier = [$this->id];
+
+        while ($frontier !== []) {
+            $frontier = static::whereIn('parent_id', $frontier)->whereNotIn('id', $ids)->pluck('id')->all();
+            $ids = array_merge($ids, $frontier);
+        }
+
+        return $ids;
+    }
+
+    public function getStatusColorAttribute(): string
+    {
+        return self::STATUS_COLORS[$this->status] ?? 'secondary';
+    }
+
+    public function getPriorityColorAttribute(): string
+    {
+        return self::PRIORITY_COLORS[$this->priority] ?? 'secondary';
+    }
+
+    /**
+     * Hours keep their fraction (2,5 not 3): core_number_format rounds to integers.
+     */
+    public static function formatHours(float|string|null $hours): string
+    {
+        $formatted = number_format((float) $hours, 2, ',', '.');
+
+        return str_contains($formatted, ',') ? rtrim(rtrim($formatted, '0'), ',') : $formatted;
+    }
+
+    public function getProgressAttribute(): int
+    {
+        return (int) round((float) $this->progress_percentage);
+    }
+
+    /**
      * Auto-generate code if not set.
      */
     protected static function boot()
@@ -245,9 +311,7 @@ class Task extends BaseModel
 
         static::creating(function ($task) {
             if (empty($task->code)) {
-                $prefix = 'TSK';
-                $taskId = static::max('id') + 1;
-                $task->code = $prefix . '-' . str_pad($taskId, 5, '0', STR_PAD_LEFT);
+                $task->code = static::nextCode('TSK');
             }
         });
     }

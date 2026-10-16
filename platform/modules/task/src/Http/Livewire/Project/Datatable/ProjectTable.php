@@ -42,10 +42,9 @@ final class ProjectTable extends BaseTable
     public function datasource(): Builder
     {
         $query = Project::query()
-            ->with(['branch', 'createdBy'])
-            ->when(user_branch(), function ($q) {
-                $q->where('branch_id', user_branch());
-            })
+            ->visible()
+            ->with(['branch', 'createdBy', 'tasks:id,project_id,parent_id,status,progress_percentage'])
+            ->withCount('tasks')
             ->orderByDesc('id');
 
         // Apply filters from sidebar
@@ -81,7 +80,10 @@ final class ProjectTable extends BaseTable
         return PowerGrid::fields()
             ->add('id')
             ->add('code')
-            ->add('name')
+            // PowerGrid renders field values as HTML: escape everything users typed.
+            ->add('name', function (Project $project) {
+                return '<a href="' . e(route('admin.projects.show', $project->id)) . '" class="fw-medium">' . e($project->name) . '</a>';
+            })
             ->add('status_label', function (Project $project) {
                 $colors = [
                     'planning' => 'info',
@@ -108,10 +110,10 @@ final class ProjectTable extends BaseTable
                 return "<span class='badge bg-{$color}-lt text-{$color}'>{$label}</span>";
             })
             ->add('budget_formatted', function (Project $project) {
-                return core_number_format($project->budget);
+                return core_number_format((float) $project->budget);
             })
             ->add('progress_percentage', function (Project $project) {
-                $percentage = $project->progress_percentage;
+                $percentage = $project->progress;
                 $color = match(true) {
                     $percentage >= 100 => 'success',
                     $percentage >= 75 => 'primary',
@@ -134,7 +136,7 @@ final class ProjectTable extends BaseTable
                 return $start && $end ? "{$start} - {$end}" : '-';
             })
             ->add('tasks_count', function (Project $project) {
-                return $project->tasks_count ?? $project->tasks()->count();
+                return (int) $project->tasks_count;
             })
             ->add('created_at_formatted', function (Project $project) {
                 return $project->created_at?->format('d/m/Y H:i');
@@ -203,18 +205,21 @@ final class ProjectTable extends BaseTable
                 ->slot('<i class="icon icon-sm text-primary">' . tabler_icon('eye') . '</i>')
                 ->class('btn btn-sm btn-ghost-primary btn-icon')
                 ->route('admin.projects.show', ['id' => $row->id])
+                ->can(auth()->user()->can('projects.show'))
                 ->tooltip(__('core/base::general.view')),
 
             Button::make('edit')
                 ->slot('<i class="icon icon-sm text-primary">' . tabler_icon('edit') . '</i>')
                 ->class('btn btn-sm btn-ghost-primary btn-icon')
                 ->route('admin.projects.edit', ['id' => $row->id])
+                ->can(auth()->user()->can('projects.edit'))
                 ->tooltip(__('core/base::general.edit')),
 
             Button::make('delete')
                 ->slot('<i class="icon icon-sm text-danger">' . tabler_icon('trash') . '</i>')
                 ->class('btn btn-sm btn-ghost-danger btn-icon')
                 ->dispatch('deleteProject', ['id' => $row->id])
+                ->can(auth()->user()->can('projects.destroy'))
                 ->confirm(__('core/base::general.confirm_delete'))
                 ->tooltip(__('core/base::general.delete')),
         ];
@@ -240,7 +245,21 @@ final class ProjectTable extends BaseTable
     public function deleteProject(int $id): void
     {
         $this->authorize('projects.destroy');
-        Project::find($id)?->delete();
+        $project = Project::query()->visible()->find($id);
+
+        if (! $project) {
+            return;
+        }
+
+        // Deleting a project cascades to its tasks in the database; never do that silently.
+        if ($count = $project->tasks()->count()) {
+            $this->dispatch('error', __('modules/task::project.cannot_delete_with_tasks', ['count' => $count]));
+
+            return;
+        }
+
+        $project->delete();
+        $this->dispatch('success', __('modules/task::project.deleted_successfully'));
         $this->dispatch('pg:eventRefresh-' . $this->tableName);
     }
 }

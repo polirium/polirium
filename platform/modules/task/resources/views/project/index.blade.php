@@ -1,36 +1,28 @@
 <x-ui.layouts::app>
-    <div class="page-header d-print-none">
-        <div class="container-xl">
-            <div class="row g-2 align-items-center">
-                <div class="col">
-                    <h2 class="page-title">
-                        {{ __('modules/task::project.index') }}
-                    </h2>
-                </div>
-                <div class="col-auto">
-                    @can('projects.create')
-                        <a href="{{ route('admin.projects.create') }}" class="btn btn-primary d-flex align-items-center gap-1">
-                            {!! tabler_icon('plus', ['class' => 'icon']) !!}
-                            {{ __('core/base::general.create') }}
-                        </a>
-                    @endcan
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-slot:title>{{ __('modules/task::project.index') }}</x-slot:title>
+    <x-slot:actions>
+        @can('tasks.index')
+            <a href="{{ route('admin.tasks.index') }}" class="btn btn-outline-secondary">
+                {!! tabler_icon('checklist', ['class' => 'icon']) !!} {{ __('modules/task::task.index') }}
+            </a>
+        @endcan
+        @can('projects.create')
+            <a href="{{ route('admin.projects.create') }}" class="btn btn-primary">
+                {!! tabler_icon('plus', ['class' => 'icon']) !!} {{ __('modules/task::project.create') }}
+            </a>
+        @endcan
+    </x-slot:actions>
 
-    <div class="page-body">
-        <div class="container-xl">
-            <div class="row">
-                <div class="col-md-3">
-                    @livewire('modules/task::project.filter-sidebar')
-                </div>
-                <div class="col-md-9">
-                    <x-ui::card>
-                        @livewire('modules/task::project.datatable.project-table')
-                    </x-ui::card>
-                </div>
-            </div>
+    @include('modules/task::partials.alerts')
+
+    <div class="row g-3">
+        <div class="col-lg-3">
+            @livewire('modules/task::project.filter-sidebar')
+        </div>
+        <div class="col-lg-9">
+            <x-ui::card>
+                @livewire('modules/task::project.datatable.project-table')
+            </x-ui::card>
         </div>
     </div>
 </x-ui.layouts::app>

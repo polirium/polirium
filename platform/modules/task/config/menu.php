@@ -26,4 +26,22 @@ return [
         'permission' => 'tasks.index',
         'sort' => 2,
     ],
+    [
+        'id' => 'module-task-kanban',
+        'parent' => 'module-task',
+        'name' => 'modules/task::task.kanban',
+        'route' => 'admin.tasks.kanban',
+        'icon' => 'layout-kanban',
+        'permission' => 'tasks.kanban',
+        'sort' => 3,
+    ],
+    [
+        'id' => 'module-task-gantt',
+        'parent' => 'module-task',
+        'name' => 'modules/task::task.gantt',
+        'route' => 'admin.tasks.gantt',
+        'icon' => 'timeline',
+        'permission' => 'tasks.gantt',
+        'sort' => 4,
+    ],
 ];

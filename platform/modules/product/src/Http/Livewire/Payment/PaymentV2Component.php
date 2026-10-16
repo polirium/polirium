@@ -129,8 +129,13 @@ class PaymentV2Component extends PaymentComponent
             return $product;
         });
     }
-    public function selectedProduct($product_id): void
+    public function selectedProduct($product_id, $tab_id = null): void
     {
+        // Same tab guard as the parent: another tab's selection must not toast here.
+        if ($tab_id && $tab_id !== $this->tab_selected) {
+            return;
+        }
+
         $product = Product::with(['branches' => function ($q) {
             $q->where('branches.id', user_branch());
         }])->find($product_id);
@@ -141,7 +146,7 @@ class PaymentV2Component extends PaymentComponent
 
         // Allow services (unlimited stock)
         if ($product->type === 'service') {
-            parent::selectedProduct($product_id);
+            parent::selectedProduct($product_id, $tab_id);
 
             return;
         }
@@ -164,6 +169,6 @@ class PaymentV2Component extends PaymentComponent
             return;
         }
 
-        parent::selectedProduct($product_id);
+        parent::selectedProduct($product_id, $tab_id);
     }
 }

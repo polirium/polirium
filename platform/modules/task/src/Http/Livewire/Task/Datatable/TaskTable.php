@@ -42,10 +42,8 @@ final class TaskTable extends BaseTable
     public function datasource(): Builder
     {
         $query = Task::query()
+            ->visible()
             ->with(['project', 'assignedTo', 'parent'])
-            ->when(user_branch(), function ($q) {
-                $q->where('branch_id', user_branch());
-            })
             ->orderBy('sort_order')
             ->orderByDesc('id');
 
@@ -95,9 +93,12 @@ final class TaskTable extends BaseTable
         return PowerGrid::fields()
             ->add('id')
             ->add('code')
-            ->add('name')
+            // PowerGrid renders field values as HTML: escape everything users typed.
+            ->add('name', function (Task $task) {
+                return '<a href="' . e(route('admin.tasks.show', $task->id)) . '" class="fw-medium">' . e($task->name) . '</a>';
+            })
             ->add('project_name', function (Task $task) {
-                return $task->project?->name ?? '-';
+                return e($task->project?->name ?? '-');
             })
             ->add('status_label', function (Task $task) {
                 $colors = [
@@ -126,10 +127,10 @@ final class TaskTable extends BaseTable
                 return "<span class='badge bg-{$color}-lt text-{$color}'>{$label}</span>";
             })
             ->add('assigned_to_name', function (Task $task) {
-                return $task->assignedTo?->name ?? '-';
+                return e($task->assignedTo?->name ?? '-');
             })
             ->add('progress_percentage', function (Task $task) {
-                $percentage = $task->progress_percentage;
+                $percentage = $task->status === 'done' ? 100 : $task->progress;
                 $color = match(true) {
                     $percentage >= 100 => 'success',
                     $percentage >= 75 => 'primary',
@@ -152,20 +153,15 @@ final class TaskTable extends BaseTable
                 return $start && $end ? "{$start} - {$end}" : '-';
             })
             ->add('hours', function (Task $task) {
-                $estimated = $task->estimated_hours;
-                $actual = $task->actual_hours;
-
-                return "{$actual}/{$estimated}h";
+                return Task::formatHours($task->actual_hours) . '/' . Task::formatHours($task->estimated_hours) . 'h';
             })
             ->add('parent_name', function (Task $task) {
-                return $task->parent?->name ?? '-';
+                return e($task->parent?->name ?? '-');
             })
             ->add('is_overdue', function (Task $task) {
-                if ($task->is_overdue) {
-                    return "<span class='badge bg-danger-lt text-danger'>{{ __('modules/task::task.overdue') }}</span>";
-                }
-
-                return '';
+                return $task->is_overdue
+                    ? "<span class='badge bg-danger-lt text-danger'>" . e(__('modules/task::task.overdue')) . '</span>'
+                    : '';
             })
             ->add('created_at_formatted', function (Task $task) {
                 return $task->created_at?->format('d/m/Y H:i');
@@ -239,18 +235,21 @@ final class TaskTable extends BaseTable
                 ->slot('<i class="icon icon-sm text-primary">' . tabler_icon('eye') . '</i>')
                 ->class('btn btn-sm btn-ghost-primary btn-icon')
                 ->route('admin.tasks.show', ['id' => $row->id])
+                ->can(auth()->user()->can('tasks.show'))
                 ->tooltip(__('core/base::general.view')),
 
             Button::make('edit')
                 ->slot('<i class="icon icon-sm text-primary">' . tabler_icon('edit') . '</i>')
                 ->class('btn btn-sm btn-ghost-primary btn-icon')
                 ->route('admin.tasks.edit', ['id' => $row->id])
+                ->can(auth()->user()->can('tasks.edit'))
                 ->tooltip(__('core/base::general.edit')),
 
             Button::make('delete')
                 ->slot('<i class="icon icon-sm text-danger">' . tabler_icon('trash') . '</i>')
                 ->class('btn btn-sm btn-ghost-danger btn-icon')
                 ->dispatch('deleteTask', ['id' => $row->id])
+                ->can(auth()->user()->can('tasks.destroy'))
                 ->confirm(__('core/base::general.confirm_delete'))
                 ->tooltip(__('core/base::general.delete')),
         ];
@@ -272,7 +271,20 @@ final class TaskTable extends BaseTable
     public function deleteTask(int $id): void
     {
         $this->authorize('tasks.destroy');
-        Task::find($id)?->delete();
+        $task = Task::query()->visible()->find($id);
+
+        if (! $task) {
+            return;
+        }
+
+        if ($count = $task->children()->count()) {
+            $this->dispatch('error', __('modules/task::task.cannot_delete_with_children', ['count' => $count]));
+
+            return;
+        }
+
+        $task->delete();
+        $this->dispatch('success', __('modules/task::task.deleted_successfully'));
         $this->dispatch('pg:eventRefresh-' . $this->tableName);
     }
 }

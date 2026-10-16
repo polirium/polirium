@@ -28,4 +28,15 @@ return [
     'created_at' => 'Ngày tạo',
     'created_by' => 'Người tạo',
     'branch' => 'Chi nhánh',
+
+    'cannot_delete_with_tasks' => 'Không thể xóa: dự án còn :count công việc. Hãy xóa hoặc chuyển các công việc sang dự án khác trước.',
+    'confirm_delete' => 'Xóa dự án này?',
+    'tasks' => 'Công việc của dự án',
+    'add_task' => 'Thêm công việc',
+    'total_tasks' => 'Tổng công việc',
+    'done_tasks' => 'Đã xong',
+    'overdue_tasks' => 'Quá hạn',
+    'hours' => 'Giờ (thực tế / ước tính)',
+    'no_tasks_hint' => 'Dự án chưa có công việc. Bấm "Thêm công việc" để bắt đầu.',
+    'progress_hint' => 'Tính theo tiến độ các công việc gốc',
 ];

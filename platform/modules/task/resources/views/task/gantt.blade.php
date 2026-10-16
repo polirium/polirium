@@ -1,36 +1,10 @@
 <x-ui.layouts::app>
-    <div class="page-header d-print-none">
-        <div class="container-xl">
-            <div class="row g-2 align-items-center">
-                <div class="col">
-                    <h2 class="page-title">
-                        {{ __('modules/task::task.gantt') }}
-                    </h2>
-                </div>
-                <div class="col-auto">
-                    <div class="btn-list">
-                        <a href="{{ route('admin.tasks.index') }}" class="btn btn-white">
-                            {!! tabler_icon('list', ['class' => 'icon']) !!}
-                            {{ __('modules/task::task.index') }}
-                        </a>
-                        <a href="{{ route('admin.tasks.kanban') }}" class="btn btn-white">
-                            {!! tabler_icon('columns', ['class' => 'icon']) !!}
-                            {{ __('modules/task::task.kanban') }}
-                        </a>
-                        @can('tasks.create')
-                            <a href="{{ route('admin.tasks.create') }}" class="btn btn-primary d-flex align-items-center gap-1">
-                                {!! tabler_icon('plus', ['class' => 'icon']) !!}
-                                {{ __('core/base::general.create') }}
-                            </a>
-                        @endcan
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-slot:title>{{ __('modules/task::task.gantt') }}</x-slot:title>
+    <x-slot:actions>
+        @include('modules/task::partials.view-switcher')
+    </x-slot:actions>
 
-    <div class="page-body">
-        <div class="container-xl" x-data="ganttChart({{ Js::from($tasks) }}, {{ Js::from($projects) }})" x-init="init()">
+    <div x-data="ganttChart({{ Js::from($tasks) }}, {{ Js::from($projects) }})" x-init="init()">
 
             {{-- Controls --}}
             <div class="card mb-3">
@@ -80,9 +54,12 @@
                                     </div>
                                 </div>
                                 <template x-for="task in filteredTasks" :key="task.id">
-                                    <div class="gantt-sidebar-row" :title="task.name">
+                                    <div class="gantt-sidebar-row" :title="task.code + ' · ' + task.name">
                                         <div class="d-flex w-100">
-                                            <span class="text-truncate" style="width: 60%;" x-text="task.name"></span>
+                                            <a class="text-truncate text-reset" :href="task.url" style="width: 60%;"
+                                               :style="{ paddingLeft: (task.depth * 14) + 'px' }">
+                                                <span class="text-secondary" x-show="task.depth > 0">↳ </span><span x-text="task.name"></span>
+                                            </a>
                                             <span class="text-truncate text-muted" style="width: 40%; font-size: 0.75rem;" x-text="task.assigned_to || '-'"></span>
                                         </div>
                                     </div>
@@ -117,7 +94,6 @@
                 </div>
             @endif
         </div>
-    </div>
 
     @push('styles')
         <style>
@@ -203,6 +179,29 @@
                 background: rgba(var(--tblr-primary-rgb), 0.08);
                 color: var(--tblr-primary);
                 font-weight: 600;
+            }
+
+            .gantt-deps {
+                position: absolute;
+                top: 0;
+                left: 0;
+                pointer-events: none;
+                overflow: visible;
+                z-index: 3;
+            }
+
+            .gantt-dep {
+                fill: none;
+                stroke: var(--tblr-secondary);
+                stroke-width: 1.5;
+            }
+
+            .gantt-dep-head {
+                fill: var(--tblr-secondary);
+            }
+
+            .gantt-bar {
+                cursor: pointer;
             }
 
             .gantt-timeline-body {
@@ -405,8 +404,8 @@
                         let minDate = null,
                             maxDate = null;
                         this.filteredTasks.forEach(t => {
-                            const s = new Date(t.start);
-                            const e = new Date(t.end);
+                            const s = this.parseDate(t.start);
+                            const e = this.parseDate(t.end);
                             if (!minDate || s < minDate) minDate = new Date(s);
                             if (!maxDate || e > maxDate) maxDate = new Date(e);
                         });
@@ -414,6 +413,10 @@
                         // Add padding
                         minDate.setDate(minDate.getDate() - 3);
                         maxDate.setDate(maxDate.getDate() + 7);
+
+                        if (this.zoomLevel === 'month') {
+                            minDate.setDate(1);
+                        }
 
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
@@ -468,8 +471,8 @@
                             }
 
                             // Calculate bar position
-                            const taskStart = new Date(task.start);
-                            const taskEnd = new Date(task.end);
+                            const taskStart = this.parseDate(task.start);
+                            const taskEnd = this.parseDate(task.end);
                             taskStart.setHours(0, 0, 0, 0);
                             taskEnd.setHours(0, 0, 0, 0);
 
@@ -505,6 +508,8 @@
                                         data-task-progress="${progress}"
                                         data-task-assignee="${this.escape(task.assigned_to)}"
                                         data-task-project="${this.escape(task.project_name)}"
+                                        data-url="${this.escape(task.url)}"
+                                        onclick="window.location = this.dataset.url"
                                         onmouseenter="ganttTooltipShow(event, this)"
                                         onmouseleave="ganttTooltipHide()">`;
                             if (progress > 0) {
@@ -514,6 +519,7 @@
                             bodyHtml += `</div></div>`;
                         });
                         bodyEl.innerHTML = bodyHtml;
+                        this.drawDependencies(bodyEl);
 
                         // Today line
                         if (today >= minDate && today <= maxDate) {
@@ -539,6 +545,43 @@
                             const todayLeft = parseInt(todayLine.style.left, 10);
                             timeline.scrollLeft = Math.max(0, todayLeft - timeline.clientWidth / 3);
                         }
+                    },
+
+                    parseDate(value) {
+                        const [y, m, d] = String(value).split('-').map(Number);
+                        return new Date(y, m - 1, d);
+                    },
+
+                    // Arrows from the end of each predecessor bar to the start of its successor.
+                    drawDependencies(bodyEl) {
+                        const bars = {};
+                        bodyEl.querySelectorAll('.gantt-bar').forEach(bar => bars[bar.dataset.taskId] = bar);
+                        const origin = bodyEl.getBoundingClientRect();
+                        let paths = '';
+
+                        this.filteredTasks.forEach(task => {
+                            const from = bars[task.id];
+                            (task.dependencies || []).forEach(successorId => {
+                                const to = bars[successorId];
+                                if (!from || !to) return;
+
+                                const a = from.getBoundingClientRect();
+                                const b = to.getBoundingClientRect();
+                                const x1 = a.right - origin.left + bodyEl.scrollLeft;
+                                const y1 = a.top + a.height / 2 - origin.top;
+                                const x2 = b.left - origin.left + bodyEl.scrollLeft;
+                                const y2 = b.top + b.height / 2 - origin.top;
+                                const bend = Math.max(x1 + 10, Math.min(x2 - 10, x1 + 10));
+
+                                paths += `<path d="M${x1},${y1} H${bend} V${y2} H${x2 - 2}" class="gantt-dep" marker-end="url(#gantt-arrow)"/>`;
+                            });
+                        });
+
+                        if (!paths) return;
+
+                        bodyEl.insertAdjacentHTML('beforeend', `<svg class="gantt-deps" width="${bodyEl.scrollWidth}" height="${bodyEl.scrollHeight}">
+                            <defs><marker id="gantt-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 z" class="gantt-dep-head"/></marker></defs>${paths}</svg>`);
                     },
 
                     getDaysBetween(start, end) {
@@ -569,12 +612,18 @@
                     _ganttTooltip.className = 'gantt-tooltip';
                     document.body.appendChild(_ganttTooltip);
                 }
-                const name = el.dataset.taskName;
-                const start = el.dataset.taskStart;
-                const end = el.dataset.taskEnd;
-                const progress = el.dataset.taskProgress;
-                const assignee = el.dataset.taskAssignee;
-                const project = el.dataset.taskProject;
+                const esc = (value) => {
+                    const div = document.createElement('div');
+                    div.textContent = value || '';
+                    return div.innerHTML;
+                };
+                const date = (value) => String(value || '').split('-').reverse().join('/');
+                const name = esc(el.dataset.taskName);
+                const start = date(el.dataset.taskStart);
+                const end = date(el.dataset.taskEnd);
+                const progress = esc(el.dataset.taskProgress);
+                const assignee = esc(el.dataset.taskAssignee);
+                const project = esc(el.dataset.taskProject);
 
                 _ganttTooltip.innerHTML = `
                 <strong>${name}</strong>

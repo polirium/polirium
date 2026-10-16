@@ -9,6 +9,7 @@ use Polirium\Core\Base\Http\Controllers\BaseController;
 use Polirium\Modules\Task\Http\Requests\StoreProjectRequest;
 use Polirium\Modules\Task\Http\Requests\UpdateProjectRequest;
 use Polirium\Modules\Task\Models\Project;
+use Polirium\Modules\Task\Models\Task;
 
 class ProjectController extends BaseController
 {
@@ -19,50 +20,67 @@ class ProjectController extends BaseController
 
     public function create(): View
     {
-        return view('modules/task::project.create');
+        return view('modules/task::project.create', [
+            'project' => new Project(['status' => 'planning', 'priority' => 'medium', 'budget' => 0]),
+        ]);
     }
 
     public function store(StoreProjectRequest $request): RedirectResponse
     {
-        Project::create(array_merge($request->validated(), [
-            'uuid' => Str::uuid(),
+        $project = Project::create($request->validated() + [
+            'uuid' => (string) Str::uuid(),
             'created_by' => auth()->id(),
             'updated_by' => auth()->id(),
             'branch_id' => user_branch(),
-        ]));
+        ]);
 
-        return redirect()->route('admin.projects.index')
+        return redirect()->route('admin.projects.show', $project->id)
             ->with('success', __('modules/task::project.created_successfully'));
     }
 
     public function show($id): View
     {
-        $project = Project::with(['tasks.parent', 'branch', 'createdBy'])->findOrFail($id);
+        $project = Project::query()->visible()
+            ->with(['branch', 'createdBy', 'tasks' => fn ($q) => $q->orderBy('sort_order')->orderBy('id'), 'tasks.assignedTo', 'tasks.parent'])
+            ->findOrFail($id);
 
-        return view('modules/task::project.show', compact('project'));
+        $tasks = $project->tasks;
+        $stats = [
+            'total' => $tasks->count(),
+            'done' => $tasks->where('status', 'done')->count(),
+            'overdue' => $tasks->filter(fn (Task $task) => $task->is_overdue)->count(),
+            'by_status' => collect(Task::STATUSES)->mapWithKeys(fn ($status) => [$status => $tasks->where('status', $status)->count()]),
+            'estimated_hours' => (float) $tasks->sum('estimated_hours'),
+            'actual_hours' => (float) $tasks->sum('actual_hours'),
+        ];
+
+        return view('modules/task::project.show', compact('project', 'stats'));
     }
 
     public function edit($id): View
     {
-        $project = Project::findOrFail($id);
-
-        return view('modules/task::project.edit', compact('project'));
+        return view('modules/task::project.edit', ['project' => Project::findVisibleOrFail($id)]);
     }
 
     public function update(UpdateProjectRequest $request, $id): RedirectResponse
     {
-        $project = Project::findOrFail($id);
-        $project->update(array_merge($request->validated(), [
-            'updated_by' => auth()->id(),
-        ]));
+        $project = Project::findVisibleOrFail($id);
+        $project->update($request->validated() + ['updated_by' => auth()->id()]);
 
-        return redirect()->route('admin.projects.index')
+        return redirect()->route('admin.projects.show', $project->id)
             ->with('success', __('modules/task::project.updated_successfully'));
     }
 
     public function destroy($id): RedirectResponse
     {
-        Project::findOrFail($id)->delete();
+        $project = Project::findVisibleOrFail($id);
+
+        // Deleting a project cascades to its tasks in the database; never do that silently.
+        if ($count = $project->tasks()->count()) {
+            return back()->with('error', __('modules/task::project.cannot_delete_with_tasks', ['count' => $count]));
+        }
+
+        $project->delete();
 
         return redirect()->route('admin.projects.index')
             ->with('success', __('modules/task::project.deleted_successfully'));
