@@ -105,7 +105,7 @@ class RefundComponent extends Component
         $this->updatedRefund();
     }
 
-    public function updatedRefund(mixed $value = null, string $key = null): void
+    public function updatedRefund(mixed $value = null, ?string $key = null): void
     {
         $total = array_sum(array_column($this->products, 'value'));
 

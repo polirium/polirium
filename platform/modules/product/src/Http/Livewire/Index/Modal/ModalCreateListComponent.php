@@ -48,7 +48,7 @@ class ModalCreateListComponent extends Component
     }
 
     #[On('show-modal-create-list')]
-    public function showModal($id = null, $title, $tbl = 'trademarks', $model = 'Trademark')
+    public function showModal($id = null, $title = '', $tbl = 'trademarks', $model = 'Trademark')
     {
         $this->title = $title;
         $this->tbl = $tbl;

@@ -54,7 +54,7 @@ class ModalCreateDeliveryPartnerComponent extends Component
     }
 
     #[On('show-modal-create-delivery-partner')]
-    public function showModal(int $id = null): void
+    public function showModal(?int $id = null): void
     {
         $this->authorize($id ? 'products.delivery-partner.edit' : 'products.delivery-partner.create');
 

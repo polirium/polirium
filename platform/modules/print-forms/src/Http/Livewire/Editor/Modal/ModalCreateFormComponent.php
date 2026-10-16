@@ -50,7 +50,7 @@ class ModalCreateFormComponent extends Component
     }
 
     #[On('show-modal-create-form')]
-    public function showModal(string $type = null, ?int $id = null)
+    public function showModal(?string $type = null, ?int $id = null)
     {
         $this->authorize($id ? 'print-forms.forms.edit' : 'print-forms.forms.create');
         $this->editor_id = $id;

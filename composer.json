@@ -19,8 +19,9 @@
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
-        "maatwebsite/excel": "^3.1",
-        "polirium/core": "dev-main"
+        "maatwebsite/excel": "^4.0",
+        "polirium/core": "dev-main",
+        "relayercore/laravel-installer": "^1.5"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^4.2",
@@ -61,13 +62,18 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "mcamara/laravel-localization"
+            ]
         }
     },
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "platform": {
+            "php": "8.3.0"
+        },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true

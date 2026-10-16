@@ -77,7 +77,7 @@ class SaleChannelTable extends BaseTable
                 ->editOnClick(hasPermission: auth()->user()?->can('products.sale-channel.edit') ?? false),
 
             Column::make(trans('Kích hoạt'), 'is_active_formatted', 'is_active'),
-            
+
             Column::make('Mặc định', 'is_default_formatted', 'is_default'),
 
             Column::make(trans('modules/product::product.created_at'), 'created_at_formatted', 'created_at')

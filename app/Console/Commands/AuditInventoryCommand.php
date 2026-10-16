@@ -423,7 +423,7 @@ class AuditInventoryCommand extends Command
         if ($this->failedProducts > 0) {
             $this->line("  <fg=red>✗</> Lỗi:                    <fg=red;options=bold>{$this->failedProducts}</>");
         } else {
-            $this->line("  <fg=red>✗</> Lỗi:                    <fg=green;options=bold>0</>");
+            $this->line('  <fg=red>✗</> Lỗi:                    <fg=green;options=bold>0</>');
         }
 
         if (! empty($this->errors)) {

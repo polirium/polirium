@@ -82,7 +82,7 @@ class ModalCreateCustomerComponent extends Component
         if ($key == 'province_id') {
             if ($value) {
                 $this->list['districts'] = get_districts($value);
-                $this->list['wards'] = [];
+                $this->list['wards'] = get_wards_by_province($value);
             } else {
                 $this->list['districts'] = [];
                 $this->list['wards'] = [];
@@ -108,6 +108,9 @@ class ModalCreateCustomerComponent extends Component
 
     public function resetInputs()
     {
+        $this->list['provinces'] = get_provinces();
+        $this->list['districts'] = [];
+        $this->list['wards'] = [];
         $this->reset('customer_groups');
         $this->customer = [
             'code' => code_generate('KH', Customer::max('id')),
@@ -135,6 +138,10 @@ class ModalCreateCustomerComponent extends Component
     {
         $this->authorize($id ? 'customers.edit' : 'customers.create');
 
+        $this->list['provinces'] = get_provinces();
+        $this->list['districts'] = [];
+        $this->list['wards'] = [];
+
         $this->list['customer-groups'] = CustomerGroup::select(['id', 'name'])->get() ?? [];
         $this->customer_id = $id;
         if ($id) {
@@ -145,8 +152,11 @@ class ModalCreateCustomerComponent extends Component
             $district_id = $this->customer['district_id'];
             $ward_id = $this->customer['ward_id'];
 
-            $this->updatedCustomer($this->customer['province_id'], 'province_id');
-            $this->updatedCustomer($district_id, 'district_id');
+            if ($this->customer['province_id']) {
+                $this->list['provinces'] = get_provinces($this->customer['province_id']);
+                $this->list['districts'] = get_districts($this->customer['province_id'], $district_id);
+                $this->list['wards'] = get_wards_by_province($this->customer['province_id'], $ward_id);
+            }
 
             $this->customer['district_id'] = $district_id;
             $this->customer['ward_id'] = $ward_id;

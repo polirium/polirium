@@ -87,14 +87,14 @@ class TopCustomersWidget extends AbstractWidget
         $digits = preg_replace('/\D+/', '', (string) $phone) ?? '';
 
         if (strlen($digits) === 11 && str_starts_with($digits, '84')) {
-            $digits = '0'.substr($digits, 2);
+            $digits = '0' . substr($digits, 2);
         }
 
         if (strlen($digits) < 7) {
             return $digits === '' ? '—' : str_repeat('x', strlen($digits));
         }
 
-        return substr($digits, 0, 3).'xxxx'.substr($digits, -3);
+        return substr($digits, 0, 3) . 'xxxx' . substr($digits, -3);
     }
 
     public function render()

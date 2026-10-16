@@ -16,7 +16,6 @@
                                 icon="hash"
                             />
                         </div>
-
                         <div class="col-12">
                             <x-ui.form.input
                                 wire:model="customer.name"
@@ -145,7 +144,7 @@
                                 :options="$list['provinces']"
                             />
                         </div>
-
+                        @if ($list['districts'] !== [])
                         <div class="col-12">
                             <x-ui.form.select
                                 wire:model.live="customer.district_id"
@@ -154,6 +153,7 @@
                                 :options="$list['districts']"
                             />
                         </div>
+                        @endif
 
                         <div class="col-12">
                             <x-ui.form.select

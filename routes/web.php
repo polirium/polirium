@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Installer\RunInstallationStageController;
+use App\Http\Livewire\Installer;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,3 +18,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Keep the installer page in Laravel's web middleware group so its initial
+// response and the staged installation requests share a session and CSRF token.
+Route::get('/install', Installer::class)
+    ->name('installer.index');
+
+Route::post('/install/stage', RunInstallationStageController::class)
+    ->name('installer.stage');

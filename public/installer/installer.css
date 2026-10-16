@@ -1,0 +1,1418 @@
+/* ============================================================
+   Installer CSS — Custom styles for the Laravel Installer wizard
+   No Tailwind dependency. Clean, themable, minimal.
+   ============================================================ */
+
+:root {
+    --color-primary: var(--theme-primary, #6366f1);
+    --color-primary-dark: var(--theme-primary-dark, #4f46e5);
+    --color-sidebar: #0f172a;
+    --color-content-bg: #ffffff;
+    --color-body-bg: #f1f5f9;
+    --color-border: #e2e8f0;
+    --color-text: #1e293b;
+    --color-text-muted: #64748b;
+    --color-error-bg: #fef2f2;
+    --color-error-border: #ef4444;
+    --color-error-text: #b91c1c;
+    --color-success-bg: #f0fdf4;
+    --color-success-text: #15803d;
+    --color-warning-bg: #fffbeb;
+    --color-warning-text: #92400e;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ============================================================
+   Base & Reset
+   ============================================================ */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+[x-cloak] { display: none !important; }
+
+/* ============================================================
+   Layout — Main Container
+   ============================================================ */
+
+.installer-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background-color: var(--color-body-bg);
+    font-family: var(--font-sans);
+}
+
+@media (min-width: 640px) {
+    .installer-page {
+        padding: 2rem;
+    }
+}
+
+.installer-card {
+    width: 90%;
+    max-width: 1920px;
+    min-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-content-bg);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+    overflow: hidden;
+}
+
+@media (min-width: 768px) {
+    .installer-card {
+        flex-direction: row;
+    }
+}
+
+/* ============================================================
+   Sidebar
+   ============================================================ */
+
+.installer-sidebar {
+    width: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2.5rem;
+    background-color: var(--color-sidebar);
+    color: #fff;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    .installer-sidebar {
+        width: 350px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .installer-sidebar {
+        width: 400px;
+    }
+}
+
+.installer-sidebar-decoration {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+.installer-sidebar-decoration--top-right {
+    top: 0;
+    right: 0;
+    width: 24rem;
+    height: 24rem;
+    margin-top: -5rem;
+    margin-right: -5rem;
+    background-color: var(--color-primary);
+    filter: blur(64px);
+}
+
+.installer-sidebar-decoration--bottom-left {
+    bottom: 0;
+    left: 0;
+    width: 24rem;
+    height: 24rem;
+    margin-bottom: -5rem;
+    margin-left: -5rem;
+    background-color: var(--color-primary-dark);
+    filter: blur(64px);
+}
+
+.installer-sidebar-content {
+    position: relative;
+    z-index: 10;
+}
+
+/* ============================================================
+   Brand
+   ============================================================ */
+
+.installer-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.installer-brand-logo {
+    height: 2.5rem;
+}
+
+.installer-brand-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #3b82f6, #9333ea);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+}
+
+.installer-brand-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #fff;
+}
+
+.installer-brand-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+}
+
+.installer-step-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0 0 0.5rem 0;
+}
+
+.installer-step-counter {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* ============================================================
+   Progress Bar (thin line at top)
+   ============================================================ */
+
+.installer-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: rgba(255, 255, 255, 0.1);
+    z-index: 20;
+}
+
+.installer-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
+    transition: width 0.4s ease;
+    border-radius: 0 2px 2px 0;
+}
+
+/* ============================================================
+   Progress Steps
+   ============================================================ */
+
+.installer-progress {
+    margin-top: 2rem;
+    flex: 1;
+}
+
+.installer-progress-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.installer-progress-item {
+    width: 100%;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    transition: all 0.3s ease;
+}
+
+.installer-progress-item--current {
+    opacity: 1;
+    transform: translateX(0.25rem);
+}
+
+.installer-progress-item--past {
+    opacity: 0.55;
+    cursor: pointer;
+}
+
+.installer-progress-item--past:hover {
+    opacity: 1;
+}
+
+.installer-progress-item--future {
+    opacity: 0.25;
+}
+
+.installer-progress-indicator {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1.5px solid;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.installer-progress-indicator--current {
+    background-color: #fff;
+    color: var(--color-sidebar);
+    border-color: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15), var(--shadow-lg);
+    transform: scale(1.1);
+}
+
+.installer-progress-indicator--past {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #bfdbfe;
+}
+
+.installer-progress-item--past:hover .installer-progress-indicator--past {
+    background-color: rgba(59, 130, 246, 0.4);
+}
+
+.installer-progress-indicator--future {
+    border-color: #334155;
+    color: #64748b;
+}
+
+.installer-progress-label {
+    margin-left: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.installer-progress-label--current {
+    color: #fff;
+    font-weight: 600;
+}
+
+.installer-progress-label--past {
+    color: #e2e8f0;
+}
+
+.installer-progress-label--future {
+    color: #475569;
+}
+
+.installer-sidebar-footer {
+    position: relative;
+    z-index: 10;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.75rem;
+    color: #475569;
+}
+
+/* ============================================================
+   Content Area
+   ============================================================ */
+
+.installer-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    position: relative;
+}
+
+@media (min-width: 768px) {
+    .installer-content {
+        padding: 3rem;
+        width: calc(100% - 350px);
+    }
+}
+
+/* ============================================================
+   Error Alert
+   ============================================================ */
+
+.installer-alert {
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 0;
+    border-left: 4px solid var(--color-error-border);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 1rem;
+    background-color: var(--color-error-bg);
+    animation: fadeInDown 0.3s ease-out;
+}
+
+.installer-alert-icon {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--color-error-border);
+}
+
+.installer-alert-body {
+    margin-left: 0.75rem;
+}
+
+.installer-alert-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-error-text);
+    margin: 0;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   Form
+   ============================================================ */
+
+.installer-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.installer-form-body {
+    flex: 1;
+}
+
+/* ============================================================
+   Action Bar (Footer)
+   ============================================================ */
+
+.installer-actions {
+    margin-top: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--color-border);
+    padding-top: 1.5rem;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    line-height: 1.5;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn--back {
+    background-color: #fff;
+    color: #475569;
+    border: 1px solid var(--color-border);
+}
+
+.btn--back:hover:not(:disabled) {
+    background-color: #f8fafc;
+    color: #1e293b;
+}
+
+.btn--back svg {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+}
+
+.btn--continue {
+    position: relative;
+    background-color: var(--color-primary);
+    color: #fff;
+    box-shadow: var(--shadow-lg);
+}
+
+.btn--continue:hover:not(:disabled) {
+    background-color: var(--color-primary-dark);
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-2px);
+}
+
+.btn--continue:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn--continue:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--color-sidebar), 0 0 0 4px #fff;
+}
+
+.btn--continue svg {
+    width: 1rem;
+    height: 1rem;
+    transition: transform 0.2s ease;
+}
+
+.btn--continue:hover svg {
+    transform: translateX(2px);
+}
+
+.btn-text-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ============================================================
+   Spinner
+   ============================================================ */
+
+.spinner {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   Section Headings
+   ============================================================ */
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+}
+
+.section-subtitle {
+    color: #64748b;
+    margin: 0 0 1.5rem 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* ============================================================
+   Cards (Requirements, Permissions)
+   ============================================================ */
+
+.check-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+    .check-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.check-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    transition: all 0.2s ease;
+}
+
+.check-item--pass {
+    background-color: #fff;
+    box-shadow: var(--shadow-sm);
+}
+
+.check-item--fail {
+    background-color: var(--color-error-bg);
+    border-color: #fecaca;
+}
+
+.check-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.check-icon--pass {
+    background-color: #dcfce7;
+}
+
+.check-icon--fail {
+    background-color: #fecaca;
+}
+
+.check-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.check-icon--pass svg {
+    color: #16a34a;
+}
+
+.check-icon--fail svg {
+    color: #dc2626;
+}
+
+.check-info {
+    margin-left: 1rem;
+    flex: 1;
+}
+
+.check-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.check-item--pass .check-label { color: #334155; }
+.check-item--fail .check-label { color: #991b1b; }
+
+.check-status {
+    font-size: 0.75rem;
+    margin: 0.125rem 0 0 0;
+}
+
+.check-item--pass .check-status { color: #94a3b8; }
+.check-item--fail .check-status { color: #ef4444; }
+
+.check-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    margin-left: 1rem;
+}
+
+.check-badge--pass {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.check-badge--fail {
+    background-color: #fecaca;
+    color: #991b1b;
+}
+
+/* ============================================================
+   Message Boxes
+   ============================================================ */
+
+.msg-box {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+.msg-box strong {
+    font-weight: 600;
+}
+
+.msg-box--success {
+    background-color: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.msg-box--error {
+    background-color: var(--color-error-bg);
+    color: var(--color-error-text);
+}
+
+.msg-box--warning {
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.msg-box--info {
+    background-color: #eff6ff;
+    color: #1e40af;
+}
+
+.msg-box--test-pass {
+    background-color: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.msg-box--test-fail {
+    background-color: var(--color-error-bg);
+    color: var(--color-error-text);
+}
+
+/* ============================================================
+   Permission Items (stacked, one per row)
+   ============================================================ */
+
+.permission-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* ============================================================
+   Form Fields
+   ============================================================ */
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.5rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    color: var(--color-text);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: transparent;
+    box-shadow: 0 0 0 2px var(--color-sidebar);
+}
+
+.form-input::placeholder {
+    color: #94a3b8;
+}
+
+.form-input--with-icon {
+    padding-left: 2.75rem;
+}
+
+.form-input--with-icon-right {
+    padding-right: 2.75rem;
+}
+
+.form-input-wrapper {
+    position: relative;
+}
+
+.form-input-icon {
+    position: absolute;
+    top: 50%;
+    left: 1rem;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+}
+
+.form-input-icon-right {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    pointer-events: auto;
+    cursor: pointer;
+}
+.form-input-icon-right:hover {
+    color: #64748b;
+}
+
+.form-hint {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin: 0.25rem 0 0 0;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.form-grid .col-span-full {
+    grid-column: 1 / -1;
+}
+
+/* ============================================================
+   Select
+   ============================================================ */
+
+.form-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    color: var(--color-text);
+    appearance: auto;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: transparent;
+    box-shadow: 0 0 0 2px var(--color-sidebar);
+}
+
+.form-select.form-input--with-icon {
+    padding-left: 2.75rem;
+}
+
+/* ============================================================
+   Checkbox / Toggle
+   ============================================================ */
+
+.toggle-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    cursor: pointer;
+}
+
+.toggle-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.125rem;
+    accent-color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.toggle-text {
+    font-weight: 600;
+    color: var(--color-sidebar);
+}
+
+.toggle-desc {
+    display: block;
+    color: #64748b;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin-top: 0.25rem;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.toggle-track {
+    width: 3rem;
+    height: 1.75rem;
+    background-color: #cbd5e1;
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
+}
+
+.toggle-track--active {
+    background-color: var(--color-sidebar);
+}
+
+.toggle-thumb {
+    position: absolute;
+    left: 0.25rem;
+    top: 0.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    background-color: #fff;
+    border-radius: 50%;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease;
+}
+
+.toggle-thumb--active {
+    transform: translateX(1.25rem);
+}
+
+/* ============================================================
+   Checkbox card (radio selection)
+   ============================================================ */
+
+.radio-card {
+    position: relative;
+    display: flex;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background-color: #fff;
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.radio-card:hover {
+    border-color: var(--color-primary);
+}
+
+.radio-card--selected {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.radio-card-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.radio-card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.radio-card-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.radio-card-desc {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+}
+
+.radio-card--selected .radio-card-check {
+    display: block;
+}
+
+.radio-card-check {
+    display: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+.radio-card img {
+    margin-bottom: 0.75rem;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    height: 8rem;
+    width: 100%;
+    border: 1px solid #f1f5f9;
+}
+
+/* ============================================================
+   DB Connection Test
+   ============================================================ */
+
+.test-connection-btn {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: #cbd5e1;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.test-connection-btn:hover {
+    color: var(--color-text);
+    text-decoration-color: #64748b;
+}
+
+.test-connection-result {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.test-connection-result svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+/* ============================================================
+   Existing Database Step
+   ============================================================ */
+
+.database-action-options {
+    display: grid;
+    gap: 1rem;
+}
+
+.database-status {
+    padding: 1rem 1.125rem;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-lg);
+    background: #eff6ff;
+    color: #1e3a8a;
+}
+
+.database-status--safe {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.database-status--warning {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #9a3412;
+}
+
+.database-status p {
+    margin: .35rem 0 0;
+    color: #475569;
+    font-size: .875rem;
+    line-height: 1.55;
+}
+
+.database-action-card {
+    display: flex;
+    align-items: flex-start;
+    gap: .875rem;
+    padding: 1.125rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: #fff;
+    cursor: pointer;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.database-action-card:hover {
+    border-color: var(--theme-primary);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .08);
+}
+
+.database-action-card:has(input:checked) {
+    border-color: var(--theme-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-primary) 15%, transparent);
+}
+
+.database-action-card--danger:has(input:checked) {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
+}
+
+.database-action-card--disabled {
+    cursor: not-allowed;
+    opacity: .5;
+}
+
+.database-action-card input {
+    margin-top: .2rem;
+    accent-color: var(--theme-primary);
+}
+
+.database-action-card span {
+    display: grid;
+    gap: .25rem;
+}
+
+.database-action-card strong {
+    color: #1e293b;
+}
+
+.database-action-card small {
+    color: #64748b;
+    font-size: .8125rem;
+    line-height: 1.55;
+}
+
+.database-confirmation {
+    padding: 1rem;
+    border: 1px solid #fecaca;
+    border-radius: var(--radius-lg);
+    background: #fef2f2;
+}
+
+/* ============================================================
+   Migration Step
+   ============================================================ */
+
+.migration-card {
+    background-color: #f8fafc;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+.migration-card-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background-color: #dbeafe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.migration-card-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #2563eb;
+}
+
+.migration-card-heading {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 0.25rem 0;
+}
+
+.migration-card-desc {
+    color: #475569;
+    font-size: 0.875rem;
+    line-height: 1.625;
+    margin: 0;
+}
+
+.installation-progress {
+    padding: 1rem;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-lg);
+    background: #eff6ff;
+}
+
+.installation-progress--failed {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+.installation-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: #1e3a8a;
+    font-size: 0.875rem;
+}
+
+.installation-progress--failed .installation-progress-header {
+    color: #991b1b;
+}
+
+.installation-progress-track {
+    height: 0.5rem;
+    margin-top: 0.75rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: #dbeafe;
+}
+
+.installation-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--theme-primary);
+    transition: width 0.35s ease;
+}
+
+.installation-progress--failed .installation-progress-fill {
+    background: #dc2626;
+}
+
+.installation-progress-log {
+    max-height: 9rem;
+    margin-top: 0.75rem;
+    overflow-y: auto;
+    color: #334155;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.installation-progress-log p {
+    margin: 0.25rem 0;
+}
+
+.installation-progress-log p span:first-child {
+    color: #16a34a;
+}
+
+.installation-progress-error {
+    margin: 0.75rem 0 0;
+    color: #b91c1c;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.help-toggle {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: #cbd5e1;
+    background: none;
+    border: none;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.help-toggle:hover {
+    color: #334155;
+    text-decoration-color: #64748b;
+}
+
+.help-box {
+    margin-top: 0.75rem;
+    padding: 1rem;
+    background-color: var(--color-warning-bg);
+    border: 1px solid #fde68a;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    color: var(--color-warning-text);
+    line-height: 1.5;
+}
+
+.help-box p {
+    margin: 0.25rem 0;
+}
+
+/* ============================================================
+   Spacing Helpers
+   ============================================================ */
+
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-6 { margin-top: 1.5rem; }
+.ml-3 { margin-left: 0.75rem; }
+.ml-4 { margin-left: 1rem; }
+.ml-5 { margin-left: 1.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.gap-6 { gap: 1.5rem; }
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.justify-between { justify-content: space-between; }
+.flex-col { flex-direction: column; }
+.flex-1 { flex: 1; }
+.flex-shrink-0 { flex-shrink: 0; }
+.text-center { text-align: center; }
+
+/* ============================================================
+   Responsive Helpers
+   ============================================================ */
+
+@media (min-width: 768px) {
+    .md\:flex-row { flex-direction: row; }
+}
+
+/* ============================================================
+   Step Content Transition (Alpine.js)
+   ============================================================ */
+
+.installer-step-enter {
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+}
+
+.installer-step-enter-start {
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+.installer-step-enter-end {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ============================================================
+   Form Field Error State
+   ============================================================ */
+
+.form-input--error {
+    border-color: var(--color-error-border);
+    box-shadow: 0 0 0 1px var(--color-error-border);
+}
+
+.form-input--error:focus {
+    border-color: transparent;
+    box-shadow: 0 0 0 2px var(--color-error-border);
+}
+
+.form-error-text {
+    font-size: 0.75rem;
+    color: var(--color-error-border);
+    margin: 0.25rem 0 0 0;
+}
+
+/* ============================================================
+   Mobile Responsive Improvements
+   ============================================================ */
+
+@media (max-width: 767px) {
+    .installer-card {
+        width: 100%;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .installer-sidebar {
+        padding: 1.25rem;
+    }
+
+    .installer-sidebar-decoration {
+        display: none;
+    }
+
+    .installer-progress-bar {
+        display: none;
+    }
+
+    .installer-brand {
+        margin-bottom: 1rem;
+    }
+
+    .installer-brand-icon {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .installer-brand-icon svg {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+
+    .installer-brand-name {
+        font-size: 1rem;
+    }
+
+    .installer-step-title {
+        font-size: 1.125rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .installer-progress {
+        margin-top: 1rem;
+    }
+
+    .installer-progress-list {
+        flex-direction: row;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .installer-progress-label {
+        display: none;
+    }
+
+    .installer-progress-indicator {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 0.625rem;
+    }
+
+    .installer-content {
+        padding: 1.25rem;
+    }
+
+    .installer-actions {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+    }
+
+    .btn {
+        padding: 0.625rem 1rem;
+        font-size: 0.8125rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+    }
+
+    .check-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   Transition helpers (general)
+   ============================================================ */
+
+.transition-opacity {
+    transition: opacity 0.3s ease;
+}
+
+.transition-transform {
+    transition: transform 0.3s ease;
+}

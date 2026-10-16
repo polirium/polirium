@@ -37,9 +37,11 @@
                     <div class="mb-3">
                         <x-form::select wire:model.live="input.province_id" :label="trans('modules/product::product.city_province')" :options="$list['provinces']" tomselect />
                     </div>
+                    @if ($list['districts'] !== [])
                     <div class="mb-3">
                         <x-form::select wire:model.live="input.district_id" :label="trans('modules/product::product.district')" :options="$list['districts']" tomselect />
                     </div>
+                    @endif
                     <div class="mb-3">
                         <x-form::select wire:model="input.ward_id" :label="trans('modules/product::product.ward')" :options="$list['wards']" tomselect />
                     </div>

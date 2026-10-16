@@ -2,7 +2,7 @@
 
 ## Overview
 
-Polirium is a modular ERP platform built on Laravel (v12.x). It follows a strict modular architecture where the core framework provides base services, and business logic is encapsulated in modules.
+Polirium is a modular ERP platform built on Laravel 13. It follows a strict modular architecture where the core framework provides base services, and business logic is encapsulated in modules.
 
 ## Architecture Structure
 
@@ -61,8 +61,9 @@ Permissions are declarative, defined in `config/permissions.php` within each mod
 
 ## Technology Stack
 
-- **Backend**: Laravel 12, PHP 8.3
-- **Frontend**: Livewire 3, Alpine.js, Blade
+- **Backend**: Laravel 13, PHP 8.3 or newer (verified on PHP 8.4)
+- **Frontend**: Livewire 4, Alpine.js, Blade
+- **Asset build**: Node.js 22.12+ with esbuild and Dart Sass
 - **CSS Framework**: Tabler (Bootstrap-based)
 - **Database**: MySQL
 

@@ -5,6 +5,7 @@
 /public/storage
 /public/uploads
 /storage/*.key
+/storage/installed
 /vendor
 /bootstrap/cache/packages.php
 /bootstrap/cache/services.php

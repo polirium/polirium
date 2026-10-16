@@ -3,7 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration {
+return new class () extends Migration {
     public function up(): void
     {
         DB::statement("UPDATE product_logs l JOIN vendor_purchase_refunds r ON r.id = l.productable_id SET l.branch_id = r.branch_id WHERE l.branch_id IS NULL AND l.productable_type = 'Polirium\\Modules\\Vendor\\Http\\Model\\Refund\\Refund'");

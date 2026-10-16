@@ -1,0 +1,24 @@
+{
+    "name": "polirium/vietnam-administrative-units",
+    "description": "Official two-tier Vietnamese administrative units for Laravel and Polirium",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "illuminate/console": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/support": "^10.0|^11.0|^12.0|^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Polirium\\VietnamAdministrativeUnits\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Polirium\\VietnamAdministrativeUnits\\VietnamAdministrativeUnitsServiceProvider"
+            ]
+        }
+    }
+}

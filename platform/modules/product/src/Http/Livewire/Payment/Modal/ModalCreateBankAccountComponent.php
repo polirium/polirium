@@ -98,6 +98,7 @@ class ModalCreateBankAccountComponent extends Component
         foreach (VietQrService::banks() as $bank) {
             if (($bank['code'] ?? '') === $this->bank_code) {
                 $bankName = $bank['short_name'] ?? $bank['name'] ?? $this->bank_code;
+
                 break;
             }
         }

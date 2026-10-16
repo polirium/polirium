@@ -46,7 +46,7 @@ class ModalCreatePartnerDeliveryComponent extends Component
         if ($key == 'province_id') {
             if ($value) {
                 $this->list['districts'] = get_districts($value);
-                $this->list['wards'] = [];
+                $this->list['wards'] = get_wards_by_province($value);
             } else {
                 $this->list['districts'] = [];
                 $this->list['wards'] = [];
@@ -72,6 +72,9 @@ class ModalCreatePartnerDeliveryComponent extends Component
 
     public function resetInputs()
     {
+        $this->list['provinces'] = get_provinces();
+        $this->list['districts'] = [];
+        $this->list['wards'] = [];
         $this->input = [
             'type' => 'person',
             'code' => code_generate('ĐTGH', PaymentPartnerDelivery::max('id')),
@@ -87,13 +90,22 @@ class ModalCreatePartnerDeliveryComponent extends Component
     }
 
     #[On('show-modal-create-partner-delivery')]
-    public function showModal(int $id = null): void
+    public function showModal(?int $id = null): void
     {
         $this->authorize($id ? 'products.delivery-partner.edit' : 'products.delivery-partner.create');
+
+        $this->list['provinces'] = get_provinces();
+        $this->list['districts'] = [];
+        $this->list['wards'] = [];
 
         $this->partner_delivery_id = $id;
         if ($id) {
             $this->input = PaymentPartnerDelivery::findOrFail($id)->toArray();
+            if ($this->input['province_id']) {
+                $this->list['provinces'] = get_provinces($this->input['province_id']);
+                $this->list['districts'] = get_districts($this->input['province_id'], $this->input['district_id']);
+                $this->list['wards'] = get_wards_by_province($this->input['province_id'], $this->input['ward_id']);
+            }
         } else {
             $this->resetInputs();
         }

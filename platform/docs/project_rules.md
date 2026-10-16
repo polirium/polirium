@@ -21,7 +21,7 @@
 - **Icons**: Use `vigstudio/laravel-tabler-icons` (e.g., `<x-tabler-icon name="user" />` or `@svg('ti-user')`).
 - **Translations**: UI labels must be translatable using `trans('module::file.key')`.
 
-## 4. Coding Standards (Laravel 12+)
+## 4. Coding Standards (Laravel 13+)
 
 - **Types**: Use strict typing (`declare(strict_types=1);`) where applicable.
 - **Traits**: Use Traits for shared model functionality (e.g., `HasUuid`, `Impersonate`).

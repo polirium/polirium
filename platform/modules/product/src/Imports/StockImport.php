@@ -218,7 +218,7 @@ class StockImport implements ToCollection, WithHeadingRow
 
         $asString = trim((string) $value);
 
-        if ($asString === '' || $asString === '-' ) {
+        if ($asString === '' || $asString === '-') {
             return false;
         }
 

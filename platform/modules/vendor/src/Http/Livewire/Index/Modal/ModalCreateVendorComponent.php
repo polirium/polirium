@@ -2,9 +2,9 @@
 
 namespace Polirium\Modules\Vendor\Http\Livewire\Index\Modal;
 
-use Livewire\Component;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Rule;
+use Livewire\Component;
 use Polirium\Modules\Vendor\Http\Model\Vendor;
 use Polirium\Modules\Vendor\Http\Model\VendorGroup;
 
@@ -40,7 +40,7 @@ class ModalCreateVendorComponent extends Component
 
     protected function rules()
     {
-        $table = (new Vendor)->getTable();
+        $table = (new Vendor())->getTable();
 
         return [
             'input.branch_id' => 'required|numeric|integer',
@@ -68,23 +68,23 @@ class ModalCreateVendorComponent extends Component
 
     public function updatedInput(mixed $value, string $key)
     {
-        if ($key == "province_id") {
+        if ($key == 'province_id') {
             if ($value) {
-                $this->lists["districts"] = get_districts($value);
-                $this->lists["wards"] = [];
+                $this->lists['districts'] = get_districts($value);
+                $this->lists['wards'] = get_wards_by_province($value);
             } else {
-                $this->lists["districts"] = [];
-                $this->lists["wards"] = [];
+                $this->lists['districts'] = [];
+                $this->lists['wards'] = [];
             }
             $this->input['district_id'] = null;
             $this->input['ward_id'] = null;
         }
 
-        if ($key == "district_id") {
+        if ($key == 'district_id') {
             if ($value) {
-                $this->lists["wards"] = get_wards($value);
+                $this->lists['wards'] = get_wards($value);
             } else {
-                $this->lists["wards"] = [];
+                $this->lists['wards'] = [];
             }
             $this->input['ward_id'] = null;
         }
@@ -97,6 +97,9 @@ class ModalCreateVendorComponent extends Component
 
     public function resetInput()
     {
+        $this->lists['provinces'] = get_provinces();
+        $this->lists['districts'] = [];
+        $this->lists['wards'] = [];
         $this->reset('group');
         $this->input = [
             'branch_id' => user_branch(),
@@ -130,16 +133,20 @@ class ModalCreateVendorComponent extends Component
             $district_id = $this->input['district_id'];
             $ward_id = $this->input['ward_id'];
 
-            $this->updatedInput($this->input['province_id'], "province_id");
+            if ($this->input['province_id']) {
+                $this->lists['provinces'] = get_provinces($this->input['province_id']);
+                $this->lists['districts'] = get_districts($this->input['province_id'], $district_id);
+                $this->lists['wards'] = get_wards_by_province($this->input['province_id'], $ward_id);
+            }
+
             $this->input['district_id'] = $district_id;
 
-            $this->updatedInput($this->input['district_id'], "district_id");
             $this->input['ward_id'] = $ward_id;
 
             $this->group = $vendorModel->group->pluck('id')->toArray();
         }
 
-        $this->dispatch("modal", "modal-create-vendor");
+        $this->dispatch('modal', 'modal-create-vendor');
     }
 
     public function save()
@@ -161,7 +168,7 @@ class ModalCreateVendorComponent extends Component
         $vendor->group()->sync($this->group);
 
         $this->resetInput();
-        $this->dispatch("modal", "modal-create-vendor", "hide");
+        $this->dispatch('modal', 'modal-create-vendor', 'hide');
         \Log::info('ModalCreateVendorComponent dispatched vendor-saved', ['id' => $vendor->id]);
         $this->dispatch('vendor-saved', id: $vendor->id);
         $this->dispatch('pg:eventRefresh-table-vendors');

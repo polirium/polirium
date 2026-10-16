@@ -79,6 +79,7 @@
                                 placeholder="--"
                             />
                         </div>
+                        @if ($lists['districts'] !== [])
                         <div class="col-12">
                             <x-ui.form.select
                                 wire:model.live="input.district_id"
@@ -87,6 +88,7 @@
                                 placeholder="--"
                             />
                         </div>
+                        @endif
                         <div class="col-12">
                             <x-ui.form.select
                                 wire:model.live="input.ward_id"

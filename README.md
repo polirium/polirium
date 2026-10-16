@@ -26,6 +26,21 @@
 
 ## Cài đặt
 
+### Cài đặt bằng giao diện (khuyến nghị)
+
+Dành cho người dùng không chuyên kỹ thuật: sau khi mã nguồn và thư mục `vendor` đã được đưa lên máy chủ, mở địa chỉ ứng dụng bằng trình duyệt. Hệ thống sẽ tự chuyển đến `/install` và hướng dẫn lần lượt:
+
+1. Kiểm tra phiên bản PHP, extension và quyền ghi thư mục.
+2. Nhập và kiểm tra kết nối MySQL hoặc MariaDB.
+3. Tạo cấu trúc dữ liệu, khám phá và kích hoạt các module.
+4. Tạo tài khoản quản trị đầu tiên.
+
+Trình cài đặt chỉ chấp nhận database trống để bảo vệ dữ liệu hiện có. Khi hoàn tất, hệ thống tạo file khóa trong `storage/installed`; muốn cài lại phải xóa database có chủ đích và xóa file khóa này.
+
+### Cài đặt bằng command (dành cho developer)
+
+Yêu cầu PHP 8.3+, Composer 2.10+ và Node.js 22.12+ (khuyến nghị Node 24 LTS).
+
 ```bash
 # Clone repository with submodules
 git clone --recursive https://github.com/polirium/polirium.git
@@ -36,6 +51,7 @@ git submodule update --init --recursive
 # Install dependencies
 composer install
 npm install
+npm run production
 
 # Setup environment
 cp .env.example .env
@@ -67,8 +83,8 @@ Xem hướng dẫn chi tiết tại: **[platform/docs](./platform/docs/README.md
 
 ## Tech Stack
 
-- **Framework:** Laravel 10+
-- **Frontend:** Livewire, Alpine.js, Tabler UI
+- **Framework:** Laravel 13 (PHP 8.3+)
+- **Frontend:** Livewire 4, Alpine.js, Tabler UI
 - **Database:** MySQL/PostgreSQL
 - **Cache:** Redis (optional)
 
@@ -88,10 +104,7 @@ platform/
 
 ## Đăng nhập Admin
 
-```text
-URL: /admin
-Default: admin@polirium.com / 123456789
-```
+Mở `/login` và sử dụng tài khoản quản trị đã tạo trong trình cài đặt. Repo không cung cấp mật khẩu mặc định.
 
 ## Donate
 

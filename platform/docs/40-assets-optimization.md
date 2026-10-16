@@ -278,7 +278,7 @@ class PerformanceMiddleware
 ### Analysis
 - **Lighthouse:** Chrome DevTools
 - **WebPageTest:** webpagetest.org
-- **Bundle Analyzer:** webpack-bundle-analyzer
+- **Bundle Analyzer:** esbuild metafile analyzer
 
 ### Monitoring
 - **SpeedCurve:** speedcurve.com

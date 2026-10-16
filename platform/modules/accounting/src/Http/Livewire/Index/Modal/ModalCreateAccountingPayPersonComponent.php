@@ -43,7 +43,7 @@ class ModalCreateAccountingPayPersonComponent extends Component
         if ($key == 'province_id') {
             if ($value) {
                 $this->lists['districts'] = get_districts($value);
-                $this->lists['wards'] = [];
+                $this->lists['wards'] = get_wards_by_province($value);
             } else {
                 $this->lists['districts'] = [];
                 $this->lists['wards'] = [];
@@ -69,6 +69,9 @@ class ModalCreateAccountingPayPersonComponent extends Component
 
     public function resetInput()
     {
+        $this->lists['provinces'] = get_provinces();
+        $this->lists['districts'] = [];
+        $this->lists['wards'] = [];
         $this->reset('input');
         $this->input = new PayPerson();
     }
@@ -82,6 +85,12 @@ class ModalCreateAccountingPayPersonComponent extends Component
 
         if ($id) {
             $this->input = PayPerson::findOrFail($id);
+
+            if ($this->input->province_id) {
+                $this->lists['provinces'] = get_provinces($this->input->province_id);
+                $this->lists['districts'] = get_districts($this->input->province_id, $this->input->district_id);
+                $this->lists['wards'] = get_wards_by_province($this->input->province_id, $this->input->ward_id);
+            }
         }
 
         $this->dispatch('modal', 'modal-create-accounting-pay-person');

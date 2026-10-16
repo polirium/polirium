@@ -246,6 +246,7 @@ final class ProductInventorySupport
         foreach ($requirements as $productId => $requirement) {
             if (! isset($target[$productId])) {
                 $target[$productId] = $requirement;
+
                 continue;
             }
 

@@ -819,7 +819,9 @@ class PaymentComponent extends Component
         $overpay = (float)($this->payment['value_payment'] ?? 0) - (float)($this->payment['value'] ?? 0);
         if ($overpay > 0 && is_array($this->payment['type_payment'])) {
             foreach ($this->payment['type_payment'] as &$tp) {
-                if ($overpay <= 0) break;
+                if ($overpay <= 0) {
+                    break;
+                }
                 if (isset($tp['value']) && $tp['value'] > 0) {
                     $deduct = min($tp['value'], $overpay);
                     $tp['value'] -= $deduct;

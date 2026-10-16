@@ -28,7 +28,7 @@ platform/core/ui/
 │   │   ├── professional-detail-view.css
 │   │   └── settings.css
 │   └── js/                         # JS files
-└── webpack.mix.js                  # Webpack configuration
+└── ../../../scripts/build-assets.mjs # Asset build configuration
 ```
 
 **Dist files**: `public/vendor/polirium/core/ui/css/`
@@ -41,9 +41,9 @@ platform/core/ui/
 
 | Loại | Vị trí | Build process | Load order |
 |------|--------|--------------|------------|
-| **SCSS** | `resources/assets/scss/` | Compile bởi webpack | Được khai báo trong `scssFiles` |
+| **SCSS** | `resources/assets/scss/` | Compile bởi Dart Sass/esbuild | Được khai báo trong `scripts/build-assets.mjs` |
 | **Polirium Styles** | `resources/assets/scss/polirium/` | Import vào `app.scss` | Load qua `app.min.css` |
-| **Plain CSS** | `public/css/` | Copy + minify bởi webpack | Load qua `assets.php` |
+| **Plain CSS** | `resources/assets/css/` | Copy + minify bởi esbuild | Load qua `assets.php` |
 
 ### 2. Thêm Polirium Styles (Recommended)
 
@@ -73,17 +73,14 @@ npm run prod     # Production (minified)
 
 Đối với các styles chỉ dùng ở một số trang cụ thể:
 
-1. **Tạo file** trong `public/css/`:
+1. **Tạo file** trong `resources/assets/css/`:
 ```bash
-touch platform/core/ui/public/css/my-style.css
+touch platform/core/ui/resources/assets/css/my-style.css
 ```
 
-2. **Thêm vào webpack.mix.js**:
+2. **Thêm entry vào `scripts/build-assets.mjs`** trong target tương ứng:
 ```javascript
-const plainCssFiles = [
-    // ... existing files
-    'my-style',
-];
+css: ['my-style'],
 ```
 
 3. **Build**:
@@ -116,7 +113,7 @@ Assets::loadCss('my-style');
 ### ✅ ĐƯỢC LÀM
 
 1. **Polirium Styles** → Tạo trong `resources/assets/scss/polirium/`, import vào `app.scss`
-2. **Plain CSS** → Tạo trong `public/css/`, thêm vào `plainCssFiles`
+2. **Plain CSS** → Tạo trong `resources/assets/css/`, thêm vào target trong `scripts/build-assets.mjs`
 3. **Run build** → `npm run dev` hoặc `npm run prod`
 4. **Load polirium styles** → Tự động qua `app.min.css`
 5. **Load optional CSS** → Thêm vào `assets.php` optional css array
@@ -128,7 +125,7 @@ Assets::loadCss('my-style');
 2. ~~Import plain CSS từ bên ngoài~~ → Import từ `polirium/` folder
 3. ~~Load polirium styles trong Livewire~~ → Load tự động qua `app.min.css`
 4. ~~Quên chạy `npm run dev`~~ → Build sau khi thay đổi
-5. ~~Tạo file CSS vô tội vạ~~ → Theo quy trình webpack.mix.js
+5. ~~Tạo file CSS vô tội vạ~~ → Theo quy trình `scripts/build-assets.mjs`
 
 ---
 
@@ -186,9 +183,9 @@ npm run dev
 
 Khi thêm CSS mới, kiểm tra:
 
-- [ ] File CSS đã tạo trong đúng thư mục (`polirium/` hoặc `public/css/`)
+- [ ] File CSS đã tạo trong đúng thư mục (`polirium/` hoặc `resources/assets/css/`)
 - [ ] Đã import vào `app.scss` (nếu là polirium style)
-- [ ] Đã thêm vào `webpack.mix.js` (nếu là plain CSS)
+- [ ] Đã thêm vào `scripts/build-assets.mjs` (nếu là entry riêng)
 - [ ] Đã chạy `npm run dev` hoặc `npm run prod`
 - [ ] File minified đã được tạo trong `public/vendor/polirium/core/ui/css/`
 - [ ] Test trên browser: F12 → Network → refresh → kiểm tra CSS file
@@ -199,7 +196,7 @@ Khi thêm CSS mới, kiểm tra:
 
 | File | Mô tả |
 |------|--------|
-| `webpack.mix.js` | Webpack configuration |
+| `scripts/build-assets.mjs` | esbuild/Dart Sass build configuration |
 | `assets.php` | Assets config (load order) |
 | `app.scss` | Main SCSS entry point |
 | `resources/assets/scss/polirium/` | Polirium styles source |
@@ -208,5 +205,5 @@ Khi thêm CSS mới, kiểm tra:
 
 ---
 
-**Last updated**: 2026-01-14
+**Last updated**: 2026-08-15
 **Next review**: Khi thêm CSS mới

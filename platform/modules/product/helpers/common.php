@@ -66,7 +66,7 @@ if (! function_exists('product_logs')) {
 }
 
 if (! function_exists('change_product_amount')) {
-    function change_product_amount(int|Product $product, int $amount, bool $increase = true, int $branch_id = null): array
+    function change_product_amount(int|Product $product, int $amount, bool $increase = true, ?int $branch_id = null): array
     {
         return ProductHelper::changeProductAmount($product, $amount, $increase, $branch_id);
     }

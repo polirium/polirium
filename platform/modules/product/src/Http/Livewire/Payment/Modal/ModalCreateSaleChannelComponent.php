@@ -34,7 +34,7 @@ class ModalCreateSaleChannelComponent extends Component
     }
 
     #[On('show-modal-create-sale-channel')]
-    public function showModal(int $id = null): void
+    public function showModal(?int $id = null): void
     {
         $this->authorize($id ? 'products.sale-channel.edit' : 'products.sale-channel.create');
 

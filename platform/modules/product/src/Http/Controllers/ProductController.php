@@ -64,7 +64,7 @@ class ProductController extends BaseController
         $discountPercent = $payment->discount_type === 'percent'
             ? $payment->discount_value
             : ($payment->total_cost > 0 ? round(($payment->discount_value / $payment->total_cost) * 100, 2) : 0);
-            
+
         // Tính toán chiết khấu (số tiền thực tế)
         $actualDiscountAmount = $payment->discount_type === 'percent'
             ? ($payment->total_cost * $payment->discount_value / 100)
