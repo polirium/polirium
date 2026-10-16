@@ -77,7 +77,14 @@ class StockComponent extends Component
 
             foreach ($this->stock->products as $product) {
                 $this->products[$product->product_id] = [
-                    'product' => $product->product,
+                    // Lines of a deleted product still render (legacy hard deletes).
+                    'product' => $product->product ?? [
+                        'id' => $product->product_id,
+                        'code' => '#' . $product->product_id,
+                        'name' => __('Hàng hóa đã bị xóa'),
+                        'unit' => null,
+                        'cost' => 0,
+                    ],
                     'amount' => $product->amount,
                     'actual_stock' => $product->actual_stock ?? 1,
                     'quantity_difference' => $product->quantity_difference ?? 0,

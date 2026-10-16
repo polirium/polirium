@@ -281,7 +281,7 @@
                                     @php
                                         // Legacy history can skip movements; show the gap instead of a silent jump.
                                         $older = $cardLogs->get($index + 1);
-                                        $gap = $older && (int) $older->branch_id === (int) $item->branch_id
+                                        $gap = $product->type === 'product' && $older && (int) $older->branch_id === (int) $item->branch_id
                                             ? (int) $item->amount_before - (int) $older->amount_after
                                             : 0;
                                     @endphp

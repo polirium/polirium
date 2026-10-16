@@ -48,6 +48,7 @@ class ProductLog extends BaseModel
             Stock::class => trans('modules/product::product.stock_check'),
             PurchaseRefund::class => trans('modules/product::product.purchase_refund'),
             Product::class => __('Cập nhật tồn từ hàng hóa'),
+            'system_fix_negative_stock' => __('Hệ thống hiệu chỉnh tồn âm'),
             default => $this->productable_type,
         };
     }
@@ -92,6 +93,19 @@ class ProductLog extends BaseModel
     public function productable()
     {
         return $this->morphTo();
+    }
+
+    /**
+     * Legacy rows use a plain marker (e.g. system_fix_negative_stock) instead of a
+     * model class; resolving them must not break the stock card.
+     */
+    public function getProductableAttribute()
+    {
+        if (! $this->productable_type || ! class_exists($this->productable_type)) {
+            return null;
+        }
+
+        return $this->getRelationValue('productable');
     }
 
     /**

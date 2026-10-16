@@ -224,6 +224,10 @@ $set($service->id, 3);
 Polirium\Modules\Product\Http\Support\ProductSupport::setBranchQuantity($service, 1, 9);
 $equal($qty($service->id), 0, 'service cannot receive stock through import');
 
+// Legacy marker sources (not a model class) render instead of breaking the stock card.
+$marker = new ProductLog(); $marker->forceFill(['product_id'=>$p->id,'branch_id'=>1,'productable_type'=>'system_fix_negative_stock','productable_id'=>0,'amount'=>1,'direction'=>'in','amount_before'=>0,'amount_after'=>1,'value_before'=>0,'value_after'=>0]);
+$equal([$marker->productable, $marker->display_code, $marker->type_name, $marker->order_status, $marker->url], [null, '-', 'Hệ thống hiệu chỉnh tồn âm', null, null], 'legacy marker log renders safely');
+
 // Products with history cannot be hard-deleted; unused products take their balances along.
 $reject(fn () => $p->delete(), 'product with stock card cannot be deleted');
 $equal(Product::whereKey($p->id)->exists(), true, 'rejected delete keeps product');
