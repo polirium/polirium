@@ -133,7 +133,10 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
             'category_id' => $this->parseCategory($row['nhom_hang'] ?? $row['nhóm_hàng'] ?? $row['nhom_hang3_cap'] ?? $row['nhóm_hàng3_cấp'] ?? null) ?? $product->category_id,
             'trademark_id' => $this->parseOrCreateTrademark($row['thuong_hieu'] ?? $row['thương_hiệu'] ?? null) ?? $product->trademark_id,
             'shelve_id' => $this->parseOrCreateShelve($row['vi_tri'] ?? $row['vị_trí'] ?? null) ?? $product->shelve_id,
-            'type' => $this->parseType($row['loai_hang'] ?? $row['loại_hàng'] ?? null) ?? $product->type,
+            // An empty "Loại hàng" cell keeps the current type (it must not turn combos into goods).
+            'type' => filled($row['loai_hang'] ?? $row['loại_hàng'] ?? null)
+                ? $this->parseType($row['loai_hang'] ?? $row['loại_hàng'])
+                : $product->type,
             'price' => $this->parseNumber($row['gia_ban'] ?? $row['giá_bán'] ?? $product->price),
             'unit' => trim($row['dvt'] ?? $row['đvt'] ?? $product->unit ?? ''),
             'min_quantity' => $this->parseNumber($row['ton_nho_nhat'] ?? $row['tồn_nhỏ_nhất'] ?? $product->min_quantity),
@@ -142,6 +145,11 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
             'allows_sale' => $this->parseBoolean($row['duoc_ban_truc_tiep'] ?? $row['được_bán_trực_tiếp'] ?? $product->allows_sale),
             'note' => $row['ghi_chu'] ?? $row['ghi_chú'] ?? $row['mau_ghi_chu'] ?? $row['mẫu_ghi_chú'] ?? $product->note,
         ];
+
+        // Goods with stock or documents keep their type (see Product::booted).
+        if ($updateData['type'] !== $product->type && $product->hasInventoryHistory()) {
+            $updateData['type'] = $product->type;
+        }
 
         // Conditionally update cost price
         if ($this->updateCostPrice) {

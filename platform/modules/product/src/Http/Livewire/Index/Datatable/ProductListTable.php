@@ -3,7 +3,6 @@
 namespace Polirium\Modules\Product\Http\Livewire\Index\Datatable;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
 use Polirium\Datatable\Column;
@@ -50,33 +49,10 @@ class ProductListTable extends BaseTable
             return;
         }
 
-        $old = Product::findOrFail($id);
-        $new = $old->replicate();
-        $new->code = $this->makeCopyCode($old->code);
-        $new->qty = 0;
-        $new->save();
-
-        $branches_id = $old->branches->pluck('id')->toArray();
-        $new->branches()->sync($branches_id);
-        $new->branches()->updateExistingPivot($branches_id, ['qty' => 0]);
+        // Copies the definition only (fresh uuid/code, combo components), never stock or history.
+        Product::findOrFail($id)->duplicate();
 
         $this->dispatch('refresh-datatable-products');
-    }
-
-    private function makeCopyCode(string $code): string
-    {
-        $baseCode = trim((string) preg_replace('/\(copy(?:\s+\d+)?\)$/i', '', trim($code)));
-
-        for ($index = 1; $index <= 1000; $index++) {
-            $suffix = $index === 1 ? '(copy)' : "(copy {$index})";
-            $candidate = Str::limit($baseCode, 255 - strlen($suffix), '') . $suffix;
-
-            if (! Product::where('code', $candidate)->exists()) {
-                return $candidate;
-            }
-        }
-
-        return Str::limit($baseCode, 219, '') . '(copy ' . Str::random(30) . ')';
     }
 
     #[On('triggerRemoveProduct')]

@@ -55,8 +55,71 @@ class Product extends BaseModel
         'vendor_transfer_products' => 'product_id',
     ];
 
+    /**
+     * Copy a product's definition only: a fresh uuid and code, no stock and no
+     * history. Combo components and units are copied so a combo copy can sell.
+     */
+    public function duplicate(): self
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () {
+            $copy = $this->replicate(['uuid', 'qty']);
+            $copy->uuid = (string) \Illuminate\Support\Str::orderedUuid();
+            $copy->code = self::makeCopyCode((string) $this->code);
+            $copy->qty = 0;
+            $copy->save();
+
+            foreach (ProductBranch::where('product_id', $this->id)->pluck('branch_id')->unique() as $branchId) {
+                ProductBranch::create(['product_id' => $copy->id, 'branch_id' => $branchId, 'qty' => 0]);
+            }
+
+            foreach (ProductElement::where('product_id', $this->id)->get() as $element) {
+                $clone = $element->replicate(['uuid']);
+                $clone->product_id = $copy->id;
+                $clone->save();
+            }
+
+            foreach ($this->units()->get() as $unit) {
+                $clone = $unit->replicate(['uuid']);
+                $clone->product_id = $copy->id;
+                $clone->save();
+            }
+
+            return $copy;
+        });
+    }
+
+    public static function makeCopyCode(string $code): string
+    {
+        $baseCode = trim((string) preg_replace('/\(copy(?:\s+\d+)?\)$/i', '', trim($code)));
+
+        for ($index = 1; $index <= 1000; $index++) {
+            $suffix = $index === 1 ? '(copy)' : "(copy {$index})";
+            $candidate = \Illuminate\Support\Str::limit($baseCode, 255 - strlen($suffix), '') . $suffix;
+
+            if (! self::where('code', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return \Illuminate\Support\Str::limit($baseCode, 219, '') . '(copy ' . \Illuminate\Support\Str::random(30) . ')';
+    }
+
     protected static function booted(): void
     {
+        static::updating(function (Product $product) {
+            // products.qty mirrors branch balances; stock only moves through the stock card.
+            if ($product->isDirty('qty')) {
+                $product->qty = $product->getOriginal('qty');
+            }
+
+            // Changing goods into a service/combo (or back) strands its stock and history.
+            if ($product->isDirty('type') && $product->hasInventoryHistory()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'product' => "Hàng hóa {$product->code} đã có tồn kho hoặc chứng từ nên không thể đổi loại hàng. Hãy tạo mã mới.",
+                ]);
+            }
+        });
+
         static::deleting(function (Product $product) {
             if ($product->hasInventoryHistory()) {
                 throw \Illuminate\Validation\ValidationException::withMessages([

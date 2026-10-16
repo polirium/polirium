@@ -32,7 +32,7 @@ if (DB::connection()->getDriverName() !== 'sqlite' || DB::connection()->getDatab
     throw new RuntimeException('Unsafe test connection');
 }
 activity()->disableLogging();
-foreach (['products', 'product_elements', 'product_branches', 'product_logs', 'product_stocks', 'product_stock_products', 'product_payments', 'vendor_purchases', 'vendor_transfers','product_refunds','product_payment_refunds'] as $table) {
+foreach (['products', 'product_elements', 'product_branches', 'product_logs', 'product_stocks', 'product_stock_products', 'product_payments', 'vendor_purchases', 'vendor_transfers','product_refunds','product_payment_refunds','product_units'] as $table) {
     Schema::create($table, function ($t) use ($table) {
         $t->id(); $t->string('uuid')->nullable(); $t->timestamps(); $t->softDeletes();
         switch ($table) {
@@ -48,6 +48,7 @@ foreach (['products', 'product_elements', 'product_branches', 'product_logs', 'p
             case 'product_stock_products':
                 foreach (['stock_id','product_id','amount','actual_stock','quantity_difference','value','value_difference'] as $col) $t->integer($col);
                 $t->string('note')->nullable(); break;
+            case 'product_units': $t->integer('product_id'); $t->string('name')->nullable(); break;
             case 'product_refunds': case 'product_payment_refunds':
                 $t->integer('product_payment_id'); $t->string('status')->default('success'); break;
             default: $t->integer('branch_id')->default(1); $t->string('status')->default('success'); $t->string('code')->nullable(); break;
@@ -227,6 +228,37 @@ $equal($qty($service->id), 0, 'service cannot receive stock through import');
 // Legacy marker sources (not a model class) render instead of breaking the stock card.
 $marker = new ProductLog(); $marker->forceFill(['product_id'=>$p->id,'branch_id'=>1,'productable_type'=>'system_fix_negative_stock','productable_id'=>0,'amount'=>1,'direction'=>'in','amount_before'=>0,'amount_after'=>1,'value_before'=>0,'value_after'=>0]);
 $equal([$marker->productable, $marker->display_code, $marker->type_name, $marker->order_status, $marker->url], [null, '-', 'Hệ thống hiệu chỉnh tồn âm', null, null], 'legacy marker log renders safely');
+
+// Copying a product copies its definition only: fresh uuid/code, no stock, no history.
+$set($p->id, 7);
+$copy = $p->fresh()->duplicate();
+$equal([$copy->uuid !== $p->uuid, $copy->code, $qty($copy->id), (int) $copy->qty, ProductLog::where('product_id',$copy->id)->count()],
+    [true, 'REGRESSION(copy)', 0, 0, 0], 'product copy has fresh identity and no stock or history');
+$equal(Product::find($p->id)->duplicate()->code, 'REGRESSION(copy 2)', 'second copy gets a unique code');
+$comboCopy = Product::create(['code'=>'COMBO','type'=>'combo']);
+Polirium\Modules\Product\Http\Model\ProductElement::create(['product_id'=>$comboCopy->id,'element_id'=>$p2->id,'qty'=>2]);
+$comboDup = $comboCopy->duplicate();
+$equal(Polirium\Modules\Product\Http\Model\ProductElement::where('product_id',$comboDup->id)->pluck('qty','element_id')->all(), [$p2->id => 2], 'combo copy keeps its components');
+
+// Combo sale exports components, cancellation restores them, components cannot be deleted.
+$set($p2->id, 10);
+$comboSale = Payment::create(['branch_id'=>1, 'code'=>'TEST-COMBO']);
+$sync($comboSale, [[$comboDup->id, 3]]);
+$equal([$qty($p2->id), $qty($comboDup->id)], [4, 0], 'combo sale exports 3 x 2 components and holds no stock itself');
+$reject(fn () => $p2->delete(), 'component of a combo cannot be deleted');
+$comboSale->status = 'cancel'; $comboSale->save();
+$sync($comboSale, [[$comboDup->id, 3]]);
+$equal($qty($p2->id), 10, 'cancelled combo sale restores its components');
+
+// Type and qty cannot be rewritten on goods with history.
+$typed = Product::find($p->id); $typed->type = 'service';
+$reject(fn () => $typed->save(), 'goods with stock card cannot become a service');
+$equal(Product::find($p->id)->type, 'goods', 'rejected type change keeps type');
+$fresh2 = Product::create(['code'=>'FRESH','type'=>'goods']);
+$fresh2->type = 'service'; $fresh2->save();
+$equal(Product::find($fresh2->id)->type, 'service', 'unused product may change type');
+$mirror = Product::find($p2->id); $mirror->qty = 999; $mirror->save();
+$equal((int) Product::find($p2->id)->qty, 10, 'products.qty cannot be overwritten by a form');
 
 // Products with history cannot be hard-deleted; unused products take their balances along.
 $reject(fn () => $p->delete(), 'product with stock card cannot be deleted');

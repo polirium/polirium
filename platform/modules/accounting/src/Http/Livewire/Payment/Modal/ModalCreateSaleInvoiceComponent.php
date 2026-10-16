@@ -605,6 +605,14 @@ class ModalCreateSaleInvoiceComponent extends Component
                 if (! empty($this->payment['id'])) {
                     $paymentModel = Payment::lockForUpdate()->find($this->payment['id']);
                     if ($paymentModel) {
+                        // Remember the lines so an edit that keeps them (note, payment, customer)
+                        // never re-reads combo components that changed after the sale.
+                        $previousLines = PaymentProduct::where('product_payment_id', $paymentModel->id)
+                            ->get(['product_id', 'amount'])
+                            ->groupBy('product_id')->map(fn ($lines) => (int) $lines->sum('amount'))
+                            ->sortKeys()->all();
+                        $previousStatus = $paymentModel->status;
+
                         $paymentModel->update($this->payment);
 
                         // Only re-create lines if user has products in cart; stock is
@@ -628,10 +636,12 @@ class ModalCreateSaleInvoiceComponent extends Component
                     $savedItems->push(PaymentProduct::create($value));
                 }
 
-                ProductInventorySupport::syncPaymentItems(
-                    count($this->products) > 0 ? $savedItems : PaymentProduct::where('product_payment_id', $paymentModel->id)->get(),
-                    $paymentModel
-                );
+                $currentItems = count($this->products) > 0 ? $savedItems : PaymentProduct::where('product_payment_id', $paymentModel->id)->get();
+                $currentLines = $currentItems->groupBy('product_id')->map(fn ($lines) => (int) $lines->sum('amount'))->sortKeys()->all();
+
+                if (! isset($previousLines) || $previousLines !== $currentLines || $previousStatus !== $paymentModel->status) {
+                    ProductInventorySupport::syncPaymentItems($currentItems, $paymentModel);
+                }
 
                 // Save Delivery
                 if (! empty($this->payment_delivery['partner_delivery_id']) || ! empty($this->payment_delivery['code'])) {

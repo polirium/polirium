@@ -335,6 +335,20 @@ class ModalCreateProductComponent extends Component
                     throw new \RuntimeException('Combo phải có ít nhất một thành phần.');
                 }
 
+                // A component with quantity 0 would let the combo sell without exporting stock.
+                foreach ($this->elements as $element) {
+                    $quantity = $element['qty'] ?? null;
+                    $component = Product::find($element['element_id'] ?? null);
+
+                    if (! is_numeric($quantity) || (int) $quantity != $quantity || (int) $quantity < 1) {
+                        throw new \RuntimeException('Số lượng mỗi thành phần combo phải là số nguyên từ 1 trở lên.');
+                    }
+
+                    if (! $component || $component->type !== 'product') {
+                        throw new \RuntimeException('Thành phần combo phải là hàng hóa còn tồn tại.');
+                    }
+                }
+
                 if (str_starts_with((string) $this->product['code'], 'HH/')) {
                     $this->product['code'] = 'CB/' . substr($this->product['code'], 3);
                 }

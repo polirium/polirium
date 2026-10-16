@@ -99,15 +99,8 @@ final class PriceSettingTable extends BaseTable
         $id
     ): void {
         $this->authorize('products.price-setting');
-        $old = Product::findOrFail($id);
-        $new = $old->replicate();
-        $new->qty = 0;
-        $new->save();
-
-        $branches_id = $old->branches->pluck('id')->toArray();
-        $new->branches()->sync($branches_id);
-        // A copy starts without stock; stock only changes through documents.
-        $new->branches()->updateExistingPivot($branches_id, ['qty' => 0]);
+        // Copies the definition only (fresh uuid/code, combo components), never stock or history.
+        Product::findOrFail($id)->duplicate();
 
         $this->dispatch('refresh-datatable-products-price-setting');
     }
