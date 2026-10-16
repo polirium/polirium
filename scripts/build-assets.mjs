@@ -99,9 +99,40 @@ const strictSassLogger = {
     },
 }
 
+// Sass leaves `@import "file.css"` as a plain CSS import. Laravel Mix inlined
+// those files; served from /vendor/polirium/... the relative paths 404, so the
+// datatable, flatpickr and tom-select styles were silently missing.
+async function inlineCssImports(css, fromDirectory, seen = new Set()) {
+    const pattern = /@import\s*(?:url\()?\s*["']([^"']+\.css)["']\s*\)?\s*;/g
+    let output = ''
+    let last = 0
+
+    for (const match of css.matchAll(pattern)) {
+        const file = path.resolve(fromDirectory, match[1])
+
+        if (seen.has(file)) {
+            throw new Error(`Circular CSS import: ${file}`)
+        }
+
+        let content
+
+        try {
+            content = await readFile(file, 'utf8')
+        } catch {
+            throw new Error(`CSS import not found: ${match[1]} (resolved to ${file})`)
+        }
+
+        output += css.slice(last, match.index)
+            + await inlineCssImports(content, path.dirname(file), new Set([...seen, file]))
+        last = match.index + match[0].length
+    }
+
+    return output + css.slice(last)
+}
+
 async function writeCss(source, destination, compileSass = false) {
     const sourcePath = path.join(root, source)
-    const css = compileSass
+    const compiled = compileSass
         ? sass.compile(sourcePath, {
             loadPaths: [path.join(root, 'node_modules')],
             // Bootstrap 5.3's supported customization API still uses the
@@ -114,6 +145,7 @@ async function writeCss(source, destination, compileSass = false) {
             style: production ? 'compressed' : 'expanded',
         }).css
         : await readFile(sourcePath, 'utf8')
+    const css = await inlineCssImports(compiled, path.dirname(sourcePath))
     const output = production
         ? (await transform(css, { loader: 'css', minify: true, target: 'es2020' })).code
         : css
