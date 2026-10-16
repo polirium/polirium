@@ -11,7 +11,7 @@ use Throwable;
 class ExistingDatabaseInspector
 {
     /**
-     * @return array{status: 'empty'|'polirium'|'unknown', table_count: int, has_modules_table: bool}
+     * @return array{status: 'empty'|'polirium'|'unknown', table_count: int, has_modules_table: bool, has_users: bool}
      */
     public function inspect(): array
     {
@@ -34,7 +34,27 @@ class ExistingDatabaseInspector
             }
         }
 
-        return $this->classify($tables, $migrations);
+        $result = $this->classify($tables, $migrations);
+        $result['has_users'] = false;
+
+        if (in_array('users', $tables, true)) {
+            try {
+                $result['has_users'] = DB::table('users')->exists();
+            } catch (Throwable) {
+                // An unreadable users table is treated as holding data: never wipe it.
+                $result['has_users'] = true;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * A database that already runs Polirium with users must never be installed over.
+     */
+    public static function isLive(array $inspection): bool
+    {
+        return $inspection['status'] === 'polirium' && ($inspection['has_users'] ?? false);
     }
 
     /**

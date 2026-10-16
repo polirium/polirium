@@ -59,6 +59,17 @@ class InstallPoliriumSafetyTest extends TestCase
         $this->assertSame('core_migrations', session('installer.database_stage'));
     }
 
+    public function test_live_database_with_users_is_never_wiped_even_if_fresh_mode_is_stored(): void
+    {
+        $artisan = Mockery::mock(BufferedArtisanRunner::class);
+        $artisan->shouldNotReceive('run');
+        $installer = $this->installer($artisan, 'polirium', true);
+        $this->selectMode(ChooseDatabaseAction::MODE_FRESH);
+
+        $this->expectException(RuntimeException::class);
+        $installer->runNextStage();
+    }
+
     public function test_stage_endpoint_cannot_start_without_a_stored_database_choice(): void
     {
         $artisan = Mockery::mock(BufferedArtisanRunner::class);
@@ -86,13 +97,14 @@ class InstallPoliriumSafetyTest extends TestCase
         $installer->runNextStage();
     }
 
-    private function installer(BufferedArtisanRunner $artisan, string $status): InstallPolirium
+    private function installer(BufferedArtisanRunner $artisan, string $status, bool $hasUsers = false): InstallPolirium
     {
         $inspector = Mockery::mock(ExistingDatabaseInspector::class);
         $inspector->shouldReceive('inspect')->zeroOrMoreTimes()->andReturn([
             'status' => $status,
             'table_count' => $status === 'empty' ? 0 : 12,
             'has_modules_table' => true,
+            'has_users' => $hasUsers,
         ]);
 
         return new InstallPolirium(

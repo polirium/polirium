@@ -61,13 +61,34 @@ class ChooseDatabaseActionTest extends TestCase
         $this->assertSame(ChooseDatabaseAction::MODE_FRESH, session(ChooseDatabaseAction::SESSION_MODE));
     }
 
-    private function inspector(string $status, bool $hasModules = false): ExistingDatabaseInspector
+    public function test_live_polirium_database_with_users_cannot_be_reinstalled(): void
+    {
+        $step = new ChooseDatabaseAction($this->inspector('polirium', true, true));
+        $database = (string) config('database.connections.' . config('database.default') . '.database');
+
+        $this->expectException(RuntimeException::class);
+        $step->process([
+            'install_mode' => ChooseDatabaseAction::MODE_FRESH,
+            'reinstall_confirmation' => $database,
+        ]);
+    }
+
+    public function test_live_detection_requires_a_polirium_database_with_users(): void
+    {
+        $this->assertTrue(ExistingDatabaseInspector::isLive(['status' => 'polirium', 'has_users' => true]));
+        $this->assertFalse(ExistingDatabaseInspector::isLive(['status' => 'polirium', 'has_users' => false]));
+        $this->assertFalse(ExistingDatabaseInspector::isLive(['status' => 'unknown', 'has_users' => true]));
+        $this->assertFalse(ExistingDatabaseInspector::isLive(['status' => 'empty']));
+    }
+
+    private function inspector(string $status, bool $hasModules = false, bool $hasUsers = false): ExistingDatabaseInspector
     {
         $inspector = Mockery::mock(ExistingDatabaseInspector::class);
         $inspector->shouldReceive('inspect')->atLeast()->once()->andReturn([
             'status' => $status,
             'table_count' => $status === 'empty' ? 0 : 12,
             'has_modules_table' => $hasModules,
+            'has_users' => $hasUsers,
         ]);
 
         return $inspector;

@@ -67,6 +67,10 @@ class ChooseDatabaseAction implements InstallerStep
             throw new RuntimeException(__('installer::installer.database_upgrade_unrecognized'));
         }
 
+        if ($mode === self::MODE_FRESH && ExistingDatabaseInspector::isLive($inspection)) {
+            throw new RuntimeException('Database đang chạy Polirium và có người dùng. Không cho phép cài đè (xóa dữ liệu); hãy dùng chế độ nâng cấp.');
+        }
+
         if ($mode === self::MODE_FRESH) {
             $database = (string) config('database.connections.' . config('database.default') . '.database');
 

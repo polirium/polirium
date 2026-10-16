@@ -134,6 +134,11 @@ class InstallPolirium implements InstallerStep
                 : __('installer::installer.progress_starting'),
         );
 
+        // Re-checked right before wiping: a live Polirium database is never wiped.
+        if ($mode === ChooseDatabaseAction::MODE_FRESH && ExistingDatabaseInspector::isLive($inspection)) {
+            throw new RuntimeException('Database đang chạy Polirium và có người dùng. Không cho phép cài đè (xóa dữ liệu).');
+        }
+
         if ($mode === ChooseDatabaseAction::MODE_FRESH && $inspection['status'] !== 'empty') {
             $this->progress->report(__('installer::installer.progress_wiping_database'), 5);
             $this->runArtisan('db:wipe', ['--force' => true]);
