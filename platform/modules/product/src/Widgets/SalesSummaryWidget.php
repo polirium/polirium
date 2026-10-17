@@ -80,6 +80,7 @@ class SalesSummaryWidget extends AbstractWidget
 
         $payments = Payment::whereBetween('created_at', [$startDate, $endDate])
             ->whereNotIn('status', ['cancelled', 'cancel', 'failed'])
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
             ->get();
 
         $totalOrders = $payments->count();
@@ -91,7 +92,8 @@ class SalesSummaryWidget extends AbstractWidget
         $topProducts = PaymentProduct::select('product_id', DB::raw('SUM(amount) as total_sold'))
             ->whereHas('payment', function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('created_at', [$startDate, $endDate])
-                      ->whereNotIn('status', ['cancelled', 'cancel', 'failed']);
+                      ->whereNotIn('status', ['cancelled', 'cancel', 'failed'])
+                      ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId));
             })
             ->groupBy('product_id')
             ->orderByDesc('total_sold')

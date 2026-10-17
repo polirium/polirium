@@ -80,18 +80,22 @@ class InvoiceStatsWidget extends AbstractWidget
 
         // type_id = 1: Thu, type_id = 2: Chi (assumed based on typical accounting)
         $receipts = Payment::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
             ->where('type_id', 1)
             ->sum('value');
 
         $expenses = Payment::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
             ->where('type_id', 2)
             ->sum('value');
 
         $receiptCount = Payment::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
             ->where('type_id', 1)
             ->count();
 
         $expenseCount = Payment::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
             ->where('type_id', 2)
             ->count();
 

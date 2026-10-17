@@ -4,6 +4,22 @@ All notable changes to Polirium are documented here. Versions follow
 [Semantic Versioning](https://semver.org/). Each release on GitHub carries a
 self-contained package that the in-app updater installs.
 
+## [1.0.5] - unreleased
+
+### Security
+- Dashboard: the widget list and layout could be changed from the browser to
+  show widgets the user may not see. They are now locked and checked on the
+  server, and every widget checks its own permissions.
+- Dashboard: the revenue, sales summary and cash book widgets showed figures
+  from every branch; they now follow the selected branch like the rest of
+  the application.
+- Tables with relation search (for example purchases) could return rows from
+  other branches when searching; matches now stay inside the table's filters.
+
+### Fixed
+- Saved dashboard layouts were deleted when a permission was revoked or a
+  module disabled; they are now kept.
+
 ## [1.0.4] - 2026-10-17
 
 ### Fixed

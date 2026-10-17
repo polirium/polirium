@@ -78,6 +78,7 @@ class RevenueStatsWidget extends AbstractWidget
 
         $payments = Payment::whereBetween('created_at', [$startDate, $endDate])
             ->whereNotIn('status', ['cancelled', 'cancel', 'failed'])
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
             ->get();
 
         $totalCash = 0;
