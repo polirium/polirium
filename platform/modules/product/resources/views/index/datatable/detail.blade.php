@@ -1,6 +1,12 @@
 @php
     // PowerGrid passes $row as stdClass, we need the actual Product model for accessors
     $product = \Polirium\Modules\Product\Http\Model\Product::with(['category', 'trademark', 'shelve', 'branches', 'logs', 'elements.element'])->find($id);
+@endphp
+
+@if (! $product)
+    <div class="alert alert-warning m-3">{{ __('Hàng hóa không còn tồn tại. Vui lòng tải lại danh sách.') }}</div>
+@else
+@php
 
     $totalStock = $product->type === 'service' ? null : ($product->branches?->sum('pivot.qty') ?? 0);
     $isUnlimitedStock = $product->amount >= 1e15; // Kiểm tra tồn kho không giới hạn
@@ -386,3 +392,4 @@
             @endif
         </div>
 </div>
+@endif
