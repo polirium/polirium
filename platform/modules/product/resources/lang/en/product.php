@@ -138,4 +138,5 @@ return [
     'off' => 'Off',
     'no' => 'No',
     'delete' => 'Delete',
+    'stock_card_latest' => 'Showing the latest :shown of :total stock card lines.',
 ];

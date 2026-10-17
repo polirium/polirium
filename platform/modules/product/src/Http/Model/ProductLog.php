@@ -2,8 +2,11 @@
 
 namespace Polirium\Modules\Product\Http\Model;
 
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Polirium\Core\Base\Http\Models\BaseModel;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
+use Polirium\Modules\Product\Http\Model\Refund\Refund as SalesRefund;
 use Polirium\Modules\Product\Http\Model\Stock\Stock;
 use Polirium\Modules\Vendor\Http\Model\Purchase\Purchase;
 use Polirium\Modules\Vendor\Http\Model\Refund\Refund as PurchaseRefund;
@@ -57,7 +60,8 @@ class ProductLog extends BaseModel
     {
         return match ($this->productable_type) {
             Payment::class => $this->productable?->customer?->name,
-            PurchaseRefund::class => $this->productable?->payment?->customer?->name,
+            SalesRefund::class => $this->productable?->payment?->customer?->name,
+            PurchaseRefund::class => $this->productable?->vendor?->name,
             Purchase::class => $this->productable?->vendor?->name,
             Stock::class => $this->productable?->userCreated?->name ?? 'System',
             default => null,
@@ -93,6 +97,36 @@ class ProductLog extends BaseModel
     public function productable()
     {
         return $this->morphTo();
+    }
+
+    /**
+     * Latest stock card lines of a product (newest first) with their document
+     * and partner loaded in a few queries instead of several per line.
+     */
+    public static function forStockCard(int $productId, int $limit = 100): Collection
+    {
+        $logs = static::query()
+            ->where('product_id', $productId)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+
+        // Legacy lines may carry a marker instead of a class name: never
+        // eager load those (see getProductableAttribute()).
+        $documents = $logs->filter(fn (self $log) => $log->productable_type && class_exists($log->productable_type));
+
+        if ($documents->isNotEmpty()) {
+            (new Collection($documents->all()))->load(['productable' => fn (MorphTo $morph) => $morph->morphWith([
+                Payment::class => ['customer:id,name'],
+                SalesRefund::class => ['payment.customer:id,name'],
+                Purchase::class => ['vendor:id,name'],
+                PurchaseRefund::class => ['vendor:id,name'],
+                Stock::class => ['userCreated'],
+            ])]);
+        }
+
+        return $logs;
     }
 
     /**

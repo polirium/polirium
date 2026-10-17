@@ -1,6 +1,11 @@
 @php
     // PowerGrid passes $row as stdClass, we need the actual Product model for accessors
-    $product = \Polirium\Modules\Product\Http\Model\Product::with(['category', 'trademark', 'shelve', 'branches', 'logs', 'elements.element'])->find($id);
+    $product = \Polirium\Modules\Product\Http\Model\Product::with(['category', 'trademark', 'shelve', 'branches', 'elements.element'])->find($id);
+    // Stock card: the latest lines only, loaded in a few queries. The full card
+    // is in the stock movement report.
+    $cardLimit = 100;
+    $cardLogs = $product ? \Polirium\Modules\Product\Http\Model\ProductLog::forStockCard($product->id, $cardLimit) : collect();
+    $cardTotal = $product && $cardLogs->count() >= $cardLimit ? $product->logs()->count() : $cardLogs->count();
 @endphp
 
 @if (! $product)
@@ -244,8 +249,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if ($product->logs && $product->logs->count() > 0)
-                                @php $cardLogs = $product->logs->values(); @endphp
+                            @if ($cardLogs->count() > 0)
                                 @foreach ($cardLogs as $index => $item)
                                     <tr>
                                         <td>
@@ -309,6 +313,11 @@
                             @endif
                         </tbody>
                     </x-ui::table>
+                    @if ($cardTotal > $cardLogs->count())
+                        <div class="text-secondary small text-center py-2">
+                            {{ trans('modules/product::product.stock_card_latest', ['shown' => $cardLogs->count(), 'total' => $cardTotal]) }}
+                        </div>
+                    @endif
                 </div>
 
                 {{-- Tab 4: Hàng hoá thành phần --}}

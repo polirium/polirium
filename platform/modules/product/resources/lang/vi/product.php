@@ -337,4 +337,5 @@ return [
     ],
 
     'out_of_stock' => 'Sản phẩm không đủ tồn kho để xuất. Vui lòng kiểm tra lại số lượng.',
+    'stock_card_latest' => 'Đang hiển thị :shown dòng gần nhất trên tổng :total dòng thẻ kho.',
 ];
