@@ -4,6 +4,12 @@ All notable changes to Polirium are documented here. Versions follow
 [Semantic Versioning](https://semver.org/). Each release on GitHub carries a
 self-contained package that the in-app updater installs.
 
+## [1.0.4] - 2026-10-17
+
+### Fixed
+- Settings saved before encryption was enabled (for example the store name
+  and logo) logged "The payload is invalid" on every page view.
+
 ## [1.0.3] - 2026-10-17
 
 ### Fixed
