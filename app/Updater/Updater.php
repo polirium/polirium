@@ -388,8 +388,17 @@ class Updater
                 $this->move($to, $saved);
             }
 
+            // Keep a replaced file's permissions, e.g. a public/index.php the
+            // host made read-only.
+            $mode = $existed && is_file($saved) && ! is_link($saved) ? fileperms($saved) & 0777 : null;
+
             File::ensureDirectoryExists(dirname($to));
             $this->move($from, $to);
+
+            if ($mode !== null && is_file($to) && ! is_link($to)) {
+                @chmod($to, $mode);
+            }
+
             $entries[] = ['path' => $relative, 'existed' => $existed];
         }
 
@@ -499,9 +508,11 @@ class Updater
 
         foreach ($package ? $this->releaseEntries($package) : [] as $relative) {
             $target = base_path($relative);
-            $check = file_exists($target) ? $target : dirname($target);
+            // Files and links are replaced by renaming, which needs only a
+            // writable parent; a directory is moved, so it must be writable too.
+            $isDirectory = is_dir($target) && ! is_link($target);
 
-            if (! is_writable($check) || ! is_writable(dirname($target))) {
+            if (! is_writable(dirname($target)) || ($isDirectory && ! is_writable($target))) {
                 $problems[] = __('system.not_writable', ['path' => $relative]);
             }
         }

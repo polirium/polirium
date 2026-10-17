@@ -4,6 +4,14 @@ All notable changes to Polirium are documented here. Versions follow
 [Semantic Versioning](https://semver.org/). Each release on GitHub carries a
 self-contained package that the in-app updater installs.
 
+## [1.0.3] - 2026-10-17
+
+### Fixed
+- In-app updates refused to run when the host had made a file read-only
+  (for example `public/index.php`, mode 0444). Files are swapped by renaming,
+  which needs only a writable folder; the replaced file now keeps its
+  original permissions.
+
 ## [1.0.2] - 2026-10-17
 
 ### Fixed

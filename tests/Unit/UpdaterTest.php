@@ -112,6 +112,23 @@ class UpdaterTest extends TestCase
         $this->assertSame('logo', file_get_contents($site . '/public/uploads/logo.png'));
     }
 
+    public function test_read_only_files_are_replaced_and_stay_read_only(): void
+    {
+        $site = $this->makeTree($this->sandbox . '/site', ['public/index.php' => 'old-index', 'public/uploads/a.png' => 'a']);
+        $package = $this->makeTree($this->sandbox . '/package', ['public/index.php' => 'new-index', 'release.json' => '{}']);
+        chmod($site . '/public/index.php', 0444);
+        $this->app->setBasePath($site);
+        $updater = new Updater(new ReleaseClient());
+
+        $this->assertSame([], $updater->requirementProblems([], $package));
+
+        $this->callPrivate($updater, 'swap', [$package, $this->sandbox . '/backup']);
+        clearstatcache();
+
+        $this->assertSame('new-index', file_get_contents($site . '/public/index.php'));
+        $this->assertSame(0444, fileperms($site . '/public/index.php') & 0777);
+    }
+
     public function test_checksum_mismatch_stops_before_anything_is_installed(): void
     {
         $zip = $this->makeZip(['artisan' => 'x', 'release.json' => json_encode(['version' => '9.0.0'])]);
