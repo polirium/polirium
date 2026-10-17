@@ -5,6 +5,7 @@ namespace Polirium\Modules\Task\Http\Livewire\Task\Datatable;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\On;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
+use Polirium\Datatable\ActionButtons;
 use Polirium\Datatable\Button;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Components\SetUp\Exportable;
@@ -230,29 +231,13 @@ final class TaskTable extends BaseTable
 
     public function actions(Task $row): array
     {
-        return [
-            Button::make('show')
-                ->slot('<i class="icon icon-sm text-primary">' . tabler_icon('eye') . '</i>')
-                ->class('btn btn-sm btn-ghost-primary btn-icon')
-                ->route('admin.tasks.show', ['id' => $row->id])
-                ->can(auth()->user()->can('tasks.show'))
-                ->tooltip(__('core/base::general.view')),
-
-            Button::make('edit')
-                ->slot('<i class="icon icon-sm text-primary">' . tabler_icon('edit') . '</i>')
-                ->class('btn btn-sm btn-ghost-primary btn-icon')
-                ->route('admin.tasks.edit', ['id' => $row->id])
-                ->can(auth()->user()->can('tasks.edit'))
-                ->tooltip(__('core/base::general.edit')),
-
-            Button::make('delete')
-                ->slot('<i class="icon icon-sm text-danger">' . tabler_icon('trash') . '</i>')
-                ->class('btn btn-sm btn-ghost-danger btn-icon')
-                ->dispatch('deleteTask', ['id' => $row->id])
-                ->can(auth()->user()->can('tasks.destroy'))
-                ->confirm(__('core/base::general.confirm_delete'))
-                ->tooltip(__('core/base::general.delete')),
-        ];
+        return ActionButtons::make(
+            ActionButtons::custom('view', 'eye', __('core/base::general.view'), false, 'tasks.show')
+                ?->route('admin.tasks.show', ['id' => $row->id]),
+            ActionButtons::custom('edit', 'pencil', __('core/base::general.edit'), false, 'tasks.edit')
+                ?->route('admin.tasks.edit', ['id' => $row->id]),
+            ActionButtons::delete('deleteTask', $row->id, 'tasks.destroy', __('core/base::general.delete_confirm')),
+        );
     }
 
     public function applyFilter($value, $key)

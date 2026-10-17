@@ -149,50 +149,57 @@
         {{-- Action Buttons --}}
         @if (auth()->user()?->canAny(['vendors.refunds.edit', 'vendors.refunds.delete', 'vendors.refunds.create', 'vendors.refunds.export']))
             <hr>
-            <div class="btn-list mt-3">
+            <x-ui::detail-actions class="mt-3">
+                <x-slot:start>
+                    @can('vendors.refunds.edit')
+                        @if (($refund->status ?? '') !== 'cancel')
+                            <x-ui::button
+                                          color="warning"
+                                          outline
+                                          size="sm"
+                                          icon="ban"
+                                          wire:click="$parent.cancel({{ $refund->id }})"
+                                          wire:confirm="Bạn có chắc chắn muốn hủy phiếu trả hàng nhập này? Tồn kho và công nợ liên quan sẽ được hoàn lại.">
+                                {{ __('core/base::general.cancel_document') }}
+                            </x-ui::button>
+                        @endif
+                    @endcan
+
+                    @can('vendors.refunds.delete')
+                        <x-ui::button
+                                      color="danger"
+                                      outline
+                                      size="sm"
+                                      icon="trash"
+                                      wire:click="$parent.delete({{ $refund->id }})"
+                                      wire:confirm="Bạn có chắc chắn muốn xóa phiếu trả hàng nhập này? Thao tác này không thể hoàn tác.">
+                            {{ __('core/base::general.delete') }}
+                        </x-ui::button>
+                    @endcan
+                </x-slot:start>
+
                 @if (auth()->user()?->can('vendors.refunds.create') && auth()->user()?->can('vendors.refunds.view'))
-                    <x-ui::button color="outline-primary" size="sm" icon="copy"
+                    <x-ui::button color="secondary" outline size="sm" icon="copy"
                         :href="route('vendors.purchases.refund', ['copy_id' => $refund->id])">
-                        {{ __('Sao chép phiếu') }}
+                        {{ __('core/base::general.copy') }}
                     </x-ui::button>
                 @endif
                 @can('vendors.refunds.export')
-                    <x-ui::button color="outline-success" size="sm" icon="file-export"
+                    <x-ui::button color="secondary" outline size="sm" icon="file-export"
                         :href="route('vendors.purchases.refund-export', $refund->id)">
                         {{ __('Tải Excel chi tiết') }}
                     </x-ui::button>
                 @endcan
                 @can('vendors.refunds.edit')
-                <x-ui::button
-                              color="primary"
-                              size="sm"
-                              icon="pencil"
-                              :href="route('vendors.purchases.refund', $refund->id)">
-                    {{ __('modules/vendor::purchase.edit') }}
-                </x-ui::button>
-                    @if (($refund->status ?? '') !== 'cancel')
-                        <x-ui::button
-                                      color="warning"
-                                      size="sm"
-                                      icon="circle-x"
-                                      wire:click="$parent.cancel({{ $refund->id }})"
-                                      wire:confirm="Bạn có chắc chắn muốn hủy phiếu trả hàng nhập này? Tồn kho và công nợ liên quan sẽ được hoàn lại.">
-                            {{ __('Hủy phiếu') }}
-                        </x-ui::button>
-                    @endif
-                @endcan
-
-                @can('vendors.refunds.delete')
                     <x-ui::button
-                                  color="danger"
+                                  color="primary"
                                   size="sm"
-                                  icon="trash"
-                                  wire:click="$parent.delete({{ $refund->id }})"
-                                  wire:confirm="Bạn có chắc chắn muốn xóa phiếu trả hàng nhập này? Thao tác này không thể hoàn tác.">
-                        {{ __('Xóa phiếu') }}
+                                  icon="pencil"
+                                  :href="route('vendors.purchases.refund', $refund->id)">
+                        {{ __('core/base::general.edit') }}
                     </x-ui::button>
                 @endcan
-            </div>
+            </x-ui::detail-actions>
         @endif
     </x-ui::card>
 </div>

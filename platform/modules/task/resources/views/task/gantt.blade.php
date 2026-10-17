@@ -30,9 +30,9 @@
                         </div>
                         <div class="col-md-4">
                             <div class="btn-group" role="group">
-                                <button class="btn btn-sm" :class="zoomLevel === 'day' ? 'btn-primary' : 'btn-white'" @click="setZoom('day')">{{ trans('modules/task::task.day') }}</button>
-                                <button class="btn btn-sm" :class="zoomLevel === 'week' ? 'btn-primary' : 'btn-white'" @click="setZoom('week')">{{ trans('modules/task::task.week') }}</button>
-                                <button class="btn btn-sm" :class="zoomLevel === 'month' ? 'btn-primary' : 'btn-white'" @click="setZoom('month')">{{ trans('modules/task::task.month') }}</button>
+                                <button type="button" class="btn btn-sm" :class="zoomLevel === 'day' ? 'btn-primary' : 'btn-outline-secondary'" @click="setZoom('day')">{{ trans('modules/task::task.day') }}</button>
+                                <button type="button" class="btn btn-sm" :class="zoomLevel === 'week' ? 'btn-primary' : 'btn-outline-secondary'" @click="setZoom('week')">{{ trans('modules/task::task.week') }}</button>
+                                <button type="button" class="btn btn-sm" :class="zoomLevel === 'month' ? 'btn-primary' : 'btn-outline-secondary'" @click="setZoom('month')">{{ trans('modules/task::task.month') }}</button>
                             </div>
                         </div>
                     </div>

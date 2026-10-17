@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\On;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
 use Polirium\Core\UI\Facades\Assets;
+use Polirium\Datatable\ActionButtons;
 use Polirium\Datatable\Button;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Facades\PowerGrid;
-use Polirium\Datatable\Facades\Rule;
 use Polirium\Datatable\Components\SetUp\Exportable;
 use Polirium\Datatable\PowerGridFields;
 use Polirium\Modules\Product\Http\Model\Product;
@@ -97,24 +97,9 @@ final class VendorTable extends BaseTable
 
     public function actions(Vendor $row): array
     {
-        return [
-            Button::add('edit-modal-create-vendor')
-                ->slot(tabler_icon('pencil', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-primary btn-icon btn-sm')
-                ->attributes(['aria-label' => trans('modules/vendor::vendor.edit')])
-                ->tooltip(trans('modules/vendor::vendor.edit'))
-                ->dispatch('show-modal-create-vendor', ['id' => $row->id]),
-        ];
-    }
-
-    public function actionRules($row): array
-    {
-        return [
-            Rule::button('edit-modal-create-vendor')
-                ->when(fn($row) => !auth()->user()?->can('vendors.edit'))
-                ->hide(),
-        ];
+        return ActionButtons::make(
+            ActionButtons::edit('show-modal-create-vendor', $row->id, 'vendors.edit'),
+        );
     }
 
     #[On('vendor-search-sidebar')]

@@ -51,7 +51,7 @@
         <div class="d-grid gap-2">
             @can('customers.groups')
                 <button
-                        class="btn btn-outline-primary d-flex align-items-center justify-content-start gap-2"
+                        class="btn btn-outline-secondary d-flex align-items-center justify-content-start gap-2"
                         wire:click="$dispatch('show-modal-create-customer-group')">
                     {!! tabler_icon('plus', ['class' => 'icon']) !!}
                     {{ __('core/base::general.create') }}

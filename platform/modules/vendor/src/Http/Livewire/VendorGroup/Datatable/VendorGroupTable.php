@@ -5,6 +5,7 @@ namespace Polirium\Modules\Vendor\Http\Livewire\VendorGroup\Datatable;
 use Illuminate\Database\Eloquent\Builder;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
 use Polirium\Modules\Vendor\Http\Model\VendorGroup;
+use Polirium\Datatable\ActionButtons;
 use Polirium\Datatable\Button;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Facades\PowerGrid;
@@ -64,13 +65,9 @@ final class VendorGroupTable extends BaseTable
 
     public function actions(VendorGroup $row): array
     {
-        return [
-            Button::add('edit-modal-create-vendor-group')
-                ->slot(tabler_icon('pencil', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-primary btn-icon btn-sm me-1')
-                ->dispatch('show-modal-create-vendor-group', ['id' => $row->id]),
-        ];
+        return ActionButtons::make(
+            ActionButtons::edit('show-modal-create-vendor-group', $row->id),
+        );
     }
 
     public function delete(int|string $id): void

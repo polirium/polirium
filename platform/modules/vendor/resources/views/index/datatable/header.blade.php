@@ -13,13 +13,14 @@
             @can('vendors.delete')
                 <x-ui::button
                               color="danger"
+                              outline
                               icon="trash"
                               wire:click="bulkDelete"
                               wire:confirm="Bạn có chắc chắn muốn xóa các nhà cung cấp đã chọn? Thao tác này không thể hoàn tác."
                               class="btn-bulk-delete"
                               x-show="count > 0"
                               style="display: none;">
-                    {{ __('Xóa đã chọn') }}
+                    {{ __('core/base::general.delete_selected') }}
                 </x-ui::button>
             @endcan
 

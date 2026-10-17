@@ -123,26 +123,22 @@
             </div>
 
             <x-slot:footer>
-                <div class="d-flex w-100 justify-content-between align-items-center">
-                    <span class="text-muted small">{{ trans('modules/print-forms::editor.changes_applied') }}</span>
-                    <div>
-                        <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">
-                            {{ trans('core/base::general.cancel') }}
-                        </button>
-                        @canany(['print-forms.forms.create', 'print-forms.forms.edit'])
-                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">
-                                <span wire:loading.remove wire:target="save">
-                                    <i class="ti ti-device-floppy me-1"></i>
-                                    {{ trans('core/base::general.save') }}
-                                </span>
-                                <span wire:loading wire:target="save">
-                                    <i class="ti ti-loader-2 icon-spin me-1"></i>
-                                    {{ trans('core/base::general.saving') }}
-                                </span>
-                            </button>
-                        @endcanany
-                    </div>
-                </div>
+                <button type="button" class="btn btn-ghost-secondary me-auto" data-bs-dismiss="modal">
+                    {{ trans('core/base::general.cancel') }}
+                </button>
+                <span class="text-muted small">{{ trans('modules/print-forms::editor.changes_applied') }}</span>
+                @canany(['print-forms.forms.create', 'print-forms.forms.edit'])
+                    <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="save">
+                            {!! tabler_icon('device-floppy', ['class' => 'icon']) !!}
+                            {{ trans('core/base::general.save') }}
+                        </span>
+                        <span wire:loading wire:target="save">
+                            {!! tabler_icon('loader-2', ['class' => 'icon icon-spin']) !!}
+                            {{ trans('core/base::general.saving') }}
+                        </span>
+                    </button>
+                @endcanany
             </x-slot:footer>
         </x-ui::modal>
     </form>

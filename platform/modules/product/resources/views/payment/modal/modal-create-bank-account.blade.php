@@ -61,7 +61,7 @@
         </div>
 
         <div class="modal-footer">
-            <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">{{ __('Hủy') }}</button>
+            <button type="button" class="btn btn-ghost-secondary me-auto" data-bs-dismiss="modal">{{ __('Hủy') }}</button>
             <button type="submit" class="btn btn-primary">{{ __('Lưu') }}</button>
         </div>
     </form>

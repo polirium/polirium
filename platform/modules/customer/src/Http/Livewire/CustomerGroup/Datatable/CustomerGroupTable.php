@@ -4,7 +4,7 @@ namespace Polirium\Modules\Customer\Http\Livewire\CustomerGroup\Datatable;
 
 use Illuminate\Database\Eloquent\Builder;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
-use Polirium\Datatable\Button;
+use Polirium\Datatable\ActionButtons;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Components\SetUp\Exportable;
 use Polirium\Datatable\Facades\PowerGrid;
@@ -71,14 +71,8 @@ final class CustomerGroupTable extends BaseTable
 
     public function actions(CustomerGroup $row): array
     {
-        return [
-            Button::add('edit-modal-create-customer-group')
-                ->slot(tabler_icon('pencil', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-primary btn-icon btn-sm me-1')
-                ->attributes(['aria-label' => trans('modules/customer::customer.group.edit')])
-                ->tooltip(trans('modules/customer::customer.group.edit'))
-                ->dispatch('show-modal-create-customer-group', ['id' => $row->id]),
-        ];
+        return ActionButtons::make(
+            ActionButtons::edit('show-modal-create-customer-group', $row->id),
+        );
     }
 }

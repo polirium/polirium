@@ -27,22 +27,19 @@
             </div>
 
             <x-slot:footer>
-                <div class="professional-modal-footer">
-                    <button type="button" class="professional-btn-action secondary" data-bs-dismiss="modal">
-                        {!! tabler_icon('x', ['class' => 'icon']) !!}
-                        {{ __('core/base::general.cancel') }}
-                    </button>
-                    <button type="submit" class="professional-btn-action primary" wire:loading.attr="disabled" wire:target="save">
-                        <span wire:loading.remove>
-                            {!! tabler_icon('device-floppy', ['class' => 'icon']) !!}
-                            {{ __('core/base::general.save') }}
-                        </span>
-                        <span wire:loading style="display: none;" class="align-items-center gap-2">
-                            {!! tabler_icon('loader-2', ['class' => 'icon icon-spin']) !!}
-                            {{ __('core/base::general.saving') }}
-                        </span>
-                    </button>
-                </div>
+                <button type="button" class="btn btn-ghost-secondary me-auto" data-bs-dismiss="modal">
+                    {{ __('core/base::general.cancel') }}
+                </button>
+                <button type="submit" class="btn btn-primary" wire:loading.attr="disabled" wire:target="save">
+                    <span wire:loading.remove>
+                        {!! tabler_icon('device-floppy', ['class' => 'icon']) !!}
+                        {{ __('core/base::general.save') }}
+                    </span>
+                    <span wire:loading style="display: none;" class="align-items-center gap-2">
+                        {!! tabler_icon('loader-2', ['class' => 'icon icon-spin']) !!}
+                        {{ __('core/base::general.saving') }}
+                    </span>
+                </button>
             </x-slot:footer>
         </x-ui::modal>
     </form>

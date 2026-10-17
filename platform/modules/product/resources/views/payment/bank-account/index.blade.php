@@ -4,12 +4,14 @@
     </x-slot:title>
 
     <x-slot:actions>
-        <a href="{{ route('vietqr.index') }}" class="btn btn-outline-primary me-2">
-            {!! tabler_icon('qrcode') !!} {{ __('Tạo QR thanh toán') }}
-        </a>
-        <button class="btn btn-primary" onclick="Livewire.dispatch('modal-create-bank-account')">
-            {!! tabler_icon('plus') !!} {{ __('Thêm tài khoản') }}
-        </button>
+        <div class="btn-list">
+            <x-ui::button href="{{ route('vietqr.index') }}" color="secondary" outline icon="qrcode">
+                {{ __('Tạo QR thanh toán') }}
+            </x-ui::button>
+            <x-ui::button type="button" color="primary" icon="plus" onclick="Livewire.dispatch('modal-create-bank-account')">
+                {{ __('Thêm tài khoản') }}
+            </x-ui::button>
+        </div>
     </x-slot:actions>
 
     <div class="row">

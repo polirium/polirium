@@ -52,7 +52,7 @@
             </div>
 
             <x-slot:footer>
-                <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">{{ __('Hủy') }}</button>
+                <button type="button" class="btn btn-ghost-secondary me-auto" data-bs-dismiss="modal">{{ __('Hủy') }}</button>
                 <button type="submit" class="btn btn-primary" wire:loading.attr="disabled" wire:target="save">
                     <span wire:loading.remove wire:target="save">{{ __('Lưu') }}</span>
                     <span wire:loading wire:target="save" style="display: none;">{{ trans('modules/product::product.saving') }}</span>

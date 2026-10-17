@@ -13,19 +13,20 @@
             @can('products.delivery-partner.delete')
                 <x-ui::button
                               color="danger"
+                              outline
                               icon="trash"
                               class="btn-bulk-delete"
                               x-show="count > 0"
                               style="display: none;"
                               data-bs-toggle="modal"
                               data-bs-target="#modal-bulk-delete-delivery-partner">
-                    {{ trans('modules/product::product.delete_selected') }}
+                    {{ __('core/base::general.delete_selected') }}
                 </x-ui::button>
             @endcan
 
             @can('products.delivery-partner.create')
                 <x-ui::button color="primary" icon="plus" @click="Livewire.dispatch('show-modal-create-delivery-partner')">
-                    {{ __('Thêm mới') }}
+                    {{ __('Thêm đối tác giao hàng') }}
                 </x-ui::button>
             @endcan
         </div>

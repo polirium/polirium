@@ -132,31 +132,31 @@
 
         <hr>
 
-        {{-- Action Buttons V2 - Màu sắc rõ ràng với Badge Labels --}}
-        <div class="action-buttons-v2">
-            <button
-                    class="action-btn-v2 edit"
-                    wire:click="$dispatch('show-modal-create-customer', { id: {{ $row->id }} })"
-                    aria-label="{{ __('modules/customer::customer.edit') }}">
-                {!! tabler_icon('pencil', ['class' => 'icon']) !!}
-                <span class="badge-label">Sửa</span>
-                <span class="full-label">{{ __('modules/customer::customer.edit') }}</span>
-            </button>
+        <x-ui::detail-actions>
+            <x-slot:start>
+                @can('customers.destroy')
+                    {{-- Confirmed in #modal-confirm-delete-customer --}}
+                    <button
+                            type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modal-confirm-delete-customer"
+                            onclick="window.dispatchEvent(new CustomEvent('set-delete-customer-id', {detail: {id: {{ $row->id }}}}))">
+                        {!! tabler_icon('trash', ['class' => 'icon']) !!}
+                        {{ __('modules/customer::customer.delete') }}
+                    </button>
+                @endcan
+            </x-slot:start>
 
-            @can('customers.destroy')
-                <button
-                        type="button"
-                        class="action-btn-v2 delete"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modal-confirm-delete-customer"
-                        onclick="window.dispatchEvent(new CustomEvent('set-delete-customer-id', {detail: {id: {{ $row->id }}}}))"
-                        aria-label="{{ __('modules/customer::customer.delete') }}">
-                    {!! tabler_icon('trash', ['class' => 'icon']) !!}
-                    <span class="badge-label">Xóa</span>
-                    <span class="full-label">{{ __('modules/customer::customer.delete') }}</span>
-                </button>
-            @endcan
-        </div>
+            <x-ui::button
+                    color="primary"
+                    size="sm"
+                    icon="pencil"
+                    type="button"
+                    wire:click="$dispatch('show-modal-create-customer', { id: {{ $row->id }} })">
+                {{ __('modules/customer::customer.edit') }}
+            </x-ui::button>
+        </x-ui::detail-actions>
     </x-ui::card>
 
     {{-- Invoice History --}}

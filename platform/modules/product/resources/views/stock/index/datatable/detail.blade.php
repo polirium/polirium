@@ -325,16 +325,11 @@
 
     <hr>
 
-    <div class="action-buttons">
+    <x-ui::detail-actions>
         @can('products.stock.manage')
-            <a
-               href="{{ route('products.stock.stock', $row->id) }}"
-               class="action-btn edit icon-only"
-               data-tooltip="Sửa"
-               aria-label="Sửa">
-                {!! tabler_icon('pencil', ['class' => 'icon']) !!}
-                <span class="action-text">Sửa</span>
-            </a>
+            <x-ui::button href="{{ route('products.stock.stock', $row->id) }}" color="primary" size="sm" icon="pencil">
+                {{ __('core/base::general.edit') }}
+            </x-ui::button>
         @endcan
-    </div>
+    </x-ui::detail-actions>
 </div>

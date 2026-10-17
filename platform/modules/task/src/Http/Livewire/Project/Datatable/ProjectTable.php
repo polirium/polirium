@@ -5,6 +5,7 @@ namespace Polirium\Modules\Task\Http\Livewire\Project\Datatable;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\On;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
+use Polirium\Datatable\ActionButtons;
 use Polirium\Datatable\Button;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Components\SetUp\Exportable;
@@ -200,29 +201,13 @@ final class ProjectTable extends BaseTable
 
     public function actions(Project $row): array
     {
-        return [
-            Button::make('show')
-                ->slot('<i class="icon icon-sm text-primary">' . tabler_icon('eye') . '</i>')
-                ->class('btn btn-sm btn-ghost-primary btn-icon')
-                ->route('admin.projects.show', ['id' => $row->id])
-                ->can(auth()->user()->can('projects.show'))
-                ->tooltip(__('core/base::general.view')),
-
-            Button::make('edit')
-                ->slot('<i class="icon icon-sm text-primary">' . tabler_icon('edit') . '</i>')
-                ->class('btn btn-sm btn-ghost-primary btn-icon')
-                ->route('admin.projects.edit', ['id' => $row->id])
-                ->can(auth()->user()->can('projects.edit'))
-                ->tooltip(__('core/base::general.edit')),
-
-            Button::make('delete')
-                ->slot('<i class="icon icon-sm text-danger">' . tabler_icon('trash') . '</i>')
-                ->class('btn btn-sm btn-ghost-danger btn-icon')
-                ->dispatch('deleteProject', ['id' => $row->id])
-                ->can(auth()->user()->can('projects.destroy'))
-                ->confirm(__('core/base::general.confirm_delete'))
-                ->tooltip(__('core/base::general.delete')),
-        ];
+        return ActionButtons::make(
+            ActionButtons::custom('view', 'eye', __('core/base::general.view'), false, 'projects.show')
+                ?->route('admin.projects.show', ['id' => $row->id]),
+            ActionButtons::custom('edit', 'pencil', __('core/base::general.edit'), false, 'projects.edit')
+                ?->route('admin.projects.edit', ['id' => $row->id]),
+            ActionButtons::delete('deleteProject', $row->id, 'projects.destroy', __('core/base::general.delete_confirm')),
+        );
     }
 
     public function applyFilter($value, $key)

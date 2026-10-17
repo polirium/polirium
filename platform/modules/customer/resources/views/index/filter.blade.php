@@ -35,7 +35,7 @@
             </div>
             @if (isset($search['customer_group']) && $search['customer_group'])
                 <button
-                        class="btn btn-warning btn-icon"
+                        class="btn btn-ghost-secondary btn-icon"
                         wire:click="$dispatch('show-modal-create-customer-group', { id: {{ $search['customer_group'] }} })"
                         title="{{ __('modules/customer::customer.group.edit') }}">
                     {!! tabler_icon('pencil', ['class' => 'icon']) !!}
@@ -70,7 +70,7 @@
         <div class="d-grid gap-2">
             @can('customers.create')
             <button
-                    class="btn btn-outline-primary d-flex align-items-center justify-content-start gap-2"
+                    class="btn btn-outline-secondary d-flex align-items-center justify-content-start gap-2"
                     wire:click="$dispatch('show-modal-create-customer')">
                 {!! tabler_icon('user-plus', ['class' => 'icon']) !!}
                 {{ __('modules/customer::customer.create') }}

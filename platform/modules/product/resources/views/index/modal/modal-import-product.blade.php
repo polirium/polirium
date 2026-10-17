@@ -261,8 +261,8 @@
         </div>
 
         <x-slot:footer>
-            <button type="button" class="btn btn-secondary" wire:click="closeModal">
-                {{ trans('Đóng') }}
+            <button type="button" class="btn btn-ghost-secondary me-auto" wire:click="closeModal">
+                {{ __('core/base::general.close') }}
             </button>
             <button type="button"
                     class="btn btn-primary"

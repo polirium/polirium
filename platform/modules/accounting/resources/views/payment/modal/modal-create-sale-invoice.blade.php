@@ -216,7 +216,7 @@
                                                                         <span class="input-group-text" x-text="localDiscountType === 'percent' ? '%' : 'VNĐ'"></span>
                                                                     </div>
 
-                                                                    <button type="button" class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2 py-2" @click.stop="applyDiscount()">
+                                                                    <button type="button" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2" @click.stop="applyDiscount()">
                                                                         {!! tabler_icon('check') !!}
                                                                         {{ trans('modules/product::product.apply') }}
                                                                     </button>
@@ -438,7 +438,7 @@
                                                 <input type="text" class="form-control text-end" :value="localValue.toLocaleString('vi-VN')" @input="localValue = parseInt($event.target.value.replace(/[^0-9]/g, '')) || 0; $nextTick(() => { $event.target.value = localValue.toLocaleString('vi-VN'); })">
                                                 <span class="input-group-text" x-text="localType === 'percent' ? '%' : 'VNĐ'"></span>
                                             </div>
-                                            <button type="button" class="btn btn-success w-100 py-2" @click="apply()">
+                                            <button type="button" class="btn btn-primary w-100 py-2" @click="apply()">
                                                 {!! tabler_icon('check', ['class' => 'icon icon-sm me-1']) !!} {{ trans('modules/accounting::accounting.apply') }}
                                             </button>
                                         </div>
@@ -690,7 +690,7 @@
                                                         <span class="fw-bold text-primary ms-1" x-text="formatNumber(totalPaid())"></span>
                                                     </div>
                                                     <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-secondary" @click.prevent.stop="showMultiPayment = false">{{ trans('modules/accounting::accounting.close') }}</button>
+                                                        <button type="button" class="btn btn-ghost-secondary" @click.prevent.stop="showMultiPayment = false">{{ trans('modules/accounting::accounting.close') }}</button>
                                                         <button type="button" class="btn btn-primary d-flex align-items-center gap-1"
                                                                 @click.prevent.stop="confirmMulti()"
                                                                 :disabled="multiEntries.length === 0">
@@ -750,7 +750,7 @@
                     <div class="btn-list">
                         <button
                                 type="button"
-                                class="btn btn-secondary"
+                                class="btn btn-ghost-secondary"
                                 wire:click="closeModal">
                             {{ __('core/base::general.cancel') }}
                         </button>
@@ -758,7 +758,7 @@
                             @if (empty($payment['id']) || !in_array($payment['status'] ?? '', ['success', 'completed']))
                                 <button
                                         type="button"
-                                        class="btn btn-warning"
+                                        class="btn btn-outline-secondary"
                                         wire:click="saveDraft"
                                         wire:loading.attr="disabled"
                                         @disabled(empty($payment['id']) && count($products) === 0)>
@@ -767,6 +767,22 @@
                                         {{ trans('modules/accounting::accounting.save_draft') }}
                                     </span>
                                     <span wire:loading wire:target="saveDraft">
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                        {{ __('core/base::general.processing') }}
+                                    </span>
+                                </button>
+                            @endif
+                            @if (!empty($payment['id']))
+                                <button
+                                        type="button"
+                                        class="btn btn-outline-primary"
+                                        wire:click="saveOnly"
+                                        wire:loading.attr="disabled">
+                                    <span wire:loading.remove wire:target="saveOnly">
+                                        {!! tabler_icon('check', ['class' => 'icon icon-sm me-1']) !!}
+                                        {{ trans('modules/accounting::accounting.save') }}
+                                    </span>
+                                    <span wire:loading wire:target="saveOnly">
                                         <span class="spinner-border spinner-border-sm me-1"></span>
                                         {{ __('core/base::general.processing') }}
                                     </span>
@@ -786,22 +802,6 @@
                                     {{ __('core/base::general.processing') }}
                                 </span>
                             </button>
-                            @if (!empty($payment['id']))
-                                <button
-                                        type="button"
-                                        class="btn btn-success"
-                                        wire:click="saveOnly"
-                                        wire:loading.attr="disabled">
-                                    <span wire:loading.remove wire:target="saveOnly">
-                                        {!! tabler_icon('check', ['class' => 'icon icon-sm me-1']) !!}
-                                        {{ trans('modules/accounting::accounting.save') }}
-                                    </span>
-                                    <span wire:loading wire:target="saveOnly">
-                                        <span class="spinner-border spinner-border-sm me-1"></span>
-                                        {{ __('core/base::general.processing') }}
-                                    </span>
-                                </button>
-                            @endif
                         @endcanany
                     </div>
                 </div>

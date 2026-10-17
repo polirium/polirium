@@ -127,9 +127,9 @@
                                     @if (!$viewMode)
                                         <td>
                                             @if (($stock->status ?? '') !== 'completed')
-                                                <x-ui.button color="danger" icon="trash" wire:click="removeProduct({{ $key }})" />
+                                                <x-ui::action-icon icon="trash" danger :label="__('core/base::general.delete')" wire:click="removeProduct({{ $key }})" />
                                             @elsecan('products.stock.delete')
-                                                <x-ui.button color="danger" icon="trash"
+                                                <x-ui::action-icon icon="trash" danger :label="__('core/base::general.delete')"
                                                              x-on:click="openDeleteConfirm({{ $key }})" />
                                             @endif
                                         </td>

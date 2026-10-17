@@ -14,7 +14,7 @@
                 </span>
                 <x-ui::button
                     color="danger"
-                    size="sm"
+                    outline
                     icon="trash"
                     wire:click="bulkDelete"
                     wire:confirm="Bạn có chắc chắn muốn xóa các sản phẩm đã chọn? Thao tác này không thể hoàn tác."
@@ -22,26 +22,31 @@
                     x-show="count > 0"
                     style="display: none;"
                 >
-                    {{ trans('modules/product::product.delete_selected') }}
+                    {{ __('core/base::general.delete_selected') }}
                 </x-ui::button>
             @endcan
 
             @can('products.create')
-            <x-ui::dropdown label="{{ trans('modules/product::product.add_product') }}" icon="plus" color="primary">
-                <x-ui::dropdown.item label="{{ trans('modules/product::product.product') }}" icon="box" @click="$dispatch('show-modal-create-product', { type: 'product' })" />
-                <x-ui::dropdown.item label="{{ trans('modules/product::product.service') }}" icon="settings" @click="$dispatch('show-modal-create-product', { type: 'service' })" />
-                <x-ui::dropdown.item label="{{ trans('modules/product::product.combo_package') }}" icon="package" @click="$dispatch('show-modal-create-product', { type: 'combo' })" />
-            </x-ui::dropdown>
+            <x-ui::button color="secondary" outline icon="file-import" @click="$dispatch('show-modal-import-product')">
+                {{ __('core/base::general.import_excel') }}
+            </x-ui::button>
             @endcan
 
-            <x-ui::button color="success" icon="file-download" wire:click="exportExcelTemplate" class="ms-2">
-                {{ trans('modules/product::product.export_excel') }}
+            <x-ui::button color="secondary" outline icon="file-export" wire:click="exportExcelTemplate">
+                {{ __('core/base::general.export_excel') }}
             </x-ui::button>
 
             @can('products.create')
-            <x-ui::button color="primary" icon="file-upload" :outline="true" @click="$dispatch('show-modal-import-product')" class="ms-2">
-                {{ trans('modules/product::product.import_from_excel') }}
-            </x-ui::button>
+            <div class="dropdown">
+                <x-ui::button type="button" color="primary" icon="plus" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ trans('modules/product::product.add_product') }}
+                </x-ui::button>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <x-ui::dropdown.item label="{{ trans('modules/product::product.product') }}" icon="box" @click="$dispatch('show-modal-create-product', { type: 'product' })" />
+                    <x-ui::dropdown.item label="{{ trans('modules/product::product.service') }}" icon="settings" @click="$dispatch('show-modal-create-product', { type: 'service' })" />
+                    <x-ui::dropdown.item label="{{ trans('modules/product::product.combo_package') }}" icon="package" @click="$dispatch('show-modal-create-product', { type: 'combo' })" />
+                </div>
+            </div>
             @endcan
         </div>
     </div>

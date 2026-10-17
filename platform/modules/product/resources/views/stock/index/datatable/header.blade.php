@@ -13,6 +13,7 @@
             </span>
             <x-ui::button
                 color="danger"
+                outline
                 icon="trash"
                 wire:click="bulkDelete"
                 wire:confirm="Bạn có chắc chắn muốn xóa các phiếu kiểm kho đã chọn? Thao tác này không thể hoàn tác."
@@ -20,12 +21,14 @@
                 x-show="count > 0"
                 style="display: none;"
             >
-                {{ trans('modules/product::product.delete_selected') }}
+                {{ __('core/base::general.delete_selected') }}
             </x-ui::button>
             @endcan
 
             @can('products.stock.create')
-            <x-ui.button href="{{ route('products.stock.stock') }}" color="success" icon="plus" :label="trans('modules/product::stock.name')" />
+            <x-ui::button href="{{ route('products.stock.stock') }}" color="primary" icon="plus">
+                {{ trans('modules/product::stock.create') }}
+            </x-ui::button>
             @endcan
         </div>
     </div>

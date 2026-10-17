@@ -4,7 +4,7 @@ namespace Polirium\Modules\Product\Http\Livewire\Payment;
 
 use Illuminate\Database\Eloquent\Builder;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
-use Polirium\Datatable\Button;
+use Polirium\Datatable\ActionButtons;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Facades\PowerGrid;
 use Polirium\Datatable\PowerGridFields;
@@ -66,17 +66,10 @@ final class BankAccountTable extends BaseTable
 
     public function actions(BankAccount $row): array
     {
-        return [
-            Button::add('edit')
-                ->slot(tabler_icon('pencil', ['class' => 'icon']))
-                ->class('btn btn-outline-primary btn-icon btn-sm me-1')
-                ->dispatch('modal-create-bank-account', ['id' => $row->id]),
-            Button::add('delete')
-                ->slot(tabler_icon('trash', ['class' => 'icon']))
-                ->class('btn btn-outline-danger btn-icon btn-sm')
-                ->dispatch('delete-bank-account', ['id' => $row->id])
-                ->confirm(__('Bạn có chắc muốn xóa tài khoản này?')),
-        ];
+        return ActionButtons::make(
+            ActionButtons::edit('modal-create-bank-account', $row->id),
+            ActionButtons::delete('delete-bank-account', $row->id, null, __('Bạn có chắc muốn xóa tài khoản này?')),
+        );
     }
 
     public function deleteBankAccount(int $id): void

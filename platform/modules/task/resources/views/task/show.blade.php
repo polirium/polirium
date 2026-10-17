@@ -18,26 +18,26 @@
         @endif
     </x-slot:subtitle>
     <x-slot:actions>
-        <a href="{{ $task->project_id ? route('admin.projects.show', $task->project_id) : route('admin.tasks.index') }}" class="btn btn-outline-secondary">
-            {!! tabler_icon('arrow-left', ['class' => 'icon']) !!} {{ __('core/base::general.back') }}
-        </a>
-        @can('tasks.create')
-            <a href="{{ route('admin.tasks.create', ['project_id' => $task->project_id, 'parent_id' => $task->id]) }}" class="btn btn-outline-secondary">
-                {!! tabler_icon('subtask', ['class' => 'icon']) !!} {{ __('modules/task::task.add_subtask') }}
-            </a>
-        @endcan
+        <x-ui::button color="secondary" outline icon="arrow-left" :href="$task->project_id ? route('admin.projects.show', $task->project_id) : route('admin.tasks.index')">
+            {{ __('core/base::general.back') }}
+        </x-ui::button>
         @can('tasks.destroy')
             <form method="POST" action="{{ route('admin.tasks.destroy', $task->id) }}" class="d-inline"
                   onsubmit="return confirm(@js(__('modules/task::task.confirm_delete_task')))">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn-outline-danger">{!! tabler_icon('trash', ['class' => 'icon']) !!} {{ __('core/base::general.delete') }}</button>
+                <x-ui::button color="danger" outline icon="trash" type="submit">{{ __('core/base::general.delete') }}</x-ui::button>
             </form>
         @endcan
+        @can('tasks.create')
+            <x-ui::button color="secondary" outline icon="subtask" :href="route('admin.tasks.create', ['project_id' => $task->project_id, 'parent_id' => $task->id])">
+                {{ __('modules/task::task.add_subtask') }}
+            </x-ui::button>
+        @endcan
         @can('tasks.edit')
-            <a href="{{ route('admin.tasks.edit', $task->id) }}" class="btn btn-primary">
-                {!! tabler_icon('edit', ['class' => 'icon']) !!} {{ __('core/base::general.edit') }}
-            </a>
+            <x-ui::button color="primary" icon="pencil" :href="route('admin.tasks.edit', $task->id)">
+                {{ __('core/base::general.edit') }}
+            </x-ui::button>
         @endcan
     </x-slot:actions>
 
@@ -78,7 +78,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h4 class="subheader mb-0">{{ __('modules/task::task.child_tasks') }}</h4>
                             @can('tasks.create')
-                                <a href="{{ route('admin.tasks.create', ['project_id' => $task->project_id, 'parent_id' => $task->id]) }}" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ route('admin.tasks.create', ['project_id' => $task->project_id, 'parent_id' => $task->id]) }}" class="btn btn-sm btn-primary">
                                     {!! tabler_icon('plus', ['class' => 'icon']) !!} {{ __('modules/task::task.add_subtask') }}
                                 </a>
                             @endcan
@@ -126,7 +126,7 @@
                                                   onsubmit="return confirm(@js(__('core/base::general.confirm_delete')))">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button class="btn btn-sm btn-ghost-danger" title="{{ __('core/base::general.delete') }}">{!! tabler_icon('trash', ['class' => 'icon']) !!}</button>
+                                                <button type="submit" class="btn btn-sm btn-icon btn-ghost-danger" title="{{ __('core/base::general.delete') }}" aria-label="{{ __('core/base::general.delete') }}">{!! tabler_icon('trash', ['class' => 'icon']) !!}</button>
                                             </form>
                                         @endif
                                     </div>
@@ -190,7 +190,7 @@
                                                               onsubmit="return confirm(@js(__('core/base::general.confirm_delete')))">
                                                             @csrf
                                                             @method('DELETE')
-                                                            <button class="btn btn-sm btn-ghost-danger" title="{{ __('core/base::general.delete') }}">{!! tabler_icon('trash', ['class' => 'icon']) !!}</button>
+                                                            <button type="submit" class="btn btn-sm btn-icon btn-ghost-danger" title="{{ __('core/base::general.delete') }}" aria-label="{{ __('core/base::general.delete') }}">{!! tabler_icon('trash', ['class' => 'icon']) !!}</button>
                                                         </form>
                                                     @endif
                                                 </td>
@@ -230,13 +230,13 @@
                                     <a href="{{ route('admin.tasks.attachments.download', [$task->id, $file->id]) }}">{{ $file->file_name }}</a>
                                     <div class="text-secondary small">{{ $file->file_size_human }} · {{ $file->uploadedBy?->name }} · {{ $file->created_at->format('d/m/Y H:i') }}</div>
                                 </div>
-                                <a href="{{ route('admin.tasks.attachments.download', [$task->id, $file->id]) }}" class="btn btn-sm btn-ghost-secondary" title="{{ __('modules/task::task.download') }}">{!! tabler_icon('download', ['class' => 'icon']) !!}</a>
+                                <a href="{{ route('admin.tasks.attachments.download', [$task->id, $file->id]) }}" class="btn btn-sm btn-icon btn-ghost-secondary" title="{{ __('modules/task::task.download') }}" aria-label="{{ __('modules/task::task.download') }}">{!! tabler_icon('download', ['class' => 'icon']) !!}</a>
                                 @if ($file->uploaded_by === auth()->id() || $canEdit)
                                     <form method="POST" action="{{ route('admin.tasks.attachments.destroy', [$task->id, $file->id]) }}"
                                           onsubmit="return confirm(@js(__('core/base::general.confirm_delete')))">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-sm btn-ghost-danger" title="{{ __('core/base::general.delete') }}">{!! tabler_icon('trash', ['class' => 'icon']) !!}</button>
+                                        <button type="submit" class="btn btn-sm btn-icon btn-ghost-danger" title="{{ __('core/base::general.delete') }}" aria-label="{{ __('core/base::general.delete') }}">{!! tabler_icon('trash', ['class' => 'icon']) !!}</button>
                                     </form>
                                 @endif
                             </div>
@@ -299,7 +299,7 @@
                                               onsubmit="return confirm(@js(__('core/base::general.confirm_delete')))">
                                             @csrf
                                             @method('DELETE')
-                                            <button class="btn btn-sm btn-ghost-danger" title="{{ __('core/base::general.delete') }}">{!! tabler_icon('x', ['class' => 'icon']) !!}</button>
+                                            <button type="submit" class="btn btn-sm btn-icon btn-ghost-danger" title="{{ __('core/base::general.delete') }}" aria-label="{{ __('core/base::general.delete') }}">{!! tabler_icon('x', ['class' => 'icon']) !!}</button>
                                         </form>
                                     @endif
                                 </div>

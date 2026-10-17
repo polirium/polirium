@@ -47,7 +47,7 @@
             </div>
 
             <x-slot name="footer">
-                <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-ghost-secondary me-auto" data-bs-dismiss="modal">
                     <i class="ti ti-x me-1"></i>
                     {{ __('modules/customer::customer.cancel') }}
                 </button>

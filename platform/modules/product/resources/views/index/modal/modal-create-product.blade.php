@@ -366,12 +366,15 @@
 
             <x-slot:footer>
                 @if (!$readonly)
-                    <button type="submit" class="btn btn-success">
-                        {{ tabler_icon('device-floppy') }}
+                    <button type="button" class="btn btn-ghost-secondary me-auto" data-bs-dismiss="modal">
+                        {{ __('core/base::general.cancel') }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        {!! tabler_icon('device-floppy', ['class' => 'icon']) !!}
                         {{ trans('modules/product::product.save') }}
                     </button>
                 @else
-                    <button type="button" class="btn" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">
                         {{ trans('core/base::general.close') }}
                     </button>
                 @endif

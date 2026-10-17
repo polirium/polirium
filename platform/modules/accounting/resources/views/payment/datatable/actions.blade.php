@@ -1,56 +1,42 @@
-@php
-    use VigStudio\TablerIcons\TablerIcon;
-    $iconStyle = ['class' => 'icon dropdown-item-icon'];
-@endphp
-<div class="dropdown">
-    <button class="btn btn-sm dropdown-toggle align-text-top" data-bs-boundary="viewport" data-bs-toggle="dropdown">
-        {{ trans('core/base::general.action') }}
-    </button>
-    <div class="dropdown-menu dropdown-menu-end">
-        {{-- View Details --}}
-        <a class="dropdown-item" href="{{ route('accountings.payment.show', ['id' => $row->id]) }}">
-            {!! TablerIcon::render('eye', $iconStyle) !!}
-            {{ trans('modules/accounting::accounting.view_detail') }}
-        </a>
+<x-ui::row-actions>
+    {{-- View Details --}}
+    <x-ui::action-icon
+        icon="eye"
+        :label="trans('modules/accounting::accounting.view_detail')"
+        href="{{ route('accountings.payment.show', ['id' => $row->id]) }}"
+    />
 
-        {{-- Complete --}}
-        @can('accountings.edit')
-            @if($shouldShowCompleteButton ?? false)
-                <button
-                    class="dropdown-item"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modal-action-complete"
-                    wire:click="setTargetId({{ $row->id }})"
-                >
-                    {!! TablerIcon::render('check', $iconStyle) !!}
-                    {{ trans('modules/accounting::accounting.complete') }}
-                </button>
-            @endif
-        @endcan
+    {{-- Print --}}
+    <x-ui::action-icon
+        icon="printer"
+        :label="trans('modules/accounting::accounting.print')"
+        onclick="PoliriumPrint.printUrl('{{ route('products.print.print-payment', ['id' => $row->id]) }}')"
+    />
 
-        {{-- Print --}}
-        <button
-            class="dropdown-item"
-            onclick="PoliriumPrint.printUrl('{{ route('products.print.print-payment', ['id' => $row->id]) }}')"
-        >
-            {!! TablerIcon::render('printer', $iconStyle) !!}
-            {{ trans('modules/accounting::accounting.print') }}
-        </button>
+    {{-- Complete --}}
+    @can('accountings.edit')
+        @if($shouldShowCompleteButton ?? false)
+            <x-ui::action-icon
+                icon="check"
+                :label="trans('modules/accounting::accounting.complete')"
+                data-bs-toggle="modal"
+                data-bs-target="#modal-action-complete"
+                wire:click="setTargetId({{ $row->id }})"
+            />
+        @endif
+    @endcan
 
-        {{-- Cancel --}}
-        @can('accountings.cancel')
-            @if(!in_array($row->status, ['cancelled', 'cancel', 'delivery_failed']))
-                <button
-                    class="dropdown-item text-danger"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modal-action-cancel"
-                    wire:click="setTargetId({{ $row->id }})"
-                >
-                    {!! TablerIcon::render('trash', $iconStyle) !!}
-                    {{ trans('modules/accounting::accounting.cancel_invoice') }}
-                </button>
-            @endif
-        @endcan
-    </div>
-</div>
-
+    {{-- Cancel (confirmed in #modal-action-cancel) --}}
+    @can('accountings.cancel')
+        @if(!in_array($row->status, ['cancelled', 'cancel', 'delivery_failed']))
+            <x-ui::action-icon
+                icon="ban"
+                danger
+                :label="trans('modules/accounting::accounting.cancel_invoice')"
+                data-bs-toggle="modal"
+                data-bs-target="#modal-action-cancel"
+                wire:click="setTargetId({{ $row->id }})"
+            />
+        @endif
+    @endcan
+</x-ui::row-actions>

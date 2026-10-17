@@ -4,7 +4,7 @@ namespace Polirium\Modules\Product\Http\Livewire\Payment;
 
 use Illuminate\Database\Eloquent\Builder;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
-use Polirium\Datatable\Button;
+use Polirium\Datatable\ActionButtons;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Facades\PowerGrid;
 use Polirium\Datatable\PowerGridFields;
@@ -82,32 +82,14 @@ final class PaymentMethodTable extends BaseTable
 
     public function actions(PaymentMethod $row): array
     {
-        $actions = [];
-
-        if (auth()->user()?->can('products.payment-method.edit')) {
-            $actions[] = Button::add('edit')
-                ->slot(tabler_icon('pencil', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-primary btn-icon btn-sm me-1')
-                ->attributes([
-                    'aria-label' => __('Sửa'),
-                    'title' => __('Sửa'),
-                ])
-                ->dispatch('modal-create-payment-method', ['id' => $row->id]);
-
-            $actions[] = Button::add('delete')
-                ->slot(tabler_icon('trash', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-outline-danger btn-icon btn-sm')
-                ->attributes([
-                    'aria-label' => __('Xóa'),
-                    'title' => __('Xóa'),
-                    'wire:confirm' => __('Bạn có chắc chắn muốn xóa phương thức thanh toán này?'),
-                ])
-                ->dispatch('delete-payment-method', ['id' => $row->id]);
+        if (! auth()->user()?->can('products.payment-method.edit')) {
+            return [];
         }
 
-        return $actions;
+        return ActionButtons::make(
+            ActionButtons::edit('modal-create-payment-method', $row->id),
+            ActionButtons::delete('delete-payment-method', $row->id, null, __('Bạn có chắc chắn muốn xóa phương thức thanh toán này?')),
+        );
     }
 
     #[\Livewire\Attributes\On('delete-payment-method')]

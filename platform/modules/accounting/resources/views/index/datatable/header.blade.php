@@ -24,10 +24,9 @@
     <div class="card-actions">
         @can('accountings.create')
             <div class="dropdown">
-                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <x-tabler-icons::plus class="icon me-1" />
+                <x-ui::button color="primary" icon="plus" class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     {{ trans('modules/accounting::accounting.create') }}
-                </button>
+                </x-ui::button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li>
                         <a class="dropdown-item" href="javascript:void(0)" @click="$dispatch('show-modal-create-accounting', { model: 'Polirium\\Modules\\Accounting\\Http\\Model\\Receipt', type: 'receipt' })">

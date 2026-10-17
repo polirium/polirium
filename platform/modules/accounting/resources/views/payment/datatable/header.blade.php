@@ -12,27 +12,29 @@
                 {{ trans('modules/accounting::accounting.selected') }} <span x-text="count">0</span> {{ trans('modules/accounting::accounting.voucher') }}
             </span>
 
-            @can('accountings.edit')
+            @can('sales.orders.delete')
                 <x-ui::button
-                    color="success"
-                    size="sm"
-                    icon="check"
-                    class="btn btn-bulk-complete"
+                    color="danger"
+                    outline
+                    icon="trash"
+                    class="btn-bulk-delete"
+                    type="button"
                     x-show="count > 0"
                     style="display: none;"
                     data-bs-toggle="modal"
-                    data-bs-target="#modal-bulk-complete"
+                    data-bs-target="#modal-bulk-delete"
                 >
-                    {{ trans('modules/accounting::accounting.complete') }}
+                    {{ __('core/base::general.delete_selected') }}
                 </x-ui::button>
             @endcan
 
             @can('accountings.cancel')
                 <x-ui::button
                     color="warning"
-                    size="sm"
+                    outline
                     icon="ban"
-                    class="btn btn-bulk-cancel"
+                    class="btn-bulk-cancel"
+                    type="button"
                     x-show="count > 0"
                     style="display: none;"
                     data-bs-toggle="modal"
@@ -42,26 +44,27 @@
                 </x-ui::button>
             @endcan
 
-            @can('sales.orders.delete')
-                 <x-ui::button
-                    color="danger"
-                    size="sm"
-                    icon="trash"
-                    class="btn btn-bulk-delete"
+            @can('accountings.edit')
+                <x-ui::button
+                    color="secondary"
+                    outline
+                    icon="check"
+                    class="btn-bulk-complete"
+                    type="button"
                     x-show="count > 0"
                     style="display: none;"
                     data-bs-toggle="modal"
-                    data-bs-target="#modal-bulk-delete"
+                    data-bs-target="#modal-bulk-complete"
                 >
-                    {{ trans('modules/accounting::accounting.delete') }}
+                    {{ trans('modules/accounting::accounting.complete') }}
                 </x-ui::button>
             @endcan
+
             @can('accountings.export')
                 <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        {!! tabler_icon('file-export', ['class' => 'icon']) !!}
-                        {{ __('Xuất Excel') }}
-                    </button>
+                    <x-ui::button color="secondary" outline icon="file-export" class="dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        {{ __('core/base::general.export_excel') }}
+                    </x-ui::button>
                     <div class="dropdown-menu dropdown-menu-end">
                         <button class="dropdown-item" wire:click="exportOverview">
                             {!! tabler_icon('table', ['class' => 'icon dropdown-item-icon']) !!}

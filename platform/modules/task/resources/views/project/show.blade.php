@@ -8,28 +8,28 @@
         @endif
     </x-slot:subtitle>
     <x-slot:actions>
-        <a href="{{ route('admin.projects.index') }}" class="btn btn-outline-secondary">
-            {!! tabler_icon('arrow-left', ['class' => 'icon']) !!} {{ __('core/base::general.back') }}
-        </a>
-        @can('projects.edit')
-            <a href="{{ route('admin.projects.edit', $project->id) }}" class="btn btn-outline-primary">
-                {!! tabler_icon('edit', ['class' => 'icon']) !!} {{ __('core/base::general.edit') }}
-            </a>
-        @endcan
+        <x-ui::button color="secondary" outline icon="arrow-left" :href="route('admin.projects.index')">
+            {{ __('core/base::general.back') }}
+        </x-ui::button>
         @can('projects.destroy')
             <form method="POST" action="{{ route('admin.projects.destroy', $project->id) }}" class="d-inline"
                   onsubmit="return confirm(@js(__('modules/task::project.confirm_delete')))">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn-outline-danger">
-                    {!! tabler_icon('trash', ['class' => 'icon']) !!} {{ __('core/base::general.delete') }}
-                </button>
+                <x-ui::button color="danger" outline icon="trash" type="submit">
+                    {{ __('core/base::general.delete') }}
+                </x-ui::button>
             </form>
         @endcan
+        @can('projects.edit')
+            <x-ui::button color="secondary" outline icon="pencil" :href="route('admin.projects.edit', $project->id)">
+                {{ __('core/base::general.edit') }}
+            </x-ui::button>
+        @endcan
         @can('tasks.create')
-            <a href="{{ route('admin.tasks.create', ['project_id' => $project->id]) }}" class="btn btn-primary">
-                {!! tabler_icon('plus', ['class' => 'icon']) !!} {{ __('modules/task::project.add_task') }}
-            </a>
+            <x-ui::button color="primary" icon="plus" :href="route('admin.tasks.create', ['project_id' => $project->id])">
+                {{ __('modules/task::project.add_task') }}
+            </x-ui::button>
         @endcan
     </x-slot:actions>
 

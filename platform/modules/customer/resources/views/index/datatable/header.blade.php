@@ -21,30 +21,31 @@
                 </span>
                 <x-ui::button
                               color="danger"
+                              outline
                               icon="trash"
                               wire:click="bulkDelete"
                               wire:confirm="Bạn có chắc chắn muốn xóa các khách hàng đã chọn? Thao tác này không thể hoàn tác."
                               class="btn-bulk-delete"
                               x-show="count > 0"
                               style="display: none;">
-                    {{ trans('modules/customer::customer.delete_selected') }}
+                    {{ __('core/base::general.delete_selected') }}
                 </x-ui::button>
             @endcan
 
             @can('customers.create')
-                <x-ui::button color="white" icon="file-upload" @click="window.Livewire.dispatch('show-modal-import-customer')">
-                    {{ trans('modules/customer::customer.import_excel') }}
+                <x-ui::button color="secondary" outline icon="file-import" type="button" @click="window.Livewire.dispatch('show-modal-import-customer')">
+                    {{ __('core/base::general.import_excel') }}
                 </x-ui::button>
             @endcan
 
             @if ($this->showDetailId)
-                <x-ui::button color="white" icon="filter-off" onclick="window.location.href='{{ route('customers.index') }}'">
+                <x-ui::button color="secondary" outline icon="filter-off" type="button" onclick="window.location.href='{{ route('customers.index') }}'">
                     {{ trans('modules/customer::customer.cancel_search') }}
                 </x-ui::button>
             @endif
 
             @can('customers.create')
-                <x-ui::button color="primary" icon="user-plus" @click="$dispatch('show-modal-create-customer')">
+                <x-ui::button color="primary" icon="plus" type="button" @click="$dispatch('show-modal-create-customer')">
                     {{ trans('modules/customer::customer.create') }}
                 </x-ui::button>
             @endcan

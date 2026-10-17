@@ -8,25 +8,27 @@
         {{ trans('modules/vendor::vendor.group.index') }}
     </div>
     <div class="card-actions">
+        <div class="btn-list">
         <span class="badge bg-primary-lt text-primary ms-2" x-show="count > 0" style="display: none;">
             Đã chọn <span x-text="count">0</span> bản ghi
         </span>
         @can('vendors.groups')
             <x-ui::button
                           color="danger"
+                          outline
                           icon="trash"
                           wire:click="bulkDelete"
                           wire:confirm="Bạn có chắc chắn muốn xóa các bản ghi đã chọn? Thao tác này không thể hoàn tác."
-                          class="btn-bulk-delete me-2"
+                          class="btn-bulk-delete"
                           x-show="count > 0"
                           style="display: none;">
-                {{ __('Xóa đã chọn') }}
+                {{ __('core/base::general.delete_selected') }}
             </x-ui::button>
-            <button class="btn btn-primary d-none d-sm-inline-block"
+            <x-ui::button color="primary" icon="plus" class="d-none d-sm-inline-block" type="button"
                     onclick="Livewire.dispatch('show-modal-create-vendor-group', [])">
-                {!! tabler_icon('plus', ['class' => 'icon']) !!}
                 {{ trans('modules/vendor::vendor.group.create') }}
-            </button>
+            </x-ui::button>
         @endcan
+        </div>
     </div>
 </div>

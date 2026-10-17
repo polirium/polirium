@@ -13,19 +13,20 @@
             @can('products.sale-channel.delete')
                 <x-ui::button
                               color="danger"
+                              outline
                               icon="trash"
                               class="btn-bulk-delete"
                               x-show="count > 0"
                               style="display: none;"
                               data-bs-toggle="modal"
                               data-bs-target="#modal-bulk-delete-sale-channel">
-                    {{ trans('modules/product::product.delete_selected') }}
+                    {{ __('core/base::general.delete_selected') }}
                 </x-ui::button>
             @endcan
 
             @can('products.sale-channel.create')
                 <x-ui::button color="primary" icon="plus" @click="Livewire.dispatch('show-modal-create-sale-channel')">
-                    {{ __('Thêm mới') }}
+                    {{ __('Thêm kênh bán hàng') }}
                 </x-ui::button>
             @endcan
         </div>

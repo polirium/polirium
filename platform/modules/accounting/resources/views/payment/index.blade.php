@@ -4,10 +4,9 @@
     </x-slot:title>
 
     <x-slot:actions>
-        <button class="btn btn-primary d-none d-sm-inline-block" onclick="window.Livewire.dispatch('show-modal-create-sale-invoice')">
-            {!! tabler_icon('plus') !!}
+        <x-ui::button color="primary" icon="plus" class="d-none d-sm-inline-block" type="button" onclick="window.Livewire.dispatch('show-modal-create-sale-invoice')">
             {{ trans('modules/accounting::accounting.add_new') }}
-        </button>
+        </x-ui::button>
     </x-slot:actions>
 
     <div class="row" x-data="{ showSidebar: true }" @toggle-sidebar.window="showSidebar = !showSidebar">
@@ -16,7 +15,7 @@
         </div>
         <div :class="showSidebar ? 'col-md-9' : 'col-md-12'" class="transition-all duration-300">
             <div class="mb-3" x-show="!showSidebar" x-cloak>
-                <button type="button" class="btn btn-outline-primary" @click="showSidebar = true">
+                <button type="button" class="btn btn-outline-secondary" @click="showSidebar = true">
                     {!! tabler_icon('filter', ['class' => 'icon']) !!} {{ trans('modules/accounting::accounting.show_filter') }}
                 </button>
             </div>

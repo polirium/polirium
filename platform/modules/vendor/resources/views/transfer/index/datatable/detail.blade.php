@@ -146,7 +146,7 @@
     <hr>
 
     {{-- Action Buttons --}}
-    <div class="btn-list">
+    <x-ui::detail-actions>
         @can('vendors.transfers.edit')
         <x-ui::button
             color="primary"
@@ -157,5 +157,5 @@
             {{ trans('modules/vendor::transfer.open') }}
         </x-ui::button>
         @endcan
-    </div>
+    </x-ui::detail-actions>
 </x-ui::card>

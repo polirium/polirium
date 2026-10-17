@@ -121,7 +121,7 @@
             </div>
 
             <x-slot:footer>
-                <x-ui::button color="secondary" :ghost="true" type="button" data-bs-dismiss="modal" icon="x">
+                <x-ui::button color="secondary" :ghost="true" class="me-auto" type="button" data-bs-dismiss="modal" icon="x">
                     {{ trans('core/base::general.cancel') }}
                 </x-ui::button>
                 <x-ui::button color="primary" type="submit" wire:loading.attr="disabled">

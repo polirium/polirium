@@ -12,16 +12,17 @@
                 Đã chọn <span x-text="count">0</span> phiếu
             </span>
             @can('accountings.refunds')
-                <button
+                <x-ui::button
+                        color="danger"
+                        outline
+                        icon="trash"
                         type="button"
-                        class="btn btn-danger btn-sm"
                         wire:click="bulkDelete"
                         wire:confirm="Bạn có chắc chắn muốn xóa các phiếu trả hàng đã chọn?"
                         x-show="count > 0"
                         style="display: none;">
-                    {!! tabler_icon('trash', ['class' => 'icon']) !!}
-                    {{ trans('modules/accounting::accounting.delete_selected') }}
-                </button>
+                    {{ __('core/base::general.delete_selected') }}
+                </x-ui::button>
             @endcan
         </div>
     </div>

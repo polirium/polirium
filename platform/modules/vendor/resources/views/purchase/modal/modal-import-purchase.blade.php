@@ -52,7 +52,7 @@
         </div>
 
         <x-slot:footer>
-            <x-ui::button color="secondary" :ghost="true" type="button" wire:click="closeModal" icon="x">
+            <x-ui::button color="secondary" :ghost="true" class="me-auto" type="button" wire:click="closeModal" icon="x">
                 {{ __('core/base::general.close') }}
             </x-ui::button>
             <x-ui::button color="primary" type="button" wire:click="import" wire:loading.attr="disabled" :disabled="!$file">

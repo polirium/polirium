@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
 use Polirium\Core\UI\Facades\Assets;
-use Polirium\Datatable\Button;
+use Polirium\Datatable\ActionButtons;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Components\SetUp\Exportable;
 use Polirium\Datatable\Facades\PowerGrid;
@@ -186,37 +186,16 @@ final class CustomerTable extends BaseTable
 
     public function actions(Customer $row): array
     {
-        $actions = [];
-
-        if (auth()->user()->can('customers.edit')) {
-            $actions[] = Button::add('edit')
-                ->slot(tabler_icon('pencil', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-primary btn-icon btn-sm me-1')
-                ->attributes([
-                    'aria-label' => __('modules/customer::customer.edit'),
-                    'title' => __('modules/customer::customer.edit'),
-                ])
-                ->tooltip(__('modules/customer::customer.edit'))
-                ->dispatch('show-modal-create-customer', ['id' => $row->id]);
-        }
-
-        if (auth()->user()->can('customers.destroy')) {
-            $actions[] = Button::add('delete')
-                ->slot(tabler_icon('trash', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-outline-danger btn-icon btn-sm')
-                ->attributes([
-                    'aria-label' => __('modules/customer::customer.delete'),
-                    'title' => __('modules/customer::customer.delete'),
+        return ActionButtons::make(
+            ActionButtons::edit('show-modal-create-customer', $row->id, 'customers.edit'),
+            // Delete keeps its confirmation modal (#modal-confirm-delete-customer).
+            ActionButtons::custom('delete', 'trash', __('modules/customer::customer.delete'), true, 'customers.destroy')
+                ?->attributes([
                     'data-bs-toggle' => 'modal',
                     'data-bs-target' => '#modal-confirm-delete-customer',
                     'onclick' => "window.dispatchEvent(new CustomEvent('set-delete-customer-id', {detail: {id: {$row->id}}}))",
-                ])
-                ->tooltip(__('modules/customer::customer.delete'));
-        }
-
-        return $actions;
+                ]),
+        );
     }
 
     #[\Livewire\Attributes\On('datatable-customer-filter')]

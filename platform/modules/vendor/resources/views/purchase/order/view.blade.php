@@ -236,23 +236,16 @@
                     >
                 </div>
                 <div class="modal-footer">
-                    <div class="w-100">
-                        <div class="row">
-                            <div class="col">
-                                <button type="button" class="btn w-100" @click="showDeleteModal = false">{{ __('Hủy bỏ') }}</button>
-                            </div>
-                            <div class="col">
-                                <button
-                                    type="button"
-                                    class="btn btn-danger w-100"
-                                    :disabled="confirmDeleteInput !== 'DELETE'"
-                                    @click="confirmDelete()"
-                                >
-                                    {{ __('Xóa sản phẩm') }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <button type="button" class="btn btn-ghost-secondary me-auto" @click="showDeleteModal = false">{{ __('core/base::general.cancel') }}</button>
+                    <button
+                        type="button"
+                        class="btn btn-danger"
+                        :disabled="confirmDeleteInput !== 'DELETE'"
+                        @click="confirmDelete()"
+                    >
+                        {!! tabler_icon('trash', ['class' => 'icon']) !!}
+                        {{ __('Xóa sản phẩm') }}
+                    </button>
                 </div>
             </div>
         </div>

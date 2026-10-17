@@ -17,7 +17,7 @@
     @endcan
 </div>
 @can('tasks.create')
-    <a href="{{ route('admin.tasks.create') }}" class="btn btn-primary">
-        {!! tabler_icon('plus', ['class' => 'icon']) !!} {{ __('modules/task::task.create') }}
-    </a>
+    <x-ui::button color="primary" icon="plus" :href="route('admin.tasks.create')">
+        {{ __('modules/task::task.create') }}
+    </x-ui::button>
 @endcan

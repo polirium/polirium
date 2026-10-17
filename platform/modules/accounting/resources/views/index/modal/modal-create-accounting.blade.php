@@ -64,9 +64,9 @@
                                 @endforeach
                             </select>
                             <span class="input-group-text">
-                                <x-ui.button type="button"
+                                <x-ui::button type="button" ghost size="sm"
                                              :icon="$input['type_id'] ?? null ? 'pencil' : 'plus'"
-                                             :color="$input['type_id'] ?? null ? 'warning' : 'success'"
+                                             color="secondary"
                                              wire:click="$dispatch('show-modal-create-accounting-type', { id: {{ $input['type_id'] ?? 0 }}, type: '{{ $type }}' })" />
                             </span>
                         </div>
@@ -164,9 +164,9 @@
                                 </span>
                                 @if (($input['finance_type'] ?? null) == \Polirium\Modules\Accounting\Http\Model\PayPerson::class)
                                     <span class="input-group-text">
-                                        <x-ui.button type="button"
+                                        <x-ui::button type="button" ghost size="sm"
                                                      :icon="$input['finance_id'] ?? null ? 'pencil' : 'plus'"
-                                                     :color="$input['finance_id'] ?? null ? 'warning' : 'success'"
+                                                     color="secondary"
                                                      wire:click="$dispatch('show-modal-create-accounting-pay-person', { id: {{ $input['finance_id'] ?? 0 }} })" />
                                     </span>
                                 @endif
@@ -181,7 +181,7 @@
                     @if ($input['finance_id'] ?? null)
                         <div class="mb-3">
                             <span><b>{{ $this->target?->name }}: </b>{{ $this->target?->phone }}</span>
-                            <x-ui.button type="button" wire:click="$set('input.finance_id', null)" icon="x" color="danger" />
+                            <x-ui::button type="button" ghost size="sm" wire:click="$set('input.finance_id', null)" icon="x" color="danger" />
                         </div>
                     @endif
 
@@ -214,8 +214,9 @@
             </div>
 
             <x-slot:footer>
+                <button type="button" class="btn btn-ghost-secondary me-auto" data-bs-dismiss="modal">{{ __('core/base::general.cancel') }}</button>
                 @can('accountings.create')
-                <x-ui.button type="submit" icon="device-floppy" color="success" :label="trans('core/base::general.save')" />
+                <x-ui::button type="submit" icon="device-floppy" color="primary" :label="trans('core/base::general.save')" />
                 @endcan
             </x-slot:footer>
         </x-ui::modal>

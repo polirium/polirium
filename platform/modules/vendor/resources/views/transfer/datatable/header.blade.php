@@ -13,25 +13,25 @@
                 Đã chọn <span x-text="count">0</span> phiếu
             </span>
             @can('vendors.transfers.delete')
-            <button
+            <x-ui::button
+                color="danger"
+                outline
+                icon="trash"
                 type="button"
-                class="btn btn-danger btn-sm"
                 wire:click="bulkDelete"
                 wire:confirm="Bạn có chắc chắn muốn xóa các phiếu chuyển hàng đã chọn? Hành động này sẽ hoàn lại tồn kho."
                 x-show="count > 0"
                 style="display: none;"
             >
-                {!! tabler_icon('trash', ['class' => 'icon']) !!}
-                {{ __('Xóa đã chọn') }}
-            </button>
+                {{ __('core/base::general.delete_selected') }}
+            </x-ui::button>
             @endcan
 
             @can('vendors.transfers.create')
-            <button class="btn btn-primary d-none d-sm-inline-block"
+            <x-ui::button color="primary" icon="plus" class="d-none d-sm-inline-block" type="button"
                     onclick="Livewire.dispatch('redirect-transfer-view')">
-                {!! tabler_icon('plus', ['class' => 'icon']) !!}
                 {{ trans('modules/vendor::transfer.create') }}
-            </button>
+            </x-ui::button>
             @endcan
         </div>
     </div>

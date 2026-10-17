@@ -102,7 +102,7 @@
                             @can('accountings.refunds')
                                 <button type="submit" class="btn btn-primary w-100">Lưu phiếu trả</button>
                             @endcan
-                            <a href="{{ route('accountings.payment.index') }}" class="btn btn-secondary w-100">Hủy</a>
+                            <a href="{{ route('accountings.payment.index') }}" class="btn btn-ghost-secondary w-100">Hủy</a>
                         </div>
                         @can('accountings.refunds')
                             <div class="mt-2 text-center">

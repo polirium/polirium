@@ -222,20 +222,20 @@
         <hr>
 
         {{-- Action Toolbar --}}
-        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-            <div class="d-flex gap-2">
+        <x-ui::detail-actions class="mt-3 pt-3 border-top">
+            <x-slot:start>
                 @if(!in_array($row->status ?? '', ['cancel', 'cancelled'], true))
                     @can('vendors.purchases.edit')
                     {{-- Cancel Button (soft cancel - giữ record) --}}
                     <x-ui::button
-                        color="white"
+                        color="warning"
+                        outline
                         size="sm"
                         icon="ban"
-                        class="text-warning"
                         wire:click="$parent.cancel({{ $row->id }})"
                         wire:confirm="Bạn có chắc chắn muốn hủy phiếu nhập hàng này? Phiếu sẽ chuyển sang trạng thái 'Đã hủy' và cập nhật lại tồn kho."
                     >
-                        {{ __('Hủy') }}
+                        {{ __('core/base::general.cancel_document') }}
                     </x-ui::button>
                     @endcan
                 @endif
@@ -243,83 +243,75 @@
                 @can('vendors.purchases.delete')
                 {{-- Delete Button (hard delete - chỉ admin) --}}
                 <x-ui::button
-                    color="white"
+                    color="danger"
+                    outline
                     size="sm"
                     icon="trash"
-                    class="text-danger"
                     wire:click="$parent.delete({{ $row->id }})"
                     wire:confirm="Bạn có chắc chắn muốn XÓA HOÀN TOÀN phiếu nhập hàng này? Thao tác này không thể hoàn tác."
                 >
-                    {{ __('Xóa') }}
+                    {{ __('core/base::general.delete') }}
                 </x-ui::button>
                 @endcan
+            </x-slot:start>
 
-                @if(!in_array($row->status ?? '', ['cancel', 'cancelled'], true))
-                    @can('vendors.purchases.create')
-                    {{-- Copy Button --}}
-                    <x-ui::button
-                        color="white"
-                        size="sm"
-                        icon="copy"
-                        :href="route('vendors.purchases.order', ['copy_id' => $row->id])"
-                    >
-                        {{ __('Sao chép') }}
-                    </x-ui::button>
-                    @endcan
-                @endif
-
-                @can('vendors.purchases.index')
-                {{-- Export Button --}}
+            @if(!in_array($row->status ?? '', ['cancel', 'cancelled'], true))
+                @can('vendors.purchases.create')
+                {{-- Copy Button --}}
                 <x-ui::button
-                    color="white"
+                    color="secondary"
+                    outline
                     size="sm"
-                    icon="file-export"
-                    :href="route('vendors.purchases.export', $row->id)"
-                    target="_blank"
+                    icon="copy"
+                    :href="route('vendors.purchases.order', ['copy_id' => $row->id])"
                 >
-                    {{ __('Xuất file') }}
+                    {{ __('core/base::general.copy') }}
                 </x-ui::button>
                 @endcan
-            </div>
+            @endif
 
-            <div class="d-flex gap-2">
-                @if(!in_array($row->status ?? '', ['cancel', 'cancelled'], true))
-                    @can('vendors.purchases.edit')
-                    {{-- Open/Edit Button --}}
+            @can('vendors.purchases.index')
+            {{-- Export Button --}}
+            <x-ui::button
+                color="secondary"
+                outline
+                size="sm"
+                icon="file-export"
+                :href="route('vendors.purchases.export', $row->id)"
+                target="_blank"
+            >
+                {{ __('Xuất file') }}
+            </x-ui::button>
+            @endcan
+
+            @if(!in_array($row->status ?? '', ['cancel', 'cancelled'], true))
+                @php($canManageRefund = $refundId ? auth()->user()?->can('vendors.refunds.edit') : auth()->user()?->can('vendors.refunds.create'))
+                @if ($canManageRefund)
+                    {{-- Return Purchase Button --}}
                     <x-ui::button
-                        color="primary"
+                        color="secondary"
+                        outline
                         size="sm"
-                        icon="pencil"
-                        :href="route('vendors.purchases.order', $id)"
+                        icon="arrow-back-up"
+                        :href="route('vendors.purchases.refund', ['id' => $refundId ?? 0, 'purchase_id' => $row->id])"
                     >
-                        {{ __('Sửa') }}
+                        {{ __('Trả hàng nhập') }}
                     </x-ui::button>
-
-                    {{-- Save Button --}}
-                    <x-ui::button
-                        color="white"
-                        size="sm"
-                        icon="device-floppy"
-                    >
-                        {{ __('Lưu') }}
-                    </x-ui::button>
-                    @endcan
-
-                    @php($canManageRefund = $refundId ? auth()->user()?->can('vendors.refunds.edit') : auth()->user()?->can('vendors.refunds.create'))
-                    @if ($canManageRefund)
-                        {{-- Return Purchase Button --}}
-                        <x-ui::button
-                            color="white"
-                            size="sm"
-                            icon="arrow-back-up"
-                            :href="route('vendors.purchases.refund', ['id' => $refundId ?? 0, 'purchase_id' => $row->id])"
-                        >
-                            {{ __('Trả hàng nhập') }}
-                        </x-ui::button>
-                    @endif
                 @endif
-            </div>
-        </div>
+
+                @can('vendors.purchases.edit')
+                {{-- Open/Edit Button (main action, last) --}}
+                <x-ui::button
+                    color="primary"
+                    size="sm"
+                    icon="pencil"
+                    :href="route('vendors.purchases.order', $id)"
+                >
+                    {{ __('core/base::general.edit') }}
+                </x-ui::button>
+                @endcan
+            @endif
+        </x-ui::detail-actions>
         @endif
     </x-ui::card>
 </div>

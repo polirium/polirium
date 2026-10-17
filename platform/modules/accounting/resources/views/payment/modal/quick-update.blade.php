@@ -141,10 +141,10 @@
     </div>
 
     <x-slot name="footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ trans('modules/accounting::accounting.close') }}</button>
+        <button type="button" class="btn btn-ghost-secondary me-auto" data-bs-dismiss="modal">{{ __('core/base::general.cancel') }}</button>
         @can('accountings.edit')
-            <button type="button" class="btn btn-primary ms-auto" wire:click="save">
-                {!! TablerIcon::render('check', ['class' => 'icon me-1']) !!}
+            <button type="button" class="btn btn-primary" wire:click="save">
+                {!! TablerIcon::render('device-floppy', ['class' => 'icon me-1']) !!}
                 {{ trans('modules/accounting::accounting.update') }}
             </button>
         @endcan

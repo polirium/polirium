@@ -12,29 +12,30 @@
         </div>
         <div class="d-print-none col-auto ms-auto">
             <div class="btn-list">
+                @can('accountings.refunds')
+                    @if ($payment->status === 'success')
+                        <x-ui::button color="secondary" outline icon="arrow-back-up" href="{{ route('products.payment.refund', $payment->id) }}">
+                            {{ trans('modules/accounting::accounting.refund') }}
+                        </x-ui::button>
+                    @endif
+                @endcan
+                @can('accountings.create')
+                    <x-ui::button color="secondary" outline icon="copy" href="{{ route('accountings.payment.copy', $payment->id) }}" onclick="return confirm('{{ trans('modules/accounting::accounting.confirm_copy_invoice') }}')">
+                        {{ trans('modules/accounting::accounting.copy') }}
+                    </x-ui::button>
+                @endcan
+                <x-ui::button color="secondary" outline icon="printer" type="button" onclick="PoliriumPrint.printUrl('{{ route('products.print.print-payment', $payment->id) }}')">
+                    {{ trans('modules/accounting::accounting.print') }}
+                </x-ui::button>
                 @if (auth()->user()->can('accountings.edit'))
                     <x-ui::button
-                                  color="warning"
+                                  color="primary"
                                   icon="pencil"
+                                  type="button"
                                   onclick="window.Livewire.dispatch('show-modal-create-sale-invoice', { id: {{ $payment->id }} })">
                         {{ trans('modules/accounting::accounting.edit') }}
                     </x-ui::button>
                 @endif
-                @can('accountings.refunds')
-                    @if ($payment->status === 'success')
-                        <a href="{{ route('products.payment.refund', $payment->id) }}" class="btn btn-danger">
-                            {!! tabler_icon('arrow-back-up') !!} {{ trans('modules/accounting::accounting.refund') }}
-                        </a>
-                    @endif
-                @endcan
-                @can('accountings.create')
-                    <a href="{{ route('accountings.payment.copy', $payment->id) }}" class="btn btn-secondary" onclick="return confirm('{{ trans('modules/accounting::accounting.confirm_copy_invoice') }}')">
-                        {!! tabler_icon('copy') !!} {{ trans('modules/accounting::accounting.copy') }}
-                    </a>
-                @endcan
-                <button type="button" onclick="PoliriumPrint.printUrl('{{ route('products.print.print-payment', $payment->id) }}')" class="btn btn-primary">
-                    {!! tabler_icon('printer') !!} {{ trans('modules/accounting::accounting.print') }}
-                </button>
             </div>
         </div>
     </div>

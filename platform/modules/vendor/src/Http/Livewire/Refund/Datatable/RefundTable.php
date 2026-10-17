@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Polirium\Core\Support\Http\Livewire\Tables\BaseTable;
+use Polirium\Datatable\ActionButtons;
 use Polirium\Datatable\Button;
 use Polirium\Datatable\Column;
 use Polirium\Datatable\Components\SetUp\Exportable;
@@ -97,50 +98,24 @@ final class RefundTable extends BaseTable
 
     public function actions(Refund $row): array
     {
-        $actions = [];
-
-        if (auth()->user()?->can('vendors.refunds.edit')) {
-            $actions[] = Button::add('edit-refund')
-                ->slot(tabler_icon('pencil', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-primary btn-icon btn-sm me-1')
-                ->attributes([
-                    'aria-label' => __('modules/vendor::purchase.edit'),
-                    'title' => __('modules/vendor::purchase.edit'),
-                ])
-                ->tooltip(__('modules/vendor::purchase.edit'))
-                ->route('vendors.purchases.refund', ['id' => $row->id]);
-        }
-
-        if (($row->status ?? '') !== 'cancel' && auth()->user()?->can('vendors.refunds.edit')) {
-            $actions[] = Button::add('cancel-refund')
-                ->slot(tabler_icon('circle-x', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-warning btn-icon btn-sm me-1')
-                ->attributes([
-                    'aria-label' => __('Hủy phiếu trả hàng nhập'),
-                    'title' => __('Hủy phiếu trả hàng nhập'),
-                ])
-                ->tooltip(__('Hủy phiếu trả hàng nhập'))
-                ->confirm(__('Bạn có chắc chắn muốn hủy phiếu trả hàng nhập này? Tồn kho và công nợ liên quan sẽ được hoàn lại.'))
-                ->dispatch('cancelRefund', ['id' => $row->id]);
-        }
-
-        if (auth()->user()?->can('vendors.refunds.delete')) {
-            $actions[] = Button::add('delete-refund')
-                ->slot(tabler_icon('trash', ['class' => 'icon']))
-                ->id()
-                ->class('btn btn-outline-danger btn-icon btn-sm')
-                ->attributes([
-                    'aria-label' => __('Xóa phiếu trả hàng nhập'),
-                    'title' => __('Xóa phiếu trả hàng nhập'),
-                ])
-                ->tooltip(__('Xóa phiếu trả hàng nhập'))
-                ->confirm(__('Bạn có chắc chắn muốn xóa phiếu trả hàng nhập này? Thao tác này không thể hoàn tác.'))
-                ->dispatch('deleteRefund', ['id' => $row->id]);
-        }
-
-        return $actions;
+        return ActionButtons::make(
+            ActionButtons::custom('edit', 'pencil', __('modules/vendor::purchase.edit'), false, 'vendors.refunds.edit')
+                ?->route('vendors.purchases.refund', ['id' => $row->id]),
+            ($row->status ?? '') !== 'cancel'
+                ? ActionButtons::cancel(
+                    'cancelRefund',
+                    $row->id,
+                    'vendors.refunds.edit',
+                    __('Bạn có chắc chắn muốn hủy phiếu trả hàng nhập này? Tồn kho và công nợ liên quan sẽ được hoàn lại.')
+                )
+                : null,
+            ActionButtons::delete(
+                'deleteRefund',
+                $row->id,
+                'vendors.refunds.delete',
+                __('Bạn có chắc chắn muốn xóa phiếu trả hàng nhập này? Thao tác này không thể hoàn tác.')
+            ),
+        );
     }
 
     #[On('redirect-purchase-refund-view')]

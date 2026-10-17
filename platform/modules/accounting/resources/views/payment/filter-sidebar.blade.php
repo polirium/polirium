@@ -321,7 +321,7 @@
             @can('accountings.create')
                 <button
                         type="button"
-                        class="btn btn-outline-primary d-flex align-items-center justify-content-start gap-2"
+                        class="btn btn-outline-secondary d-flex align-items-center justify-content-start gap-2"
                         @click="$dispatch('show-modal-create-sale-invoice')">
                     {!! tabler_icon('shopping-cart', ['class' => 'icon']) !!}
                     {{ __('modules/accounting::accounting.create_invoice') }}
@@ -329,21 +329,21 @@
             @endcan
             <button
                     type="button"
-                    class="btn btn-outline-success d-flex align-items-center justify-content-start gap-2"
+                    class="btn btn-outline-secondary d-flex align-items-center justify-content-start gap-2"
                     @click="$dispatch('show-modal-create-customer', { id: 0 })">
                 {!! tabler_icon('user-plus', ['class' => 'icon']) !!}
                 {{ trans('modules/accounting::accounting.add_customer') }}
             </button>
             <button
                     type="button"
-                    class="btn btn-outline-info d-flex align-items-center justify-content-start gap-2"
+                    class="btn btn-outline-secondary d-flex align-items-center justify-content-start gap-2"
                     @click="$dispatch('show-modal-create-sale-channel')">
                 {!! tabler_icon('building-store', ['class' => 'icon']) !!}
                 {{ trans('modules/accounting::accounting.add_sale_channel') }}
             </button>
             <button
                     type="button"
-                    class="btn btn-outline-warning d-flex align-items-center justify-content-start gap-2"
+                    class="btn btn-outline-secondary d-flex align-items-center justify-content-start gap-2"
                     @click="$dispatch('show-modal-create-partner-delivery')">
                 {!! tabler_icon('truck', ['class' => 'icon']) !!}
                 {{ trans('modules/accounting::accounting.add_delivery_partner') }}

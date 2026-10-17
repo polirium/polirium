@@ -2,14 +2,14 @@
     <x-slot:title>{{ __('modules/task::project.index') }}</x-slot:title>
     <x-slot:actions>
         @can('tasks.index')
-            <a href="{{ route('admin.tasks.index') }}" class="btn btn-outline-secondary">
-                {!! tabler_icon('checklist', ['class' => 'icon']) !!} {{ __('modules/task::task.index') }}
-            </a>
+            <x-ui::button color="secondary" outline icon="checklist" :href="route('admin.tasks.index')">
+                {{ __('modules/task::task.index') }}
+            </x-ui::button>
         @endcan
         @can('projects.create')
-            <a href="{{ route('admin.projects.create') }}" class="btn btn-primary">
-                {!! tabler_icon('plus', ['class' => 'icon']) !!} {{ __('modules/task::project.create') }}
-            </a>
+            <x-ui::button color="primary" icon="plus" :href="route('admin.projects.create')">
+                {{ __('modules/task::project.create') }}
+            </x-ui::button>
         @endcan
     </x-slot:actions>
 

@@ -174,16 +174,17 @@
             @endif
         </x-ui::table>
 
-        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-            <div class="d-flex gap-2">
+        <x-ui::detail-actions class="mt-3 pt-3 border-top">
+            <x-slot:start>
                 {{-- Cancel Button --}}
                 @can('accountings.cancel')
                     @if(!in_array($row->status, ['cancelled']))
                     <x-ui::button
-                        color="white"
+                        color="warning"
+                        outline
                         size="sm"
-                        icon="trash"
-                        class="text-danger"
+                        icon="ban"
+                        type="button"
                         wire:click="cancel({{ $row->id }})"
                         wire:confirm="Bạn có chắc chắn muốn xóa đơn này? Thao tác này sẽ xóa đơn và cập nhật lại tồn kho (nếu đã nhập)."
                     >
@@ -191,80 +192,86 @@
                     </x-ui::button>
                     @endif
                 @endcan
+            </x-slot:start>
 
-                 {{-- Copy Button --}}
+            {{-- Copy Button --}}
+            <x-ui::button
+                color="secondary"
+                outline
+                size="sm"
+                icon="copy"
+                :href="route('accountings.payment.copy', $row->id)"
+            >
+                {{ trans('modules/accounting::accounting.copy') }}
+            </x-ui::button>
+
+            {{-- Export Button --}}
+            <x-ui::button
+                color="secondary"
+                outline
+                size="sm"
+                icon="file-export"
+                :href="route('accountings.payment.export', $row->id)"
+                target="_blank"
+            >
+                {{ trans('modules/accounting::accounting.export_file') }}
+            </x-ui::button>
+
+            {{-- Return Button --}}
+            <x-ui::button
+                color="secondary"
+                outline
+                size="sm"
+                icon="arrow-back-up"
+                href="{{ route('products.payment.refund', $id) }}"
+            >
+                {{ trans('modules/accounting::accounting.refund') }}
+            </x-ui::button>
+
+            {{-- Print Button --}}
+            <x-ui::button
+                color="secondary"
+                outline
+                size="sm"
+                icon="printer"
+                :href="route('products.print.print-payment', $row->id)"
+                target="_blank"
+            >
+                {{ __('core/base::general.print') }}
+            </x-ui::button>
+
+            {{-- Edit Note Trigger (main action, last) --}}
+            @if($editingNoteId !== $row->id)
                 <x-ui::button
-                    color="white"
+                    color="primary"
                     size="sm"
-                    icon="copy"
-                    :href="route('accountings.payment.copy', $row->id)"
+                    icon="pencil"
+                    type="button"
+                    wire:click="editNote({{ $row->id }}, '{{ $row->note }}')"
                 >
-                    {{ trans('modules/accounting::accounting.copy') }}
+                    {{ trans('modules/accounting::accounting.edit') }}
                 </x-ui::button>
-
-                {{-- Export Button --}}
+            @else
                 <x-ui::button
-                    color="white"
+                    color="secondary"
+                    ghost
                     size="sm"
-                    icon="file-export"
-                    :href="route('accountings.payment.export', $row->id)"
-                    target="_blank"
+                    icon="x"
+                    type="button"
+                    wire:click="cancelEdit"
                 >
-                    {{ trans('modules/accounting::accounting.export_file') }}
+                    {{ trans('modules/accounting::accounting.close') }}
                 </x-ui::button>
-            </div>
-
-            <div class="d-flex gap-2">
-                 {{-- Edit Note Trigger --}}
-                 @if($editingNoteId !== $row->id)
-                    <x-ui::button
-                        color="primary"
-                        size="sm"
-                        icon="pencil"
-                        wire:click="editNote({{ $row->id }}, '{{ $row->note }}')"
-                    >
-                        {{ trans('modules/accounting::accounting.edit') }}
-                    </x-ui::button>
-                 @else
-                    <x-ui::button
-                        color="success"
-                        size="sm"
-                        icon="device-floppy"
-                        wire:click="saveNote"
-                    >
-                        {{ trans('modules/accounting::accounting.save') }}
-                    </x-ui::button>
-                     <x-ui::button
-                        color="secondary"
-                        size="sm"
-                        icon="x"
-                        wire:click="cancelEdit"
-                    >
-                        {{ trans('modules/accounting::accounting.close') }}
-                    </x-ui::button>
-                 @endif
-
-                {{-- Return Button --}}
                 <x-ui::button
-                    color="white"
+                    color="primary"
                     size="sm"
-                    icon="arrow-back-up"
-                     href="{{ route('products.payment.refund', $id) }}"
+                    icon="device-floppy"
+                    type="button"
+                    wire:click="saveNote"
                 >
-                    {{ trans('modules/accounting::accounting.refund') }}
+                    {{ trans('modules/accounting::accounting.save') }}
                 </x-ui::button>
-
-                 {{-- Print Button --}}
-                <x-ui::button
-                    color="white"
-                    size="sm"
-                    icon="printer"
-                    :href="route('products.print.print-payment', $row->id)"
-                    target="_blank"
-                >
-                    {{ __('In') }}
-                </x-ui::button>
-            </div>
-        </div>
+            @endif
+        </x-ui::detail-actions>
     </x-ui::card>
 </div>

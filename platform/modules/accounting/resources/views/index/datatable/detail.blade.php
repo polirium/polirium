@@ -61,14 +61,14 @@
     </tr>
 </x-ui::table>
 
-<div class="action-buttons mt-3">
-    <button
-        class="action-btn edit icon-only"
-        data-tooltip="{{ trans('modules/accounting::accounting.edit') }}"
+<x-ui::detail-actions class="mt-3">
+    <x-ui::button
+        color="primary"
+        size="sm"
+        icon="pencil"
+        type="button"
         wire:click="$dispatch('show-modal-create-accounting', { model: '{{ addslashes($model) }}', type: '{{ $type }}', id: {{ $row->id }} })"
-        aria-label="{{ trans('modules/accounting::accounting.edit') }}"
     >
-        {!! tabler_icon('pencil', ['class' => 'icon']) !!}
-        <span class="action-text">{{ trans('modules/accounting::accounting.edit') }}</span>
-    </button>
-</div>
+        {{ trans('modules/accounting::accounting.edit') }}
+    </x-ui::button>
+</x-ui::detail-actions>

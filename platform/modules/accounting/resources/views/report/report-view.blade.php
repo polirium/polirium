@@ -146,7 +146,7 @@
                     {{ $this->summary['count'] }} {{ trans('modules/accounting::accounting.invoice.label') }}
                 </div>
                 <div class="btn-list">
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
                         {!! tabler_icon('printer', ['class' => 'icon icon-sm me-1']) !!}
                         {{ trans('modules/accounting::accounting.print_report') }}
                     </button>

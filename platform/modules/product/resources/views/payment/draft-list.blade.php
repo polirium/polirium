@@ -101,7 +101,7 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" wire:click="closeModal">
+                    <button type="button" class="btn btn-ghost-secondary" wire:click="closeModal">
                         {{ __('core/base::general.close') }}
                     </button>
                 </div>

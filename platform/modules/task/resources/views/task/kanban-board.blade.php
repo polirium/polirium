@@ -24,10 +24,9 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <button class="btn btn-sm btn-ghost-danger" wire:click="clearFilters">
-                                {!! tabler_icon('x', ['class' => 'icon icon-sm']) !!}
+                            <x-ui::button color="secondary" outline size="sm" icon="filter-off" type="button" wire:click="clearFilters">
                                 {{ __('core/base::general.clear_filter') }}
-                            </button>
+                            </x-ui::button>
                         </div>
                     </div>
                 </div>

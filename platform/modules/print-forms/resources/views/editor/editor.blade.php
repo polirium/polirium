@@ -62,38 +62,24 @@
                             </div>
 
                             <div class="d-flex align-items-center hover-opacity-100 {{ $form_id == $item['id'] ? 'opacity-100' : '' }} gap-1 opacity-0 transition-opacity" wire:click.stop>
-                                @can('print-forms.forms.edit')
-                                @if (!$item['active'])
-                                    <button class="btn btn-icon btn-sm btn-ghost-success rounded-circle"
-                                            wire:click="toggleActive({{ $item['id'] }})"
-                                            data-bs-toggle="tooltip"
-                                            title="{{ trans('modules/print-forms::editor.set_as_main') }}">
-                                        {{ tabler_icon('check', ['class' => 'icon-sm']) }}
-                                    </button>
-                                @endif
-                                @endcan
-                                <div class="dropdown">
-                                    <button class="btn btn-icon btn-sm btn-ghost-secondary rounded-circle" data-bs-toggle="dropdown">
-                                        {{ tabler_icon('dots-vertical', ['class' => 'icon-sm']) }}
-                                    </button>
-                                    <div class="dropdown-menu dropdown-menu-end border-0 shadow-lg">
-                                        @can('print-forms.forms.edit')
-                                        <a class="dropdown-item" href="#" wire:click.prevent="$dispatch('show-modal-create-form', { id: {{ $item['id'] }}, type: '{{ $tab }}' })">
-                                            {{ tabler_icon('pencil', ['class' => 'icon me-2 text-muted']) }}
-                                            {{ trans('modules/print-forms::editor.edit') }}
-                                        </a>
-                                        @endcan
-                                        @can('print-forms.forms.delete')
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item text-danger" href="#"
-                                           wire:click.prevent="deleteForm({{ $item['id'] }})"
-                                           wire:confirm="{{ trans('modules/print-forms::editor.delete_confirm') }}">
-                                            {{ tabler_icon('trash', ['class' => 'icon me-2']) }}
-                                            {{ trans('modules/print-forms::editor.delete_confirm') }}
-                                        </a>
-                                        @endcan
-                                    </div>
-                                </div>
+                                <x-ui::row-actions>
+                                    @can('print-forms.forms.edit')
+                                        <x-ui::action-icon icon="pencil"
+                                                           :label="trans('modules/print-forms::editor.edit')"
+                                                           wire:click.prevent="$dispatch('show-modal-create-form', { id: {{ $item['id'] }}, type: '{{ $tab }}' })" />
+                                        @if (!$item['active'])
+                                            <x-ui::action-icon icon="check"
+                                                               :label="trans('modules/print-forms::editor.set_as_main')"
+                                                               wire:click="toggleActive({{ $item['id'] }})" />
+                                        @endif
+                                    @endcan
+                                    @can('print-forms.forms.delete')
+                                        <x-ui::action-icon icon="trash" danger
+                                                           :label="trans('core/base::general.delete')"
+                                                           :confirm="trans('modules/print-forms::editor.delete_confirm')"
+                                                           wire:click.prevent="deleteForm({{ $item['id'] }})" />
+                                    @endcan
+                                </x-ui::row-actions>
                             </div>
                         </div>
                     </div>
@@ -154,13 +140,13 @@
 
                         <div class="btn-list">
                             @can('print-forms.forms.edit')
-                            <button class="btn btn-outline-secondary"
+                            <button type="button" class="btn btn-outline-secondary"
                                     wire:click="$dispatch('show-modal-create-form', { id: {{ $this->form->id }}, type: '{{ $tab }}' })">
                                 {{ tabler_icon('pencil', ['class' => 'icon me-1']) }}
                                 {{ trans('modules/print-forms::editor.edit') }}
                             </button>
                             @endcan
-                            <button class="btn btn-primary"
+                            <button type="button" class="btn btn-outline-secondary"
                                     onclick="printPreview()">
                                 {{ tabler_icon('printer', ['class' => 'icon me-1']) }}
                                 {{ trans('modules/print-forms::editor.print_preview') }}

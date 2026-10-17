@@ -15,32 +15,28 @@
 
     <div class="d-flex justify-content-end mb-3">
         <div class="btn-list">
-            @can('vendors.purchases.edit')
-                <a href="{{ route('vendors.purchases.order', $purchase->id) }}" class="btn btn-warning">
-                    {!! tabler_icon('pencil', ['class' => 'icon']) !!}
-                    {{ trans('modules/vendor::purchase.edit') ?? 'Sửa' }}
-                </a>
-            @endcan
-
-            @if ($canManageRefund)
-                <a href="{{ route('vendors.purchases.refund', ['id' => $refundId ?? 0, 'purchase_id' => $purchase->id]) }}" class="btn btn-danger">
-                    {!! tabler_icon('arrow-back-up', ['class' => 'icon']) !!}
-                    {{ __('Trả hàng nhập') }}
-                </a>
-            @endif
-
             @can('vendors.purchases.create')
-                <a href="{{ route('vendors.purchases.order', ['copy_id' => $purchase->id]) }}" class="btn btn-secondary">
-                    {!! tabler_icon('copy', ['class' => 'icon']) !!}
-                    {{ __('Sao chép') }}
-                </a>
+                <x-ui::button color="secondary" outline icon="copy" :href="route('vendors.purchases.order', ['copy_id' => $purchase->id])">
+                    {{ __('core/base::general.copy') }}
+                </x-ui::button>
             @endcan
 
             @can('vendors.purchases.index')
-                <a href="{{ route('vendors.purchases.export', $purchase->id) }}" class="btn btn-primary" target="_blank">
-                    {!! tabler_icon('file-export', ['class' => 'icon']) !!}
+                <x-ui::button color="secondary" outline icon="file-export" :href="route('vendors.purchases.export', $purchase->id)" target="_blank">
                     {{ __('Xuất file') }}
-                </a>
+                </x-ui::button>
+            @endcan
+
+            @if ($canManageRefund)
+                <x-ui::button color="secondary" outline icon="arrow-back-up" :href="route('vendors.purchases.refund', ['id' => $refundId ?? 0, 'purchase_id' => $purchase->id])">
+                    {{ __('Trả hàng nhập') }}
+                </x-ui::button>
+            @endif
+
+            @can('vendors.purchases.edit')
+                <x-ui::button color="primary" icon="pencil" :href="route('vendors.purchases.order', $purchase->id)">
+                    {{ __('core/base::general.edit') }}
+                </x-ui::button>
             @endcan
         </div>
     </div>

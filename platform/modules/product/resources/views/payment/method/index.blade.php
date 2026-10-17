@@ -4,19 +4,21 @@
     </x-slot:title>
 
     <x-slot:actions>
-        @if ((int) auth()->id() === 1)
-            <a href="{{ route('products.bank-accounts.index') }}" class="btn btn-outline-primary me-2">
-                {!! tabler_icon('building-bank') !!} {{ __('Tài khoản NH / VietQR') }}
-            </a>
-        @endif
-        <a href="{{ route('vietqr.index') }}" class="btn btn-outline-secondary me-2">
-            {!! tabler_icon('qrcode') !!} {{ __('Tạo QR') }}
-        </a>
-        @can('products.payment-method.edit')
-        <button class="btn btn-primary" onclick="Livewire.dispatch('modal-create-payment-method')">
-            {!! tabler_icon('plus') !!} {{ __('Thêm mới') }}
-        </button>
-        @endcan
+        <div class="btn-list">
+            @if ((int) auth()->id() === 1)
+                <x-ui::button href="{{ route('products.bank-accounts.index') }}" color="secondary" outline icon="building-bank">
+                    {{ __('Tài khoản NH / VietQR') }}
+                </x-ui::button>
+            @endif
+            <x-ui::button href="{{ route('vietqr.index') }}" color="secondary" outline icon="qrcode">
+                {{ __('Tạo QR') }}
+            </x-ui::button>
+            @can('products.payment-method.edit')
+            <x-ui::button type="button" color="primary" icon="plus" onclick="Livewire.dispatch('modal-create-payment-method')">
+                {{ __('Thêm phương thức thanh toán') }}
+            </x-ui::button>
+            @endcan
+        </div>
     </x-slot:actions>
 
     <div class="row">

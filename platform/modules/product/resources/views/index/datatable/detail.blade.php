@@ -353,52 +353,28 @@
         <hr>
 
         {{-- Action Buttons --}}
-        <div class="d-flex justify-content-end gap-2">
-            @can('products.edit')
-            {{-- Edit button --}}
-            <button
-                class="btn btn-primary btn-sm"
-                data-bs-toggle="tooltip"
-                title="Sửa"
-                wire:click="$dispatch('show-modal-create-product', { id: {{ $id }}, type: '{{ $product->type }}' })"
-            >
-                {!! tabler_icon('pencil', ['class' => 'icon']) !!}
-                Sửa
-            </button>
+        <x-ui::detail-actions>
+            @can('products.destroy')
+            <x-slot:start>
+                <x-ui::button color="danger" outline size="sm" icon="trash"
+                    wire:click="$dispatch('triggerRemoveProduct', { id: {{ $id }} })"
+                    wire:confirm="{{ trans('Are you sure you want to delete this product?') }}">
+                    {{ __('core/base::general.delete') }}
+                </x-ui::button>
+            </x-slot:start>
             @endcan
 
-            @if(auth()->user()?->canAny(['products.create', 'products.destroy']))
-            {{-- Dropdown Menu --}}
-            <div class="dropdown">
-                <button class="btn btn-white btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    {!! tabler_icon('dots', ['class' => 'icon']) !!}
-                    Thêm
-                </button>
-                <div class="dropdown-menu dropdown-menu-end">
-                    @can('products.create')
-                    {{-- Copy action --}}
-                    <button class="dropdown-item" wire:click="$dispatch('triggerCopyProduct', { id: {{ $id }} })">
-                        {!! tabler_icon('copy', ['class' => 'icon dropdown-item-icon']) !!}
-                        Copy sản phẩm
-                    </button>
-                    @endcan
+            @can('products.create')
+            <x-ui::button color="secondary" outline size="sm" icon="copy" wire:click="$dispatch('triggerCopyProduct', { id: {{ $id }} })">
+                {{ __('core/base::general.copy') }}
+            </x-ui::button>
+            @endcan
 
-                    @can('products.destroy')
-                    <div class="dropdown-divider"></div>
-
-                    {{-- Delete action --}}
-                    <button
-                        class="dropdown-item text-danger"
-                        wire:click="$dispatch('triggerRemoveProduct', { id: {{ $id }} })"
-                        wire:confirm="{{ trans('Are you sure you want to delete this product?') }}"
-                    >
-                        {!! tabler_icon('trash', ['class' => 'icon dropdown-item-icon']) !!}
-                        Xóa sản phẩm
-                    </button>
-                    @endcan
-                </div>
-            </div>
-            @endif
-        </div>
+            @can('products.edit')
+            <x-ui::button color="primary" size="sm" icon="pencil" wire:click="$dispatch('show-modal-create-product', { id: {{ $id }}, type: '{{ $product->type }}' })">
+                {{ __('core/base::general.edit') }}
+            </x-ui::button>
+            @endcan
+        </x-ui::detail-actions>
 </div>
 @endif

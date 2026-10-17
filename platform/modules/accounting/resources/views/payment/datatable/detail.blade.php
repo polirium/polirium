@@ -266,29 +266,29 @@
         </div>
 
         {{-- Action Bar --}}
-        <div class="border-top mt-3 pt-3 d-flex justify-content-between align-items-center">
-            <div>
+        <x-ui::detail-actions class="border-top mt-3 pt-3">
+            <x-slot:start>
                 @livewire('modules/accounting::payment.payment-actions', ['payment' => $payment], key('actions-' . $payment->id))
-            </div>
-            <div class="d-flex gap-2">
-                @can('accountings.edit')
-                    <x-ui::button
-                        color="primary"
-                        size="sm"
-                        icon="pencil"
-                        onclick="window.Livewire.dispatch('show-modal-create-sale-invoice', { id: {{ $payment->id }} })"
-                    >
-                        {{ trans('modules/accounting::accounting.edit') }}
-                    </x-ui::button>
-                @endcan
-                <x-ui::button color="white" size="sm" icon="arrow-back-up" :href="route('products.payment.v2', ['refund_id' => $payment->id])">
-                    {{ trans('modules/accounting::accounting.refund') }}
+            </x-slot:start>
+
+            <x-ui::button color="secondary" outline size="sm" icon="arrow-back-up" :href="route('products.payment.v2', ['refund_id' => $payment->id])">
+                {{ trans('modules/accounting::accounting.refund') }}
+            </x-ui::button>
+            <x-ui::button color="secondary" outline size="sm" icon="printer" type="button" onclick="PoliriumPrint.printUrl('{{ route('products.print.print-payment', $payment->id) }}')">
+                {{ __('core/base::general.print') }}
+            </x-ui::button>
+            @can('accountings.edit')
+                <x-ui::button
+                    color="primary"
+                    size="sm"
+                    icon="pencil"
+                    type="button"
+                    onclick="window.Livewire.dispatch('show-modal-create-sale-invoice', { id: {{ $payment->id }} })"
+                >
+                    {{ trans('modules/accounting::accounting.edit') }}
                 </x-ui::button>
-                <x-ui::button color="white" size="sm" icon="printer" onclick="PoliriumPrint.printUrl('{{ route('products.print.print-payment', $payment->id) }}')">
-                    {{ __('In') }}
-                </x-ui::button>
-            </div>
-        </div>
+            @endcan
+        </x-ui::detail-actions>
     </div>
 
     {{-- Tab: Lịch sử thanh toán --}}

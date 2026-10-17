@@ -141,7 +141,7 @@
                 </x-ui::button>
             @else
                 {{-- Normal/Import state --}}
-                <x-ui::button color="secondary" :ghost="true" type="button" wire:click="closeModal" icon="x">
+                <x-ui::button color="secondary" :ghost="true" class="me-auto" type="button" wire:click="closeModal" icon="x">
                     {{ trans('modules/customer::customer.cancel') }}
                 </x-ui::button>
 
