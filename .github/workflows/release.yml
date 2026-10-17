@@ -1,0 +1,84 @@
+name: Release
+
+# Pushing a tag vX.Y.Z builds the self-contained update package (code,
+# submodules, production vendor, built assets) and attaches it, with its
+# SHA-256 checksum, to the GitHub release used by the in-app updater.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to (re)build, e.g. v1.0.0'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      # Artisan (package:discover, tests) boots the app; never reach a real database.
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, ctype, curl, dom, fileinfo, gd, intl, mbstring, openssl, pdo, pdo_mysql, pdo_sqlite, tokenizer, xml, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Check VERSION matches the tag
+        run: |
+          test "$(tr -d '[:space:]' < VERSION)" = "${TAG#v}" || { echo "VERSION=$(cat VERSION) but tag is $TAG"; exit 1; }
+
+      - name: Install dependencies (with dev, for tests)
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Test
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          vendor/bin/phpunit --colors=never
+          rm .env
+
+      - name: Install production dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+          composer check-platform-reqs --no-dev
+
+      - name: Build package
+        run: bash scripts/release/build-package.sh "$TAG"
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${TAG#v}"
+          NOTES="CHANGELOG.md"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/polirium-$VERSION.zip dist/polirium-$VERSION.zip.sha256 --clobber
+          else
+            awk -v v="$VERSION" '$0 ~ "^## \\[?"v"\\]?" {p=1; next} /^## / && p {exit} p' "$NOTES" > release-notes.md || true
+            [ -s release-notes.md ] || echo "Polirium $VERSION" > release-notes.md
+            gh release create "$TAG" dist/polirium-$VERSION.zip dist/polirium-$VERSION.zip.sha256 \
+              --title "Polirium $VERSION" --notes-file release-notes.md --verify-tag
+          fi

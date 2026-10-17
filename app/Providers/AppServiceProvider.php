@@ -31,5 +31,7 @@ class AppServiceProvider extends ServiceProvider
         if (! app(InstallationStateManager::class)->isInstalled()) {
             config(['app.debug' => false]);
         }
+
+        \App\Support\SystemSettings::register();
     }
 }
