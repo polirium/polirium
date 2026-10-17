@@ -1,5 +1,8 @@
 @php
-    $totalAmount = $row->products->sum('total') ?? 0;
+    // The row handed to the detail panel is plain data after a Livewire round
+    // trip (relations become arrays): load the invoice itself.
+    $row = \Polirium\Modules\Accounting\Http\Model\Payment::with(['branch', 'user', 'finance', 'products.product'])->find($id) ?? $row;
+    $totalAmount = collect($row->products ?? [])->sum('total');
     $statusColor = match(($row->finance?->status ?? $row->status ?? '')) {
         'paid', 'completed' => 'success',
         'pending', 'processing' => 'warning',
@@ -8,7 +11,8 @@
     };
 @endphp
 
-<div>
+{{-- The note is edited in place; it is saved through the invoice table (updateNote). --}}
+<div x-data="{ editingNote: false, note: @js((string) ($row->note ?? '')) }">
     <x-ui::card>
         {{-- Header with code and status --}}
         <div class="d-flex justify-content-between align-items-start mb-3">
@@ -106,11 +110,8 @@
                 <div class="card card-sm bg-muted-lt">
                     <div class="card-body py-2">
                         <div class="text-muted small mb-1">{{ trans('core/base::general.note') }}</div>
-                        @if($editingNoteId === $row->id)
-                            <textarea wire:model="noteContent" class="form-control" rows="3"></textarea>
-                        @else
-                            <div class="small">{{ $row->note ?? 'Không có ghi chú' }}</div>
-                        @endif
+                        <textarea x-show="editingNote" x-model="note" class="form-control" rows="3" style="display: none"></textarea>
+                        <div x-show="! editingNote" class="small" x-text="note || @js(__('Không có ghi chú'))">{{ $row->note ?: __('Không có ghi chú') }}</div>
                     </div>
                 </div>
             </div>
@@ -185,7 +186,7 @@
                         size="sm"
                         icon="ban"
                         type="button"
-                        wire:click="cancel({{ $row->id }})"
+                        wire:click="$parent.cancel({{ $row->id }})"
                         wire:confirm="Bạn có chắc chắn muốn xóa đơn này? Thao tác này sẽ xóa đơn và cập nhật lại tồn kho (nếu đã nhập)."
                     >
                         {{ trans('modules/accounting::accounting.cancel') }}
@@ -240,38 +241,20 @@
                 {{ __('core/base::general.print') }}
             </x-ui::button>
 
-            {{-- Edit Note Trigger (main action, last) --}}
-            @if($editingNoteId !== $row->id)
-                <x-ui::button
-                    color="primary"
-                    size="sm"
-                    icon="pencil"
-                    type="button"
-                    wire:click="editNote({{ $row->id }}, '{{ $row->note }}')"
-                >
+            {{-- Edit note (main action, last) --}}
+            @can('accountings.edit')
+                <x-ui::button color="primary" size="sm" icon="pencil" type="button" x-show="! editingNote" x-on:click="editingNote = true">
                     {{ trans('modules/accounting::accounting.edit') }}
                 </x-ui::button>
-            @else
-                <x-ui::button
-                    color="secondary"
-                    ghost
-                    size="sm"
-                    icon="x"
-                    type="button"
-                    wire:click="cancelEdit"
-                >
+                <x-ui::button color="secondary" ghost size="sm" icon="x" type="button" x-show="editingNote" style="display: none"
+                    x-on:click="editingNote = false; note = @js((string) ($row->note ?? ''))">
                     {{ trans('modules/accounting::accounting.close') }}
                 </x-ui::button>
-                <x-ui::button
-                    color="primary"
-                    size="sm"
-                    icon="device-floppy"
-                    type="button"
-                    wire:click="saveNote"
-                >
+                <x-ui::button color="primary" size="sm" icon="device-floppy" type="button" x-show="editingNote" style="display: none"
+                    x-on:click="$wire.$parent.updateNote({{ $row->id }}, note).then(() => editingNote = false)">
                     {{ trans('modules/accounting::accounting.save') }}
                 </x-ui::button>
-            @endif
+            @endcan
         </x-ui::detail-actions>
     </x-ui::card>
 </div>

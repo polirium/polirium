@@ -214,6 +214,26 @@ final class InvoiceTable extends BaseTable
         }
     }
 
+    /**
+     * Save a note edited in an invoice's detail panel.
+     */
+    public function updateNote(int $id, ?string $note): void
+    {
+        $this->authorize('accountings.edit');
+
+        $payment = Payment::query()
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
+            ->find($id);
+
+        if (! $payment) {
+            return;
+        }
+
+        $payment->note = mb_substr((string) $note, 0, 2000);
+        $payment->save();
+        $this->dispatch('success', 'Đã cập nhật ghi chú.');
+    }
+
     public function cancelEdit()
     {
         $this->editingNoteId = null;
