@@ -33,7 +33,7 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
     ) {
     }
 
-    public function collection(Collection $rows)
+    public function collection(Collection $rows): void
     {
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2; // +2 because of header row and 0-index

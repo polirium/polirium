@@ -29,7 +29,7 @@ class CustomerImport implements ToCollection, WithHeadingRow, WithChunkReading
         $this->currentMaxId = Customer::max('id') ?? 0;
     }
 
-    public function collection(Collection $rows)
+    public function collection(Collection $rows): void
     {
         // Pre-fetch existing customers by phone to avoid query per row
         // Extract all phone numbers from rows

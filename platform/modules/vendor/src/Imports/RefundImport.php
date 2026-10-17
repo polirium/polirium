@@ -12,7 +12,7 @@ class RefundImport implements ToCollection, WithHeadingRow
     protected array $products = [];
     protected array $errors = [];
 
-    public function collection(Collection $rows)
+    public function collection(Collection $rows): void
     {
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2; // +2 because of header row and 0-index
