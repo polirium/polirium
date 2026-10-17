@@ -18,7 +18,7 @@ return new class () extends Migration {
     public function up(): void
     {
         foreach (self::INDEXES as $table => $index) {
-            if (Schema::hasTable($table) && ! Schema::hasIndex($table, $index)) {
+            if (Schema::hasTable($table) && ! Schema::hasIndex($table, ['code'])) {
                 Schema::table($table, fn (Blueprint $blueprint) => $blueprint->index('code', $index));
             }
         }

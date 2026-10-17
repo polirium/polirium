@@ -236,8 +236,6 @@ class ProductListTable extends BaseTable
 
     public function datasource(): Builder
     {
-        \Illuminate\Support\Facades\Log::info('ProductListTable loaded', ['class' => __CLASS__, 'methods' => get_class_methods($this)]);
-
         $branchId = user_branch();
 
         return Product::query()

@@ -12,7 +12,7 @@ return new class () extends Migration {
 
     public function up(): void
     {
-        if (Schema::hasTable('vendors') && ! Schema::hasIndex('vendors', self::INDEX)) {
+        if (Schema::hasTable('vendors') && ! Schema::hasIndex('vendors', ['code'])) {
             Schema::table('vendors', fn (Blueprint $table) => $table->index('code', self::INDEX));
         }
     }
