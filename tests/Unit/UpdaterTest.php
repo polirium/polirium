@@ -9,7 +9,9 @@ use App\Updater\ReleaseClient;
 use App\Updater\Updater;
 use App\Updater\UpdateException;
 use App\Updater\Version;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -35,6 +37,22 @@ class UpdaterTest extends TestCase
         File::deleteDirectory($this->sandbox);
 
         parent::tearDown();
+    }
+
+    public function test_assets_are_requested_as_files_not_metadata(): void
+    {
+        Http::fake(function (Request $request) {
+            return $request->header('Accept') === ['application/octet-stream']
+                ? Http::response('abc123  polirium-9.9.9.zip')
+                : Http::response('{"url":"metadata"}');
+        });
+
+        $client = new ReleaseClient();
+        $this->assertSame('abc123  polirium-9.9.9.zip', $client->fetchText('https://api.github.com/repos/x/y/releases/assets/1'));
+
+        $file = $this->sandbox . '/asset.zip';
+        $client->download('https://api.github.com/repos/x/y/releases/assets/2', $file);
+        $this->assertSame('abc123  polirium-9.9.9.zip', file_get_contents($file));
     }
 
     public function test_versions_compare_semantically(): void

@@ -4,6 +4,15 @@ All notable changes to Polirium are documented here. Versions follow
 [Semantic Versioning](https://semver.org/). Each release on GitHub carries a
 self-contained package that the in-app updater installs.
 
+## [1.0.2] - 2026-10-17
+
+### Fixed
+- In-app updates failed with "checksum mismatch": the updater asked GitHub
+  for the package with a merged Accept header and received the asset's JSON
+  description instead of the file. Installations on 1.0.0 or 1.0.1 need this
+  one file (`app/Updater/ReleaseClient.php`) replaced by hand once, or a
+  manual update, before the in-app updater works.
+
 ## [1.0.1] - 2026-10-17
 
 ### Changed

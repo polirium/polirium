@@ -69,10 +69,15 @@ class ReleaseClient
         return $parsed;
     }
 
+    /**
+     * Asset URLs return the file only for "Accept: application/octet-stream"
+     * alone; withHeaders() would merge it with the JSON type and GitHub then
+     * answers with the asset's metadata, so the header is replaced.
+     */
     public function download(string $url, string $destination): void
     {
         $this->http()
-            ->withHeaders(['Accept' => 'application/octet-stream'])
+            ->replaceHeaders(['Accept' => 'application/octet-stream'])
             ->timeout(600)
             ->sink($destination)
             ->get($url)
@@ -81,7 +86,7 @@ class ReleaseClient
 
     public function fetchText(string $url): string
     {
-        return (string) $this->http()->withHeaders(['Accept' => 'application/octet-stream'])->get($url)->throw()->body();
+        return (string) $this->http()->replaceHeaders(['Accept' => 'application/octet-stream'])->get($url)->throw()->body();
     }
 
     /**
