@@ -18,6 +18,6 @@ class HomeController extends Controller
             return redirect()->to(url(admin_prefix()));
         }
 
-        return view('welcome');
+        return view('welcome', \App\Support\Homepage::data());
     }
 }

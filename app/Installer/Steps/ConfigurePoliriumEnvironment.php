@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Installer\Steps;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use RelayerCore\LaravelInstaller\Contracts\EnvironmentWriter;
 use RelayerCore\LaravelInstaller\Steps\ConfigureEnvironment;
@@ -46,5 +47,20 @@ class ConfigurePoliriumEnvironment extends ConfigureEnvironment
             'APP_DEBUG' => 'false',
         ]);
         $this->env->save();
+
+        // The .env written above is only read on the next boot. The following
+        // steps run in this same request, so point the live connection at the
+        // database that was just validated instead of the example defaults.
+        $connection = (string) ($data['connection'] ?? 'mysql');
+        config([
+            'database.default' => $connection,
+            "database.connections.{$connection}.host" => (string) ($data['host'] ?? '127.0.0.1'),
+            "database.connections.{$connection}.port" => (string) ($data['port'] ?? '3306'),
+            "database.connections.{$connection}.database" => (string) ($data['database'] ?? ''),
+            "database.connections.{$connection}.username" => (string) ($data['username'] ?? ''),
+            "database.connections.{$connection}.password" => (string) ($data['password'] ?? ''),
+        ]);
+        DB::purge($connection);
+        DB::setDefaultConnection($connection);
     }
 }

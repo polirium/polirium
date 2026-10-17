@@ -4,6 +4,22 @@ All notable changes to Polirium are documented here. Versions follow
 [Semantic Versioning](https://semver.org/). Each release on GitHub carries a
 self-contained package that the in-app updater installs.
 
+## [1.0.1] - 2026-10-17
+
+### Changed
+- New public homepage: a modern, responsive page (light and dark) that shows
+  the store's own name and logo, only the modules that are enabled, and quick
+  links that respect the signed-in user's permissions. It keeps working when
+  modules are disabled or the database is unavailable.
+
+### Fixed
+- A freshly unzipped release package answered every page with a 500: the
+  application now creates `.env` with a unique key on first run and boots
+  without a database, so the web installer opens.
+- Web installer: the database step now uses the database just entered within
+  the same request, and the administrator form no longer comes pre-filled
+  with the database username and password.
+
 ## [1.0.0] - 2026-10-17
 
 First versioned release.

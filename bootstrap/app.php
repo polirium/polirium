@@ -11,9 +11,34 @@
 |
 */
 
-$app = new Illuminate\Foundation\Application(
-    $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
-);
+$basePath = $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__);
+
+/*
+|--------------------------------------------------------------------------
+| First Run Of A Release Package
+|--------------------------------------------------------------------------
+|
+| A freshly unzipped release has no .env, and without an encryption key no
+| page (not even the web installer) can be served. Create .env from the
+| example with a key unique to this installation; the installer fills in
+| the rest. Environments that provide APP_KEY themselves are left alone.
+|
+*/
+
+if (! is_file($basePath . '/.env') && is_file($basePath . '/.env.example')
+    && empty($_ENV['APP_KEY']) && empty(getenv('APP_KEY')) && is_writable($basePath)) {
+    $environment = preg_replace(
+        '/^APP_KEY=.*$/m',
+        'APP_KEY=base64:' . base64_encode(random_bytes(32)),
+        (string) file_get_contents($basePath . '/.env.example'),
+    );
+
+    if (file_put_contents($basePath . '/.env', $environment, LOCK_EX) !== false) {
+        @chmod($basePath . '/.env', 0640);
+    }
+}
+
+$app = new Illuminate\Foundation\Application($basePath);
 
 /*
 |--------------------------------------------------------------------------
