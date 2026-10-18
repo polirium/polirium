@@ -32,4 +32,13 @@ return [
     'draft_saved' => 'Đã lưu hóa đơn tạm',
     'draft_updated' => 'Đã cập nhật hóa đơn tạm',
     'draft_opened' => 'Đã mở hóa đơn tạm',
+    // POS layout
+    'search_placeholder' => 'Tìm tên, mã sản phẩm hoặc quét mã vạch (F3)',
+    'search_hint' => '↑ ↓ để chọn, Enter để thêm',
+    'subtotal' => 'Tạm tính',
+    'items_count' => ':count sản phẩm',
+    'new_invoice' => 'Hóa đơn mới',
+    'more' => 'Thêm',
+    'checkout' => 'Thanh toán',
+    'checkout_hint' => 'F9',
 ];

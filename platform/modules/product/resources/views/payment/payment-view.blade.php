@@ -1,15 +1,12 @@
 <div class="payment-view">
     {{-- Summary Section --}}
     <div class="payment-view__summary-section">
-        {{-- Total Items Row --}}
+        {{-- Subtotal --}}
         <div class="payment-view__summary-row">
-            <span class="payment-view__amount-label">{{ __('modules/product::payment.total_amount') }}</span>
-            <span class="badge bg-indigo text-indigo-fg badge-pill">{{ collect($products)->sum('amount') }}</span>
-        </div>
-
-        {{-- Total Value Row --}}
-        <div class="payment-view__summary-row">
-            <span class="payment-view__amount-label">{{ __('modules/product::payment.total_value') }}</span>
+            <span class="payment-view__amount-label">
+                {{ __('modules/product::payment.subtotal') }}
+                <span class="text-secondary fw-normal">({{ __('modules/product::payment.items_count', ['count' => core_number_format(collect($products)->sum('amount'))]) }})</span>
+            </span>
             <span class="payment-view__amount-value">{{ core_number_format(collect($products)->sum('total')) }}</span>
         </div>
 
@@ -38,10 +35,10 @@
                     :aria-label="@js(__('modules/product::payment.discount')) + ' selector'"
                 >
                     <template x-if="localType === 'percent'">
-                        <span x-text="localValue + ' %'"></span>
+                        <span x-text="'-' + localValue + '%'"></span>
                     </template>
                     <template x-if="localType !== 'percent'">
-                        <span x-text="localValue.toLocaleString('vi-VN') + ' VNĐ'"></span>
+                        <span x-text="localValue > 0 ? '-' + localValue.toLocaleString('vi-VN') : '0'"></span>
                     </template>
                     <i class="ti ti-chevron-down ms-1" :class="{ 'rotate': open }"></i>
                 </button>
@@ -126,11 +123,6 @@
             </div>
         </div>
 
-        {{-- Customer Need Pay Row --}}
-        <div class="payment-view__summary-row">
-            <span class="payment-view__amount-label">{{ __('modules/product::payment.customer_need_pay') }}</span>
-            <span class="payment-view__amount-value payment-view__total-value">{{ core_number_format($total_payment) }}</span>
-        </div>
     </div>
 </div>
 
@@ -346,8 +338,7 @@
 
 {{-- Payment Method Selection (Compact Scrollable) --}}
 @if (count((array) ($payment['type_payment'] ?? [])) <= 1)
-    <div class="mt-3 overflow-hidden">
-        <div class="row g-1 row-cols-4">
+    <div class="pos-methods">
             @foreach($payment_methods as $method)
                 @php
                     $icon = match($method['code']) {
@@ -361,22 +352,19 @@
                         default => 'wallet'
                     };
                 @endphp
-                <div class="col">
-                    <button
-                        type="button"
-                        @class([
-                            'btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1 px-1',
-                            'btn-primary' => $isMethodSelected($method['code'], $payment['type_payment'] ?? []),
-                            'btn-outline-primary' => !$isMethodSelected($method['code'], $payment['type_payment'] ?? []),
-                        ])
-                        wire:click="setPaymentMethod('{{ $method['code'] }}')"
-                    >
-                        {!! tabler_icon($icon, ['class' => 'icon-sm']) !!}
-                        <span class="text-truncate small">{{ $method['name'] }}</span>
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    @class([
+                        'pos-method',
+                        'active' => $isMethodSelected($method['code'], $payment['type_payment'] ?? []),
+                    ])
+                    wire:click="setPaymentMethod('{{ $method['code'] }}')"
+                    title="{{ $method['name'] }}"
+                >
+                    {!! tabler_icon($icon, ['class' => 'icon']) !!}
+                    <span>{{ $method['name'] }}</span>
+                </button>
             @endforeach
-        </div>
     </div>
 @endif
 

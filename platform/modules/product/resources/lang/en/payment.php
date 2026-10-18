@@ -18,4 +18,27 @@ return [
     'cash' => 'Cash',
     'bank_transfer' => 'Bank Transfer',
     'card' => 'Card',
+    'cod' => 'COD',
+    'other' => 'Other',
+
+    'save_draft' => 'Save draft',
+    'draft_list' => 'Draft invoices',
+    'draft' => 'Draft',
+    'draft_empty' => 'No draft invoices yet',
+    'open_draft' => 'Open',
+    'delete_draft' => 'Delete',
+    'confirm_delete_draft' => 'Delete this draft invoice?',
+    'draft_saved' => 'Draft invoice saved',
+    'draft_updated' => 'Draft invoice updated',
+    'draft_opened' => 'Draft invoice opened',
+
+    // POS layout
+    'search_placeholder' => 'Search name, code or scan a barcode (F3)',
+    'search_hint' => '↑ ↓ to choose, Enter to add',
+    'subtotal' => 'Subtotal',
+    'items_count' => ':count items',
+    'new_invoice' => 'New invoice',
+    'more' => 'More',
+    'checkout' => 'Checkout',
+    'checkout_hint' => 'F9',
 ];

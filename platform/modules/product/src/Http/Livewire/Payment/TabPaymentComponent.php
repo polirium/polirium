@@ -35,10 +35,12 @@ class TabPaymentComponent extends Component
             return Product::select(['id', 'name', 'code', 'unit', 'price', 'type'])
             ->with('branches:id')
             ->where(function ($q) {
-                $q->where('name', 'like', "%{$this->search}%")
-                ->orWhere('code', 'like', "%{$this->search}%")
+                $term = '%' . addcslashes(trim($this->search), '%_\\') . '%';
+                $q->where('name', 'like', $term)
+                ->orWhere('code', 'like', $term)
                 ;
             })
+            ->orderByRaw('code = ? desc', [trim($this->search)])
             ->limit(50)
             ->get();
         }
@@ -132,7 +134,7 @@ class TabPaymentComponent extends Component
         $currentTabParams = collect($this->tab)->firstWhere('id', $this->tab_selected);
 
         if (($currentTabParams['type'] ?? 'invoice') !== 'invoice') {
-            $this->js("alert('Vui lòng chọn tab Hóa đơn để thêm sản phẩm!')");
+            $this->dispatch('error', 'Vui lòng chọn tab Hóa đơn để thêm sản phẩm!');
 
             return;
         }
@@ -142,20 +144,56 @@ class TabPaymentComponent extends Component
         ->with('branches:id')
         ->find($id);
 
+        if (! $product) {
+            return;
+        }
+
         // Nếu là dịch vụ thì không cần kiểm tra tồn kho
         // $product->amount is an accessor, so it will be calculated automatically when accessed
         if ($product->type !== 'service' && $product->amount <= 0) {
-            $this->js("alert('Sản phẩm \\'{$product->name}\\' đã hết hàng trong kho!')");
+            $this->dispatch('error', "Sản phẩm '{$product->name}' đã hết hàng trong kho!");
 
             return;
         }
 
         $this->dispatch('payment-product-selected', product_id: $id, tab_id: $this->tab_selected);
+
+        // Ready for the next scan or search.
+        $this->search = '';
+        unset($this->products);
+        $this->dispatch('pos-search-reset');
+    }
+
+    /**
+     * Enter in the search box (or a barcode scanner): add the product whose
+     * code matches exactly, otherwise the only/first result.
+     */
+    public function selectFirstMatch($term = null)
+    {
+        // The typed value is passed in: a scanner's Enter can beat the debounced sync.
+        if ($term !== null) {
+            $this->search = (string) $term;
+            unset($this->products);
+        }
+        $term = trim((string) $this->search);
+        if ($term === '') {
+            return;
+        }
+
+        $product = Product::select(['id'])->where('code', $term)->first()
+            ?? $this->products?->first();
+
+        if (! $product) {
+            $this->dispatch('error', trans('modules/product::product.no_products_found'));
+
+            return;
+        }
+
+        $this->selectProduct($product->id);
     }
 
     public function tabSelected($key)
     {
-        \Log::info('TabPaymentComponent::tabSelected', ['id' => $key]);
         $this->tab_selected = $key;
     }
 }
