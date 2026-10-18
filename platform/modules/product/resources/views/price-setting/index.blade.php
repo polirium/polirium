@@ -10,5 +10,15 @@
         </div>
     </div>
 
-    @livewire('modules/product::product-price-setting-table')
+    <div class="row">
+        <div class="col-md-3">
+            @livewire('modules/product::price-setting.filter-sidebar')
+        </div>
+        <div class="col-md-9">
+            @livewire('modules/product::product-price-setting-table')
+        </div>
+    </div>
+
+    {{-- Edit from the row actions and the product detail. --}}
+    @livewire('modules/product::index.modal.modal-create-product')
 </x-ui.layouts::app>

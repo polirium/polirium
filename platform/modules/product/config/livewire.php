@@ -77,6 +77,11 @@ return [
         'alias' => 'modules/product::product-price-setting-table',
         'description' => 'Product Price Setting Table',
     ],
+    'price-setting-filter-sidebar' => [
+        'class' => \Polirium\Modules\Product\Http\Livewire\PriceSetting\FilterSidebarComponent::class,
+        'alias' => 'modules/product::price-setting.filter-sidebar',
+        'description' => 'Price Setting Filter Sidebar',
+    ],
     'product-stock-table' => [
         'class' => StockTable::class,
         'alias' => 'modules/product::stock-table',
