@@ -44,14 +44,15 @@ class SearchSidebarComponent extends Component
             $this->code = request('search');
         }
 
-        // Apply initial filters from URL on mount
-        $this->applyFilters();
+        // Apply filters given in the URL. Empty ones are skipped: the table
+        // already shows everything, and each event costs it a re-render.
+        $this->applyFilters(onlyFilled: true);
     }
 
     /**
      * Apply all filters at once
      */
-    public function applyFilters()
+    public function applyFilters(bool $onlyFilled = false)
     {
         $filters = [
             'category_id' => $this->category_id,
@@ -63,6 +64,10 @@ class SearchSidebarComponent extends Component
         ];
 
         foreach ($filters as $key => $value) {
+            if ($onlyFilled && blank($value)) {
+                continue;
+            }
+
             $this->dispatch('product-search-sidebar', value: $value, key: $key);
         }
     }

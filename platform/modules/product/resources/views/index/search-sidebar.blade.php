@@ -36,7 +36,7 @@
                 @endif
                 @canany(['products.create', 'products.edit'])
                     <x-ui.button type="button"
-                                 :color="$category_id ? 'warning' : 'success'"
+                                 color="outline-secondary"
                                  :icon="$category_id ? 'pencil' : 'plus'"
                                  wire:click="$dispatch('show-modal-create-category', { id: {{ $category_id ?: 0 }} })" />
                 @endcanany
@@ -57,7 +57,7 @@
                 @endif
                 @canany(['products.create', 'products.edit'])
                     <x-ui.button type="button"
-                                 :color="$trademark_id ? 'warning' : 'success'"
+                                 color="outline-secondary"
                                  :icon="$trademark_id ? 'pencil' : 'plus'"
                                  wire:click="$dispatch('show-modal-create-list', { id: {{ $trademark_id ?: 0 }}, title: 'Thương hiệu', tbl: 'trademarks', model: 'Trademark' })" />
                 @endcanany
@@ -78,7 +78,7 @@
                 @endif
                 @canany(['products.create', 'products.edit'])
                     <x-ui.button type="button"
-                                 :color="$shelve_id ? 'warning' : 'success'"
+                                 color="outline-secondary"
                                  :icon="$shelve_id ? 'pencil' : 'plus'"
                                  wire:click="$dispatch('show-modal-create-list', { id: {{ $shelve_id ?: 0 }}, title: 'Vị trí', tbl: 'shelves', model: 'Shelve' })" />
                 @endcanany
