@@ -191,6 +191,13 @@ class DemoDataCommand extends Command
         $this->newLine();
         $this->table(['Dữ liệu', 'Số lượng'], collect($this->counts)->map(fn ($n, $k) => [$k, number_format($n)])->values()->all());
 
+        if ($this->skips !== []) {
+            arsort($this->skips);
+            $this->newLine();
+            $this->line('Bước bỏ qua (không đủ điều kiện tại thời điểm đó):');
+            $this->table(['Lý do', 'Lần'], collect($this->skips)->take(8)->map(fn ($n, $reason) => [$reason, $n])->values()->all());
+        }
+
         $mismatch = $this->stockMismatches();
         if ($mismatch > 0) {
             $this->warn("Có {$mismatch} dòng tồn kho lệch với thẻ kho. Kiểm tra lại bằng php artisan audit:inventory.");
@@ -551,6 +558,7 @@ class DemoDataCommand extends Command
                 'email' => 'ncc' . ($i + 1) . '@example.test',
                 'address' => mt_rand(10, 300) . ' Đường Số ' . mt_rand(1, 30) . ', Khu công nghiệp Mẫu ' . chr(65 + $i),
                 'company' => $name,
+                'vat' => '0399' . sprintf('%06d', $i + 1),
                 'status' => 'active',
                 'total' => 0,
                 'debt' => 0,
@@ -678,19 +686,7 @@ class DemoDataCommand extends Command
                     // Not possible at this moment (e.g. stock already gone): skip it and
                     // reload the stock mirror, which may hold a rolled-back reservation.
                     $this->mirror = [];
-                    $this->count('Bỏ qua (thiếu điều kiện)');
-                }
-            }
-        }
-
-        // A few defective-goods returns to suppliers.
-        foreach (array_slice($this->purchases, 3, 40, true) as $index => $purchase) {
-            if ($index % 13 === 0) {
-                $this->at($purchase->created_at->copy()->addDays(3)->setTime(15, 0));
-                try {
-                    $this->purchaseReturn($purchase);
-                } catch (Throwable) {
-                    $this->count('Bỏ qua (thiếu điều kiện)');
+                    $this->skip($kind, $exception);
                 }
             }
         }
@@ -759,7 +755,7 @@ class DemoDataCommand extends Command
             }
 
             $used[$product->id] = true;
-            $discount = $this->chance(0.12) ? [(int) (round($product->price * $qty * mt_rand(5, 15) / 100 / 1000) * 1000), 'vnd'] : [0, 'vnd'];
+            $discount = $this->chance(0.12) ? [(int) (round($product->price * $qty * mt_rand(5, 15) / 100 / 1000) * 1000), 'number'] : [0, 'number'];
             $lines[] = [$product, $qty, $product->price, $discount];
             $this->reserve($branchId, $product, $qty);
         }
@@ -800,12 +796,12 @@ class DemoDataCommand extends Command
     {
         return DB::transaction(function () use ($branchId, $cashier, $customer, $lines, $method, $channel, $delivery) {
             $items = collect($lines)->map(fn ($line) => [
-                'product' => $line[0], 'amount' => $line[1], 'value' => $line[2],
+                'product' => $line[0], 'product_id' => $line[0]->id, 'amount' => $line[1], 'value' => $line[2],
                 'discount_value' => $line[3][0], 'discount_type' => $line[3][1],
                 'total' => discount_value($line[1] * $line[2], $line[3][0], $line[3][1]),
             ]);
             $totalCost = (int) $items->sum('total');
-            [$discountValue, $discountType] = $customer && $this->chance(0.1) ? [mt_rand(5, 10), 'percent'] : [0, 'vnd'];
+            [$discountValue, $discountType] = $customer && $this->chance(0.1) ? [mt_rand(5, 10), 'percent'] : [0, 'number'];
             $value = (int) round(discount_value($totalCost, $discountValue, $discountType));
             $collected = $this->methods[$method]->target_payment_status === PaymentMethod::STATUS_COMPLETED;
             $label = $this->methods[$method]->name;
@@ -1036,12 +1032,17 @@ class DemoDataCommand extends Command
         $this->purchases[] = $purchase;
         $this->syncMirror($branchId);
         $this->count('Phiếu nhập hàng');
+
+        // Now and then some goods turn out defective and go back to the supplier.
+        if (count($this->purchases) % 13 === 4) {
+            $this->schedule(now()->copy()->addDays(3)->setTime(15, 0), 'purchase-return', $purchase->id);
+        }
     }
 
-    private function purchaseReturn(Purchase $purchase): void
+    private function purchaseReturn(int $purchaseId): void
     {
-        $purchase->refresh()->load('products');
-        if ($purchase->status !== 'success') {
+        $purchase = Purchase::with('products')->find($purchaseId);
+        if (! $purchase || $purchase->status !== 'success') {
             return;
         }
 
@@ -1360,6 +1361,15 @@ class DemoDataCommand extends Command
     private function at(Carbon $moment): void
     {
         Carbon::setTestNow($moment);
+    }
+
+    /** @var array<string, int> "kind: reason" => times */
+    private array $skips = [];
+
+    private function skip(string $kind, Throwable $exception): void
+    {
+        $reason = $kind . ': ' . Str::limit(preg_replace('/\s+/', ' ', $exception->getMessage()), 160);
+        $this->skips[$reason] = ($this->skips[$reason] ?? 0) + 1;
     }
 
     private function count(string $label, int $n = 1): void

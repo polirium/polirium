@@ -13,7 +13,7 @@ class AuditInventoryCommand extends Command
 {
     protected $signature = 'audit:inventory
                             {--product= : Mã sản phẩm cụ thể (VD: XG.741100)}
-                            {--fix : Tự động sửa nếu phát hiện sai}';
+                            {--fix : Đồng bộ tồn kho hiện tại theo dòng thẻ kho cuối của từng chi nhánh (không sửa lịch sử)}';
 
     protected $description = 'Kiểm tra toàn bộ tính toán Thẻ Kho (product_logs) và Tồn Kho (products.qty / product_branches.qty)';
 
@@ -245,151 +245,98 @@ class AuditInventoryCommand extends Command
                 continue;
             }
 
-            $logs = DB::table('product_logs')
+            // Stock card lines are kept per branch: amount_before/amount_after
+            // continue the previous line of the same branch.
+            $logsByBranch = DB::table('product_logs')
                 ->where('product_id', $productId)
                 ->orderBy('created_at')
                 ->orderBy('id')
-                ->get();
+                ->get()
+                ->groupBy(fn ($log) => (int) $log->branch_id);
 
-            if ($logs->isEmpty()) {
+            if ($logsByBranch->isEmpty()) {
                 continue;
             }
 
-            // Replay toán học
-            $runningQty = 0;
-            $firstLog = $logs->first();
-
-            if (! in_array($firstLog->productable_type, [VendorPurchase::class, CustomerPayment::class])) {
-                $runningQty = $firstLog->amount_before;
-            }
-
-            $paymentLogCounts = [];
-            $chainBroken = false;
+            $branchRows = DB::table('product_branches')->where('product_id', $productId)->pluck('qty', 'branch_id')->map(fn ($qty) => (int) $qty);
+            $issues = [];
             $chainErrors = [];
+            $cardTotal = 0;
 
-            foreach ($logs as $log) {
-                $expectedBefore = $runningQty;
+            foreach ($logsByBranch as $branchId => $logs) {
+                $previous = null;
 
-                // Tính signed amount
-                if ($log->productable_type === CustomerPayment::class) {
-                    if (! isset($paymentLogCounts[$log->productable_id])) {
-                        $paymentLogCounts[$log->productable_id] = 1;
-                        $runningQty -= abs($log->amount);
-                    } else {
-                        $runningQty += abs($log->amount);
+                foreach ($logs as $log) {
+                    $increase = $log->direction !== null
+                        ? $log->direction === 'in'
+                        : (int) $log->amount_after >= (int) $log->amount_before;
+                    $expectedAfter = (int) $log->amount_before + ($increase ? 1 : -1) * abs((int) $log->amount);
+
+                    if ($previous !== null && (int) $log->amount_before !== (int) $previous->amount_after) {
+                        $chainErrors[] = "Chi nhánh {$branchId}, log #{$log->id}: tồn trước {$log->amount_before} ≠ tồn sau dòng trước {$previous->amount_after}";
                     }
-                } elseif ($log->productable_type === CustomerRefund::class) {
-                    $runningQty += abs($log->amount);
-                } elseif ($log->productable_type === VendorPurchase::class) {
-                    $runningQty += abs($log->amount);
-                } elseif ($log->productable_type === VendorRefund::class) {
-                    $runningQty -= abs($log->amount);
-                } else {
-                    $runningQty += $log->amount_after >= $log->amount_before
-                        ? abs($log->amount)
-                        : -abs($log->amount);
+                    if ((int) $log->amount_after !== $expectedAfter) {
+                        $chainErrors[] = "Chi nhánh {$branchId}, log #{$log->id}: {$log->amount_before} " . ($increase ? '+' : '-') . " {$log->amount} ≠ {$log->amount_after}";
+                    }
+
+                    $previous = $log;
                 }
 
-                $expectedAfter = $runningQty;
+                $cardQty = (int) $previous->amount_after;
+                $cardTotal += $cardQty;
+                $branchQty = $branchRows[$branchId] ?? 0;
 
-                // So khớp với DB hiện tại
-                if ((int) $log->amount_before !== $expectedBefore || (int) $log->amount_after !== $expectedAfter) {
-                    $chainBroken = true;
-                    $chainErrors[] = "Log #{$log->id}: DB[{$log->amount_before}→{$log->amount_after}] vs Tính[{$expectedBefore}→{$expectedAfter}]";
+                if ($branchQty !== $cardQty) {
+                    $issues[] = "chi nhánh {$branchId}: tồn={$branchQty} ≠ thẻ kho={$cardQty}";
+
+                    // Only the current quantity is aligned to the stock card;
+                    // history is never rewritten.
+                    if ($this->option('fix')) {
+                        DB::table('product_branches')->where('product_id', $productId)->where('branch_id', $branchId)->update(['qty' => $cardQty]);
+                    }
                 }
             }
 
-            // Kiểm tra qty khớp
-            $qtyMismatch = (int) $product->qty !== $runningQty;
+            $branchTotal = (int) DB::table('product_branches')->where('product_id', $productId)->sum('qty');
+            if ((int) $product->qty !== $branchTotal) {
+                $issues[] = "products.qty={$product->qty} ≠ tổng chi nhánh={$branchTotal}";
 
-            $branchQty = DB::table('product_branches')
-                ->where('product_id', $productId)
-                ->sum('qty');
-            $branchMismatch = (int) $branchQty !== $runningQty;
-
-            if ($chainBroken || $qtyMismatch || $branchMismatch) {
-                $issues = [];
-                if ($chainBroken) {
-                    $issues[] = 'Chuỗi Thẻ kho bị đứt (' . count($chainErrors) . ' dòng sai)';
-                }
-                if ($qtyMismatch) {
-                    $issues[] = "products.qty={$product->qty} ≠ Thẻ kho={$runningQty}";
-                }
-                if ($branchMismatch) {
-                    $issues[] = "branches.qty={$branchQty} ≠ Thẻ kho={$runningQty}";
-                }
-
-                // Tự động sửa nếu có flag --fix
                 if ($this->option('fix')) {
-                    if ($chainBroken) {
-                        // Rebuild chain
-                        $rebuildQty = 0;
-                        $rebuildFirst = $logs->first();
-                        if (! in_array($rebuildFirst->productable_type, [VendorPurchase::class, CustomerPayment::class])) {
-                            $rebuildQty = $rebuildFirst->amount_before;
-                        }
-
-                        $rebuildPaymentCounts = [];
-                        foreach ($logs as $log) {
-                            $b = $rebuildQty;
-
-                            if ($log->productable_type === CustomerPayment::class) {
-                                if (! isset($rebuildPaymentCounts[$log->productable_id])) {
-                                    $rebuildPaymentCounts[$log->productable_id] = 1;
-                                    $rebuildQty -= abs($log->amount);
-                                } else {
-                                    $rebuildQty += abs($log->amount);
-                                }
-                            } elseif ($log->productable_type === CustomerRefund::class) {
-                                $rebuildQty += abs($log->amount);
-                            } elseif ($log->productable_type === VendorPurchase::class) {
-                                $rebuildQty += abs($log->amount);
-                            } elseif ($log->productable_type === VendorRefund::class) {
-                                $rebuildQty -= abs($log->amount);
-                            } else {
-                                $rebuildQty += $log->amount_after >= $log->amount_before
-                                    ? abs($log->amount) : -abs($log->amount);
-                            }
-
-                            DB::table('product_logs')->where('id', $log->id)->update([
-                                'amount_before' => $b,
-                                'amount_after' => $rebuildQty,
-                            ]);
-                        }
-                        $runningQty = $rebuildQty;
-                    }
-
-                    DB::table('products')->where('id', $productId)->update(['qty' => $runningQty]);
-                    DB::table('product_branches')->where('product_id', $productId)->update(['qty' => $runningQty]);
-
-                    // Fix thành công -> tính là passed
-                    $this->passedProducts++;
-                } else {
-                    // Không có flag --fix -> tính là failed
-                    $this->failedProducts++;
-
-                    $failedRows[] = [
-                        $product->code ?? "ID:{$productId}",
-                        $product->name ?? '-',
-                        $runningQty,
-                        $product->qty,
-                        (int) $branchQty,
-                        implode('; ', $issues),
-                    ];
-
-                    // Verbose mode cho sản phẩm cụ thể
-                    if ($productCode && $chainBroken) {
-                        $bar->clear();
-                        $this->info('');
-                        $this->warn("  Chi tiết lỗi chuỗi cho {$product->code}:");
-                        foreach ($chainErrors as $err) {
-                            $this->line("    └─ <fg=red>{$err}</>");
-                        }
-                        $bar->display();
-                    }
+                    DB::table('products')->where('id', $productId)->update(['qty' => $branchTotal]);
                 }
-            } else {
+            }
+
+            if ($chainErrors !== []) {
+                // Read-only: a broken chain needs the documents checked by hand.
+                $issues[] = 'Chuỗi thẻ kho bị đứt (' . count($chainErrors) . ' dòng, không tự sửa)';
+            }
+
+            $fixed = $this->option('fix') && $chainErrors === [];
+
+            if ($issues === [] || $fixed) {
                 $this->passedProducts++;
+
+                continue;
+            }
+
+            $this->failedProducts++;
+            $failedRows[] = [
+                $product->code ?? "ID:{$productId}",
+                $product->name ?? '-',
+                $cardTotal,
+                $product->qty,
+                $branchTotal,
+                implode('; ', $issues),
+            ];
+
+            if ($productCode && $chainErrors !== []) {
+                $bar->clear();
+                $this->info('');
+                $this->warn("  Chi tiết lỗi chuỗi cho {$product->code}:");
+                foreach (array_slice($chainErrors, 0, 50) as $err) {
+                    $this->line("    └─ <fg=red>{$err}</>");
+                }
+                $bar->display();
             }
         }
 
@@ -401,7 +348,7 @@ class AuditInventoryCommand extends Command
             $this->error('  Các sản phẩm có vấn đề:');
             $this->info('');
             $this->table(
-                ['Mã SP', 'Tên SP', 'Tính đúng', 'products.qty', 'branches.qty', 'Vấn đề'],
+                ['Mã SP', 'Tên SP', 'Theo thẻ kho', 'products.qty', 'Tổng chi nhánh', 'Vấn đề'],
                 $failedRows
             );
         }
