@@ -590,6 +590,10 @@ class DemoDataCommand extends Command
         foreach ([['Tại cửa hàng', true], ['Website', false], ['Shopee', false], ['Facebook', false]] as $i => [$name, $default]) {
             SaleChannel::query()->firstOrCreate(['name' => $name], ['is_active' => 1, 'is_default' => $default, 'sort_order' => $i]);
         }
+        // Most sales happen at the counter: make sure the in-store channel is the default.
+        if (! SaleChannel::query()->where('is_default', true)->exists()) {
+            SaleChannel::query()->where('name', 'Tại cửa hàng')->update(['is_default' => true]);
+        }
         $this->channels = SaleChannel::query()->where('is_active', 1)->get();
 
         foreach ([['Giao Hàng Mẫu Nhanh', 'company', 'GHMN'], ['Viettel Post (demo)', 'company', 'VTPD'], ['Shipper nội bộ', 'person', 'NOIBO']] as [$name, $type, $code]) {
