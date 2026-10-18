@@ -135,12 +135,6 @@ final class PaymentRefundTable extends BaseTable
         ];
     }
 
-    public function actions($row): array
-    {
-        return [
-            // PowerGrid detail đã thay thế button detail
-        ];
-    }
 
     #[On('pg:eventRefresh-{tableName}')]
     public function refresh(): void

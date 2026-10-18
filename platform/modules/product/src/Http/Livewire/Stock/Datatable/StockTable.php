@@ -132,10 +132,6 @@ final class StockTable extends BaseTable
         return [];
     }
 
-    public function actions(Stock $row): array
-    {
-        return [];
-    }
 
     /**
      * Override BaseTable delete to properly revert product quantities

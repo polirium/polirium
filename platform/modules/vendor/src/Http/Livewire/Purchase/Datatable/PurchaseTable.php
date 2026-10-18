@@ -156,10 +156,6 @@ final class PurchaseTable extends BaseTable
         ];
     }
 
-    public function actions(Purchase $row): array
-    {
-        return [];
-    }
 
     #[On('redirect-purchase-view')]
     public function redirectPurchaseView()

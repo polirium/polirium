@@ -142,10 +142,6 @@ final class InvoiceTable extends BaseTable
         ];
     }
 
-    public function actions($row): array
-    {
-        return [];
-    }
 
     public function cancel($id)
     {

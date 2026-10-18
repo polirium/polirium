@@ -131,10 +131,6 @@ final class AccountingTable extends BaseTable
         ];
     }
 
-    public function actions($row): array
-    {
-        return [];
-    }
 
     public function updatedType($value): void
     {
