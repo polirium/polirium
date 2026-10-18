@@ -2,9 +2,9 @@
 
 namespace Polirium\Modules\Accounting\Widgets;
 
-use Carbon\Carbon;
 use Polirium\Core\Base\Widgets\AbstractWidget;
 use Polirium\Modules\Accounting\Http\Model\Payment;
+use Polirium\Modules\Accounting\Http\Model\Receipt;
 
 /**
  * Invoice Stats Widget
@@ -59,55 +59,43 @@ class InvoiceStatsWidget extends AbstractWidget
 
     public function setPeriod(string $period): void
     {
-        $this->period = $period;
+        $this->period = in_array($period, ['today', 'week', 'month'], true) ? $period : 'today';
     }
 
-    protected function getDateRange(): array
+    /**
+     * Total and count of cash book vouchers (receipts or payments) in a range.
+     *
+     * @param class-string<\Illuminate\Database\Eloquent\Model> $model
+     */
+    protected function totals(string $model, array $range): object
     {
-        return match ($this->period) {
-            'today' => [Carbon::today(), Carbon::now()],
-            'week' => [Carbon::now()->startOfWeek(), Carbon::now()],
-            'month' => [Carbon::now()->startOfMonth(), Carbon::now()],
-            default => [Carbon::today(), Carbon::now()],
-        };
+        return $model::query()
+            ->whereDate('date', '>=', $range[0]->toDateString())
+            ->whereDate('date', '<=', $range[1]->toDateString())
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
+            ->selectRaw('COUNT(*) AS n, COALESCE(SUM(value), 0) AS total')
+            ->first();
     }
 
     public function render()
     {
-        abort_unless(auth()->user()?->can('accountings.dashboard'), 403);
+        $range = $this->periodRange($this->period);
+        $previous = $this->previousRange($this->period);
 
-        [$startDate, $endDate] = $this->getDateRange();
-
-        // type_id = 1: Thu, type_id = 2: Chi (assumed based on typical accounting)
-        $receipts = Payment::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
-            ->where('type_id', 1)
-            ->sum('value');
-
-        $expenses = Payment::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
-            ->where('type_id', 2)
-            ->sum('value');
-
-        $receiptCount = Payment::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
-            ->where('type_id', 1)
-            ->count();
-
-        $expenseCount = Payment::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
-            ->where('type_id', 2)
-            ->count();
-
-        $balance = $receipts - $expenses;
+        // Phiếu thu are receipts (accounting_receipts), phiếu chi are payments.
+        $receipts = $this->totals(Receipt::class, $range);
+        $expenses = $this->totals(Payment::class, $range);
+        $previousReceipts = $this->totals(Receipt::class, $previous);
+        $previousExpenses = $this->totals(Payment::class, $previous);
 
         return view('modules/accounting::widgets.invoice-stats', [
             'period' => $this->period,
-            'receipts' => $receipts,
-            'expenses' => $expenses,
-            'receiptCount' => $receiptCount,
-            'expenseCount' => $expenseCount,
-            'balance' => $balance,
+            'receipts' => (float) $receipts->total,
+            'expenses' => (float) $expenses->total,
+            'receiptCount' => (int) $receipts->n,
+            'expenseCount' => (int) $expenses->n,
+            'receiptChange' => $this->change((float) $receipts->total, (float) $previousReceipts->total),
+            'expenseChange' => $this->change((float) $expenses->total, (float) $previousExpenses->total),
         ]);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Polirium\Modules\Product\Widgets;
 
-use Carbon\Carbon;
 use Polirium\Core\Base\Widgets\AbstractWidget;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
 
@@ -59,74 +58,69 @@ class RevenueStatsWidget extends AbstractWidget
 
     public function setPeriod(string $period): void
     {
-        $this->period = $period;
+        $this->period = in_array($period, ['today', 'week', 'month'], true) ? $period : 'today';
     }
 
-    protected function getDateRange(): array
+    /**
+     * Sales of a range that count as revenue (not cancelled), in this branch.
+     */
+    protected function sales(array $range)
     {
-        return match ($this->period) {
-            'today' => [Carbon::today(), Carbon::now()],
-            'week' => [Carbon::now()->startOfWeek(), Carbon::now()],
-            'month' => [Carbon::now()->startOfMonth(), Carbon::now()],
-            default => [Carbon::today(), Carbon::now()],
-        };
+        return Payment::query()
+            ->whereBetween('created_at', $range)
+            ->whereNotIn('status', ['cancelled', 'cancel', 'failed', 'delivery_failed'])
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId));
     }
 
     public function render()
     {
-        [$startDate, $endDate] = $this->getDateRange();
+        $payments = $this->sales($this->periodRange($this->period))
+            ->get(['id', 'value', 'value_payment', 'type_payment', 'created_at']);
 
-        $payments = Payment::whereBetween('created_at', [$startDate, $endDate])
-            ->whereNotIn('status', ['cancelled', 'cancel', 'failed'])
-            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
-            ->get();
-
-        $totalCash = 0;
-        $totalBank = 0;
-        $totalCard = 0;
-        $totalOrders = $payments->count();
+        // Collected money per payment method (from each invoice's own payment
+        // lines); what is still owed (e.g. COD on its way) is "not collected".
+        $methods = ['cash' => 0, 'bank' => 0, 'card' => 0, 'other' => 0];
+        $series = array_fill_keys($this->periodBuckets($this->period), 0);
 
         foreach ($payments as $payment) {
-            $types = $payment->type_payment ?? [];
-            $amount = $payment->value_payment ?? 0;
+            foreach ((array) $payment->type_payment as $line) {
+                $method = is_array($line) ? ($line['method'] ?? 'other') : (string) $line;
+                $value = is_array($line) ? (float) ($line['value'] ?? 0) : 0;
+                $key = match ($method) {
+                    'cash' => 'cash',
+                    'bank', 'transfer' => 'bank',
+                    'card' => 'card',
+                    default => 'other',
+                };
+                $methods[$key] += $value;
+            }
 
-            if (in_array('cash', $types)) {
-                $totalCash += $amount;
-            }
-            if (in_array('bank', $types)) {
-                $totalBank += $amount;
-            }
-            if (in_array('card', $types)) {
-                $totalCard += $amount;
+            $bucket = $this->bucketOf($this->period, $payment->created_at);
+            if (array_key_exists($bucket, $series)) {
+                $series[$bucket] += (float) $payment->value;
             }
         }
 
-        $totalRevenue = $totalCash + $totalBank + $totalCard;
+        $totalRevenue = (float) $payments->sum('value');
+        $collected = array_sum($methods);
+        $uncollected = max(0, $totalRevenue - $collected);
+        $previousRevenue = (float) $this->sales($this->previousRange($this->period))->sum('value');
+
+        $parts = [
+            ['label' => trans('modules/product::product.cash'), 'value' => $methods['cash'], 'icon' => 'cash', 'color' => 'success'],
+            ['label' => trans('modules/product::product.bank_transfer'), 'value' => $methods['bank'], 'icon' => 'building-bank', 'color' => 'primary'],
+            ['label' => trans('modules/product::product.card'), 'value' => $methods['card'], 'icon' => 'credit-card', 'color' => 'purple'],
+            ['label' => trans('core/base::general.collected_other'), 'value' => $methods['other'], 'icon' => 'wallet', 'color' => 'cyan'],
+            ['label' => trans('core/base::general.not_collected'), 'value' => $uncollected, 'icon' => 'clock-dollar', 'color' => 'warning'],
+        ];
 
         return view('modules/product::widgets.revenue-stats', [
             'period' => $this->period,
             'totalRevenue' => $totalRevenue,
-            'totalOrders' => $totalOrders,
-            'stats' => [
-                [
-                    'label' => 'Tiền mặt',
-                    'value' => $totalCash,
-                    'icon' => 'cash',
-                    'color' => 'success',
-                ],
-                [
-                    'label' => 'Chuyển khoản',
-                    'value' => $totalBank,
-                    'icon' => 'building-bank',
-                    'color' => 'primary',
-                ],
-                [
-                    'label' => 'Thẻ',
-                    'value' => $totalCard,
-                    'icon' => 'credit-card',
-                    'color' => 'info',
-                ],
-            ],
+            'totalOrders' => $payments->count(),
+            'change' => $this->change($totalRevenue, $previousRevenue),
+            'series' => array_values($series),
+            'parts' => array_values(array_filter($parts, fn ($part) => $part['value'] > 0 || in_array($part['icon'], ['cash', 'building-bank', 'credit-card'], true))),
         ]);
     }
 }

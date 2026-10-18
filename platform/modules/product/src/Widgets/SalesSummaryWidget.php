@@ -2,7 +2,6 @@
 
 namespace Polirium\Modules\Product\Widgets;
 
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Polirium\Core\Base\Widgets\AbstractWidget;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
@@ -61,43 +60,51 @@ class SalesSummaryWidget extends AbstractWidget
 
     public function setPeriod(string $period): void
     {
-        $this->period = $period;
+        $this->period = in_array($period, ['today', 'week', 'month'], true) ? $period : 'today';
     }
 
-    protected function getDateRange(): array
+    /**
+     * Sales of a range that count (not cancelled), in this branch.
+     */
+    protected function sales(array $range)
     {
-        return match ($this->period) {
-            'today' => [Carbon::today(), Carbon::now()],
-            'week' => [Carbon::now()->startOfWeek(), Carbon::now()],
-            'month' => [Carbon::now()->startOfMonth(), Carbon::now()],
-            default => [Carbon::today(), Carbon::now()],
-        };
+        return Payment::query()
+            ->whereBetween('created_at', $range)
+            ->whereNotIn('status', ['cancelled', 'cancel', 'failed', 'delivery_failed'])
+            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId));
     }
 
     public function render()
     {
-        [$startDate, $endDate] = $this->getDateRange();
+        $range = $this->periodRange($this->period);
+        $payments = $this->sales($range)->get(['id', 'customer_id', 'value', 'amount_products', 'created_at']);
+        $previous = $this->sales($this->previousRange($this->period))
+            ->selectRaw('COUNT(*) AS orders, COALESCE(SUM(amount_products), 0) AS items, COALESCE(SUM(value), 0) AS revenue')
+            ->first();
 
-        $payments = Payment::whereBetween('created_at', [$startDate, $endDate])
-            ->whereNotIn('status', ['cancelled', 'cancel', 'failed'])
-            ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId))
-            ->get();
+        $buckets = array_fill_keys($this->periodBuckets($this->period), 0);
+        $series = ['orders' => $buckets, 'items' => $buckets, 'revenue' => $buckets];
+        foreach ($payments as $payment) {
+            $bucket = $this->bucketOf($this->period, $payment->created_at);
+            if (array_key_exists($bucket, $buckets)) {
+                $series['orders'][$bucket]++;
+                $series['items'][$bucket] += (int) $payment->amount_products;
+                $series['revenue'][$bucket] += (float) $payment->value;
+            }
+        }
 
         $totalOrders = $payments->count();
-        $totalItems = $payments->sum('amount_products');
-        $totalRevenue = $payments->sum('value_payment');
+        $totalItems = (int) $payments->sum('amount_products');
+        $totalRevenue = (float) $payments->sum('value');
         $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
+        $previousAvg = (int) $previous->orders > 0 ? (float) $previous->revenue / (int) $previous->orders : 0;
 
-        // Top products
-        $topProducts = PaymentProduct::select('product_id', DB::raw('SUM(amount) as total_sold'))
-            ->whereHas('payment', function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('created_at', [$startDate, $endDate])
-                      ->whereNotIn('status', ['cancelled', 'cancel', 'failed'])
-                      ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId));
-            })
+        $topProducts = PaymentProduct::query()
+            ->select('product_id', DB::raw('SUM(amount) AS total_sold'), DB::raw('SUM(total) AS total_value'))
+            ->whereIn('product_payment_id', $payments->pluck('id'))
             ->groupBy('product_id')
             ->orderByDesc('total_sold')
-            ->limit(5)
+            ->limit(4)
             ->with('product:id,name,code')
             ->get();
 
@@ -107,6 +114,15 @@ class SalesSummaryWidget extends AbstractWidget
             'totalItems' => $totalItems,
             'totalRevenue' => $totalRevenue,
             'avgOrderValue' => $avgOrderValue,
+            'customers' => $payments->whereNotNull('customer_id')->pluck('customer_id')->unique()->count(),
+            'withCustomer' => $totalOrders > 0 ? round($payments->whereNotNull('customer_id')->count() / $totalOrders * 100) : 0,
+            'changes' => [
+                'orders' => $this->change($totalOrders, (float) $previous->orders),
+                'items' => $this->change($totalItems, (float) $previous->items),
+                'revenue' => $this->change($totalRevenue, (float) $previous->revenue),
+                'avg' => $this->change($avgOrderValue, $previousAvg),
+            ],
+            'series' => array_map('array_values', $series),
             'topProducts' => $topProducts,
         ]);
     }
