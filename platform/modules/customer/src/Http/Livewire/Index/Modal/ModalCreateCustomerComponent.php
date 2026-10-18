@@ -21,6 +21,9 @@ class ModalCreateCustomerComponent extends Component
 
     public $list = [];
 
+    /** POS tab that opened the modal, echoed back so only that invoice picks the customer. */
+    public ?string $tab = null;
+
     protected function rules()
     {
         return [
@@ -140,8 +143,9 @@ class ModalCreateCustomerComponent extends Component
     }
 
     #[On('show-modal-create-customer')]
-    public function showModal($id = null, $name = null)
+    public function showModal($id = null, $name = null, $tab = null)
     {
+        $this->tab = $tab;
         $this->list['provinces'] = get_provinces();
         $this->list['districts'] = [];
         $this->list['wards'] = [];
@@ -219,7 +223,7 @@ class ModalCreateCustomerComponent extends Component
         $cust->customerGroups()->sync($this->customer_groups ?? []);
 
         // Dispatch event to select this customer in payment
-        $this->dispatch('customer-created', customerId: $cust->id);
+        $this->dispatch('customer-created', customerId: $cust->id, tabId: $this->tab);
 
         $this->resetInputs();
 

@@ -41,4 +41,6 @@ return [
     'more' => 'Thêm',
     'checkout' => 'Thanh toán',
     'checkout_hint' => 'F9',
+    'line_unit_price' => 'Đơn giá',
+    'line_sale_price' => 'Giá sau giảm',
 ];

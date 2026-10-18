@@ -358,6 +358,7 @@
                         'pos-method',
                         'active' => $isMethodSelected($method['code'], $payment['type_payment'] ?? []),
                     ])
+                    @click="$el.parentElement.querySelectorAll('.pos-method').forEach(b => b.classList.toggle('active', b === $el))"
                     wire:click="setPaymentMethod('{{ $method['code'] }}')"
                     title="{{ $method['name'] }}"
                 >

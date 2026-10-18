@@ -51,17 +51,32 @@
                 },
                 pick() {
                     const item = this.items()[this.active];
+                    const term = $refs.input.value.trim();
                     if (this.open && item && this.active > 0) {
-                        $wire.selectProduct(Number(item.dataset.productId));
-                    } else {
-                        $wire.selectFirstMatch($refs.input.value);
+                        this.add({ productId: Number(item.dataset.productId) });
+                    } else if (term !== '') {
+                        // Exact code first (barcode), else the best match: resolved by the invoice.
+                        this.add({ code: term });
                     }
+                },
+                // Straight to the open invoice: one request, no round trip through this component.
+                add(payload) {
+                    const current = ($wire.tab || []).find(t => t.id === $wire.tab_selected);
+                    if (current && current.type !== 'invoice') { $wire.wrongTab(); return; }
+                    $wire.$dispatch('pos-add-product-' + $wire.tab_selected, payload);
+                    this.reset();
+                },
+                reset() {
+                    this.open = false;
+                    this.active = 0;
+                    $refs.input.value = '';
+                    $wire.search = '';
+                    this.focus();
                 },
                 focus() { $refs.input.focus(); $refs.input.select(); },
             }"
             x-init="$nextTick(() => focus())"
             @keydown.f3.window.prevent="focus()"
-            @pos-search-reset.window="open = false; active = 0; $refs.input.value = ''; focus()"
             @click.outside="open = false"
         >
             <span class="pos-search-icon">{!! tabler_icon('search', ['class' => 'icon']) !!}</span>
@@ -78,7 +93,7 @@
                 @keydown.enter.prevent="pick()"
                 @keydown.escape="open = false"
             >
-            <span class="pos-search-loading" wire:loading.delay wire:target="search,selectProduct,selectFirstMatch">
+            <span class="pos-search-loading" wire:loading.delay wire:target="search">
                 <span class="spinner-border spinner-border-sm text-primary"></span>
             </span>
 
@@ -90,7 +105,7 @@
                             data-product-id="{{ $item->id }}"
                             :class="{ 'active': active === {{ $index }} }"
                             @mouseenter="active = {{ $index }}"
-                            wire:click="selectProduct({{ $item->id }})"
+                            @click="add({ productId: {{ $item->id }} })"
                             wire:key="product-search-{{ $item->id }}"
                         >
                             <div class="min-w-0 flex-fill">
@@ -224,6 +239,9 @@
     @livewire('modules/product::payment.modal.modal-create-partner-delivery')
     @livewire('modules/customer::index.modal.modal-create-customer')
     @livewire('modules/customer::index.modal.modal-create-customer-group')
+
+    {{-- One draft list for every tab: the button passes its tab id --}}
+    @livewire('modules/product::payment.draft-payment-list', [], key('pos-draft-list'))
 
     {{-- Select Refund Invoice Modal (Shared) --}}
     @livewire('modules/product::payment.modal.modal-select-refund-invoice')

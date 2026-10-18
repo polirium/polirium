@@ -3,7 +3,11 @@
 namespace Polirium\Modules\Product\Http\Livewire\Payment;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -15,6 +19,7 @@ use Polirium\Modules\Product\Http\Model\Payment\PaymentDelivery;
 use Polirium\Modules\Product\Http\Model\Payment\PaymentMethod;
 use Polirium\Modules\Product\Http\Model\Payment\PaymentPartnerDelivery;
 use Polirium\Modules\Product\Http\Model\Payment\PaymentProduct;
+use Polirium\Modules\Product\Http\Model\Payment\PosCart;
 use Polirium\Modules\Product\Http\Model\Payment\SaleChannel;
 use Polirium\Modules\Product\Http\Model\Product;
 use Polirium\Modules\Product\Http\Support\ProductInventorySupport;
@@ -26,17 +31,20 @@ class PaymentComponent extends Component
     {
         return [
             'refresh-payment' => '$refresh',
-            'refresh-payment' => '$refresh',
-            'payment-product-selected' => 'selectedProduct',
-            "payment-methods-value-{$this->tab_selected}" => 'paymentMethodsValue',
+            "pos-add-product-{$this->tab_selected}" => 'addProduct',
             "payment-methods-value-{$this->tab_selected}" => 'paymentMethodsValue',
             'customer-created' => 'selectCustomer',
             'open-draft-payment' => 'openDraft',
         ];
     }
 
-    public function selectCustomer($customerId)
+    public function selectCustomer($customerId, $tabId = null)
     {
+        // A customer created from another tab (or outside the POS) is not for this invoice.
+        if ($tabId !== $this->tab_selected) {
+            return;
+        }
+
         $this->payment['customer_id'] = $customerId;
         $this->search['customer'] = '';
     }
@@ -129,106 +137,109 @@ class PaymentComponent extends Component
     public $payment_user_id;
     public $payment_sale_channel_id;
 
-    public function boot()
-    {
-        // RE-INIT SESSION KEY ON EVERY REQUEST
-        // This is critical because protected properties like $session_key are NOT persisted by Livewire.
-        // Without this, saveStateToSession() fails silently in subsequent requests because session_key is null.
-        if ($this->tab_selected) {
-            $this->session_key = 'payment_v2_tab_' . ($this->tab_selected ?? 'default');
-        }
-    }
+    /**
+     * One key per sale attempt, kept across retries and reloads: saving the
+     * same key twice returns the first invoice instead of a second one.
+     */
+    #[Locked]
+    public string $checkoutKey = '';
 
     public function mount($tab_selected = null)
     {
         Assets::loadCss('professional-table');
 
-        // Restore state from session if exists
-        if (session()->has($this->session_key)) {
-            $state = session()->get($this->session_key);
-            $this->fill($state);
+        $this->refreshList();
 
-            // Fix Data Loss: Ensure list_product keys are integers
-            if (! empty($this->list_product)) {
-                $this->list_product = array_map('intval', $this->list_product);
-            }
+        $this->lists['users'] = User::query()->select(['id', 'name'])->pluck('name', 'id')->all();
 
-            // Re-sync extracted properties since fill() might not cover them if they match array keys in payment
+        // Ensure current user is in the list
+        if (auth()->check() && ! isset($this->lists['users'][auth()->id()])) {
+            $this->lists['users'][auth()->id()] = auth()->user()->name;
+        }
+
+        $this->lists['type_delivery'] = [
+            'normal' => 'Giao thường',
+            'fast' => 'Giao nhanh',
+            'day' => 'Giao trong ngày',
+        ];
+
+        $this->lists['status_delivery'] = [
+            'wait' => 'Chờ xử lý',
+            'delivery' => 'Đang giao hàng',
+        ];
+
+        // Restore the cart left open in this tab (reload, closed browser, new session).
+        $state = $this->cart()?->state;
+
+        if (is_array($state) && isset($state['payment'])) {
+            $this->payment = $state['payment'];
+            $this->products = $state['products'] ?? [];
+            $this->list_product = array_map('intval', $state['list_product'] ?? array_keys($this->products));
+            $this->payment_delivery = $state['payment_delivery'] ?? $this->payment_delivery;
+            $this->checkoutKey = $state['checkout_key'] ?? (string) Str::uuid();
+
             $this->payment_user_id = $this->payment['user_id'] ?? null;
             $this->payment_sale_channel_id = $this->payment['sale_channel_id'] ?? null;
             $this->total_payment = discount_value((int)($this->payment['value'] ?? 0), (int)($this->payment['discount_value'] ?? 0), $this->payment['discount_type'] ?? 'number');
 
-            // FIX: Restore payment_methods from session
-            // This property is saved to session but NOT restored by fill() because
-            // it's only initialized conditionally in mount()'s else branch
-            if (isset($state['payment_methods'])) {
-                $this->payment_methods = $state['payment_methods'];
+            $first = $this->payment['type_payment'][0] ?? null;
+            $methodCode = is_array($first) ? ($first['method'] ?? null) : $first;
+            if ($methodCode) {
+                $method = collect($this->payment_methods)->firstWhere('code', $methodCode);
+                $this->isPendingMethod = ($method['target_payment_status'] ?? PaymentMethod::STATUS_COMPLETED) !== PaymentMethod::STATUS_COMPLETED;
+                $this->methods_payment = collect($this->payment['type_payment'])->pluck('label')->filter()->join(', ') ?: null;
             }
-
-            // Always refresh methods so bank_account / VietQR data stays current
-            $this->payment_methods = $this->loadActivePaymentMethods();
         } else {
-            \Log::info("No session found for {$this->session_key}. Resetting inputs.");
-            // Initial setup if no session data
-            $this->refreshList();
-
-            $this->lists['users'] = User::query()->select(['id', 'name'])->pluck('name', 'id')->all();
-
-            // Ensure current user is in the list
-            if (auth()->check() && ! isset($this->lists['users'][auth()->id()])) {
-                $this->lists['users'][auth()->id()] = auth()->user()->name;
-            }
-
-            $this->lists['type_delivery'] = [
-                'normal' => 'Giao thường',
-                'fast' => 'Giao nhanh',
-                'day' => 'Giao trong ngày',
-            ];
-
-            $this->lists['type_delivery'] = [
-                'normal' => 'Giao thường',
-                'fast' => 'Giao nhanh',
-                'day' => 'Giao trong ngày',
-            ];
-
-            $this->lists['status_delivery'] = [
-                'wait' => 'Chờ xử lý',
-                'delivery' => 'Đang giao hàng',
-            ];
-
-            $this->payment_methods = $this->loadActivePaymentMethods();
-
             $this->resetInputs();
-            \Log::info('After reset inputs. Product count: ' . count($this->products));
-
-            // Sync initial stats to session
-            $this->saveStateToSession();
         }
     }
 
-    protected $session_key;
-
-    protected function saveStateToSession()
+    /**
+     * Saved after every request, so the cart is never only in the browser.
+     */
+    public function dehydrate()
     {
-        if ($this->session_key) {
-            \Log::info("SAVING SESSION: {$this->session_key} | Products: " . count($this->products));
-            session()->put($this->session_key, [
+        $this->saveCart();
+    }
+
+    protected function cart(): ?PosCart
+    {
+        if (! $this->tab_selected) {
+            return null;
+        }
+
+        return PosCart::ownedBy()->where('tab_key', $this->tab_selected)->first()
+            ?? PosCart::create([
+                'user_id' => (int) auth()->id(),
+                'branch_id' => user_branch(),
+                'tab_key' => $this->tab_selected,
+                'type' => 'invoice',
+                'position' => (int) PosCart::ownedBy()->max('position') + 1,
+            ]);
+    }
+
+    protected function saveCart(): void
+    {
+        if (! $this->tab_selected) {
+            return;
+        }
+
+        // Only update: a tab closed in the meantime must not come back.
+        PosCart::ownedBy()->where('tab_key', $this->tab_selected)->update([
+            'state' => json_encode([
                 'payment' => $this->payment,
                 'products' => $this->products,
                 'list_product' => $this->list_product,
                 'payment_delivery' => $this->payment_delivery,
-                'search' => $this->search,
-                'payment_delivery' => $this->payment_delivery,
-                'search' => $this->search,
-                'lists' => $this->lists, // Persist lists to avoid re-fetching on every mount if heavy
-                'payment_methods' => $this->payment_methods,
-            ]);
-        }
+                'checkout_key' => $this->checkoutKey,
+            ]),
+            'updated_at' => now(),
+        ]);
     }
 
-    public function dehydrate()
+    /** Kept for the callers below: the cart is saved on dehydrate. */
+    protected function saveStateToSession(): void
     {
-        $this->saveStateToSession();
     }
 
     public function updatedPaymentUserId($value)
@@ -436,6 +447,9 @@ class PaymentComponent extends Component
         // Reset cart data first
         $this->products = [];
         $this->list_product = [];
+        $this->checkoutKey = (string) Str::uuid();
+        $this->isPendingMethod = false;
+        $this->methods_payment = null;
 
         $this->payment = [
             'code' => code_generate('BH', Payment::max('id')),
@@ -585,6 +599,100 @@ class PaymentComponent extends Component
         $this->search['customer'] = null;
     }
 
+    /**
+     * From the search box: a product id (picked from the list) or a typed or
+     * scanned code. Adding a product already in the cart adds one more.
+     */
+    public function addProduct($productId = null, $code = null): void
+    {
+        $product = null;
+
+        if ($productId) {
+            $product = Product::with('branches:id')->find((int) $productId);
+        } elseif (($code = trim((string) $code)) !== '') {
+            $product = Product::with('branches:id')->where('code', $code)->first()
+                ?? Product::with('branches:id')
+                    ->where(function ($q) use ($code) {
+                        $term = '%' . addcslashes($code, '%_\\') . '%';
+                        $q->where('name', 'like', $term)->orWhere('code', 'like', $term);
+                    })
+                    ->orderBy('name')
+                    ->orderBy('id')
+                    ->first();
+        }
+
+        if (! $product) {
+            $this->dispatch('error', trans('modules/product::product.no_products_found'));
+
+            return;
+        }
+
+        $inCart = (int) ($this->products[$product->id]['amount'] ?? 0);
+
+        if ($product->type !== 'service' && $product->amount < $inCart + 1) {
+            $this->dispatch('error', $inCart > 0
+                ? "Sản phẩm '{$product->name}' chỉ còn {$product->amount} trong kho."
+                : "Sản phẩm '{$product->name}' đã hết hàng trong kho!");
+
+            return;
+        }
+
+        if ($inCart > 0) {
+            $this->products[$product->id]['amount'] = $inCart + 1;
+            $this->updatedProducts($inCart + 1, $product->id . '.amount');
+
+            return;
+        }
+
+        $this->list_product[] = $product->id;
+        $this->products[$product->id] = [
+            'product' => $product->only(['id', 'name', 'code', 'unit', 'price', 'note']),
+            'product_id' => $product->id,
+            'amount' => 1,
+            'value' => $product->price,
+            'discount_value' => 0,
+            'discount_type' => 'number',
+            'total' => $product->price,
+            'note' => $product->note,
+        ];
+
+        $this->updatedPayment();
+    }
+
+    /**
+     * Quantity from the cart's +/- buttons (sent once the clicks settle).
+     */
+    public function setQuantity(int $productId, $quantity): void
+    {
+        if (! isset($this->products[$productId])) {
+            return;
+        }
+
+        $quantity = max(1, (int) $quantity);
+        $this->products[$productId]['amount'] = $quantity;
+        $this->updatedProducts($quantity, $productId . '.amount');
+    }
+
+    /**
+     * Unit price and line discount from the price editor, in one request.
+     */
+    public function updateLinePrice(int $productId, $price, string $type, $discount): void
+    {
+        if (! isset($this->products[$productId])) {
+            return;
+        }
+
+        $type = $type === 'percent' ? 'percent' : 'number';
+        $price = max(0, (int) $price);
+        $discount = max(0, (int) $discount);
+        $discount = $type === 'percent' ? min(100, $discount) : min($price, $discount);
+
+        $this->products[$productId]['value'] = $price;
+        $this->products[$productId]['discount_type'] = $type;
+        $this->products[$productId]['discount_value'] = $discount;
+        $this->updatedProducts($price, $productId . '.value');
+    }
+
     public function selectedProduct($product_id, $tab_id = null): void
     {
         // If tab_id is provided, ensure it matches this component's tab
@@ -717,14 +825,6 @@ class PaymentComponent extends Component
 
     public function save(): void
     {
-        // Check if completing existing draft or creating new payment
-        if (! empty($this->payment['id']) && ($this->payment['status'] ?? 'success') === 'draft') {
-            // Complete existing draft instead of creating new one
-            $this->completeDraft((int)$this->payment['id']);
-
-            return;
-        }
-
         // Ensure required fields are set
         if (empty($this->payment['code'])) {
             $this->payment['code'] = code_generate('BH', Payment::max('id'));
@@ -851,84 +951,130 @@ class PaymentComponent extends Component
             $this->payment['completed_at'] = now();
         }
 
-        try {
-            \Illuminate\Support\Facades\DB::transaction(function () use (&$paymentModel) {
-                // Create Payment model and save
-                $paymentModel = Payment::create($this->payment);
+        $alreadySaved = false;
+        $paymentModel = null;
 
-                // Lưu khi giao hàng
+        try {
+            DB::transaction(function () use (&$paymentModel, &$alreadySaved) {
+                // The draft being completed, or one saved earlier with this key.
+                $draftId = $this->payment['id'] ?? null;
+                $existing = $draftId
+                    ? Payment::whereKey($draftId)->lockForUpdate()->first()
+                    : Payment::where('checkout_key', $this->checkoutKey)->lockForUpdate()->first();
+
+                if ($draftId && ! $existing) {
+                    throw new \RuntimeException('Không tìm thấy hóa đơn tạm.');
+                }
+
+                if ($existing && $existing->status !== 'draft') {
+                    // Already paid (retry after a lost response, a second click, another tab).
+                    $paymentModel = $existing;
+                    $alreadySaved = true;
+
+                    return;
+                }
+
+                $data = collect($this->payment)->except(['id', 'code'])->all();
+
+                if ($existing) {
+                    // Completing a draft: it takes the cart as it is now.
+                    $existing->update($data);
+                    PaymentDelivery::where('product_payment_id', $existing->id)->delete();
+                    PaymentProduct::where('product_payment_id', $existing->id)->delete();
+                    $paymentModel = $existing;
+                } else {
+                    $paymentModel = Payment::create($this->payment + ['checkout_key' => $this->checkoutKey]);
+                }
+
                 // Lưu khi giao hàng (Automatically detect if partner is selected)
                 if (! empty($this->payment_delivery['partner_delivery_id'])) {
-                    $this->payment['is_delivery'] = 1; // Ensure payment record reflects delivery status
-                    $paymentModel->update(['is_delivery' => 1]); // Update the already created model
+                    $this->payment['is_delivery'] = 1;
+                    $paymentModel->update(['is_delivery' => 1]);
 
                     $this->payment_delivery['product_payment_id'] = $paymentModel->id;
-                    PaymentDelivery::create($this->payment_delivery);
+                    PaymentDelivery::create(collect($this->payment_delivery)->except('id')->all());
                 }
 
-                $savedItems = collect();
-
-                foreach ($this->products as $key => $value) {
+                foreach ($this->products as $value) {
                     unset($value['product']);
                     $value['product_payment_id'] = $paymentModel->id;
-                    $savedItems->push(PaymentProduct::create($value));
+                    PaymentProduct::create($value);
                 }
 
-                ProductInventorySupport::exportPaymentItems($savedItems, $paymentModel);
+                $this->postSale($paymentModel);
             });
+        } catch (QueryException $e) {
+            // A concurrent request with the same key inserted first.
+            $paymentModel = Payment::where('checkout_key', $this->checkoutKey)->first();
+            if (! $paymentModel || $paymentModel->status === 'draft') {
+                $this->dispatch('error', 'Có lỗi xảy ra khi lưu hóa đơn: ' . $e->getMessage());
+
+                return;
+            }
+            $alreadySaved = true;
         } catch (\Exception $e) {
             $this->dispatch('error', 'Có lỗi xảy ra khi lưu hóa đơn: ' . $e->getMessage());
 
             return;
         }
 
-        if ($paymentModel->id) {
-            $this->dispatch('product-print-payment', url: route('products.print.print-payment', $paymentModel->id));
+        if ($alreadySaved) {
+            $this->dispatch('warning', "Hóa đơn {$paymentModel->code} đã được thanh toán trước đó, không tạo thêm.");
+        }
 
-            // Dispatch event to front-end to close the tab if multiple exist
-            $this->dispatch('close-or-reset-tab', tabId: $this->tab_selected);
+        $this->dispatch('product-print-payment', url: route('products.print.print-payment', $paymentModel->id));
+        $this->dispatch('refresh-draft-list');
 
-            // Auto-create Cash Book Receipt (Phiếu Thu)
-            if ($paymentModel->status === 'success') {
-                $typePayment = $this->payment['type_payment'] ?? [];
-                foreach ($typePayment as $payment) {
-                    $method = $payment['method'] ?? 'cash';
-                    $label = $payment['label'] ?? 'Khác';
-                    $value = $payment['value'] ?? 0;
+        // Dispatch event to front-end to close the tab if multiple exist
+        $this->dispatch('close-or-reset-tab', tabId: $this->tab_selected);
 
-                    if ($value > 0) {
-                        $accountingTypeName = match ($method) {
-                            'cash' => 'Thu tiền mặt',
-                            'bank', 'transfer' => 'Thu chuyển khoản',
-                            default => 'Thu qua ' . $label,
-                        };
+        // Clean the view instantly for the next order
+        $this->newPayment();
+    }
 
-                        if ($accountingTypeName) {
-                            $accountingType = \Polirium\Modules\Accounting\Http\Model\AccountingType::firstOrCreate(
-                                ['name' => $accountingTypeName],
-                                ['type' => 'receipt']
-                            );
+    /**
+     * Stock out and the cash receipts for a sale whose lines are saved.
+     * Runs inside the caller's transaction: all of it is saved, or none.
+     */
+    protected function postSale(Payment $payment): void
+    {
+        ProductInventorySupport::exportPaymentItems($payment->products()->with('product')->get(), $payment);
 
-                            \Polirium\Modules\Accounting\Http\Model\Receipt::create([
-                                'code' => code_generate('PT', \Polirium\Modules\Accounting\Http\Model\Receipt::max('id') ?? 0),
-                                'branch_id' => $paymentModel->branch_id,
-                                'date' => now(),
-                                'type_id' => $accountingType->id,
-                                'value' => $value,
-                                'user_id' => $paymentModel->user_id,
-                                'user_created_id' => auth()->id(),
-                                'finance_type' => \Polirium\Modules\Product\Http\Model\Payment\Payment::class,
-                                'finance_id' => $paymentModel->id,
-                                'note' => 'Thu tiền bán hàng đơn ' . $paymentModel->code,
-                                'business_result' => 1, // Hạch toán kết quả kinh doanh
-                            ]);
-                        }
-                    }
-                }
+        if ($payment->status !== 'success' || ! class_exists(\Polirium\Modules\Accounting\Http\Model\Receipt::class)) {
+            return;
+        }
+
+        foreach ((array) ($payment->type_payment ?? []) as $line) {
+            $method = is_array($line) ? ($line['method'] ?? 'cash') : $line;
+            $label = is_array($line) ? ($line['label'] ?? 'Khác') : 'Khác';
+            $value = is_array($line) ? (float) ($line['value'] ?? 0) : (float) $payment->value_payment;
+
+            if ($value <= 0) {
+                continue;
             }
 
-            // Clean the view instantly for the next order
-            $this->newPayment();
+            $accountingType = \Polirium\Modules\Accounting\Http\Model\AccountingType::firstOrCreate(
+                ['name' => match ($method) {
+                    'cash' => 'Thu tiền mặt',
+                    'bank', 'transfer' => 'Thu chuyển khoản',
+                    default => 'Thu qua ' . $label,
+                }],
+                ['type' => 'receipt']
+            );
+
+            \Polirium\Modules\Accounting\Http\Model\Receipt::create([
+                'code' => null, // numbered by the receipt counter
+                'branch_id' => $payment->branch_id,
+                'date' => now(),
+                'type_id' => $accountingType->id,
+                'value' => $value,
+                'user_id' => $payment->user_id,
+                'user_created_id' => auth()->id(),
+                'finance_type' => Payment::class,
+                'finance_id' => $payment->id,
+                'note' => 'Thu tiền bán hàng đơn ' . $payment->code,
+                'business_result' => 1, // Hạch toán kết quả kinh doanh
+            ]);
         }
     }
 
@@ -1031,37 +1177,28 @@ class PaymentComponent extends Component
 
         // Track if this is a new draft or update
         $isNewDraft = empty($this->payment['id']);
-        $isUpdate = ! $isNewDraft;
-
-        // Check if updating existing draft or creating new one
-        if ($isUpdate) {
-            // Update existing draft
-            $paymentModel = Payment::find($this->payment['id']);
-
-            if (! $paymentModel) {
-                $this->dispatch('error', 'Không tìm thấy hóa đơn tạm.');
-
-                return;
-            }
-
-            if ($paymentModel->status !== 'draft') {
-                $this->dispatch('error', 'Hóa đơn này không phải là hóa đơn tạm.');
-
-                return;
-            }
-        }
 
         try {
-            \Illuminate\Support\Facades\DB::transaction(function () use (&$paymentModel, $isUpdate) {
-                if ($isUpdate) {
-                    // Update payment data
-                    $paymentModel->update($this->payment);
+            DB::transaction(function () use (&$paymentModel, &$isNewDraft) {
+                // The opened draft, or one already saved with this key (second click, retry).
+                $paymentModel = ! empty($this->payment['id'])
+                    ? Payment::whereKey($this->payment['id'])->lockForUpdate()->first()
+                    : Payment::where('checkout_key', $this->checkoutKey)->lockForUpdate()->first();
+
+                if (! empty($this->payment['id']) && ! $paymentModel) {
+                    throw new \RuntimeException('Không tìm thấy hóa đơn tạm.');
+                }
+
+                if ($paymentModel && $paymentModel->status !== 'draft') {
+                    throw new \RuntimeException("Hóa đơn {$paymentModel->code} đã được thanh toán, không thể lưu tạm.");
+                }
+
+                if ($paymentModel) {
+                    $isNewDraft = false;
+                    $paymentModel->update(collect($this->payment)->except(['id', 'code'])->all());
                 } else {
                     // Create new Payment with status = 'draft'
-                    $paymentModel = Payment::create($this->payment);
-
-                    // Set payment ID for new draft
-                    $this->payment['id'] = $paymentModel->id;
+                    $paymentModel = Payment::create($this->payment + ['checkout_key' => $this->checkoutKey]);
                 }
 
                 // Lưu khi giao hàng
@@ -1070,7 +1207,7 @@ class PaymentComponent extends Component
 
                     // Delete existing delivery if any, then create new one
                     PaymentDelivery::where('product_payment_id', $paymentModel->id)->delete();
-                    PaymentDelivery::create($this->payment_delivery);
+                    PaymentDelivery::create(collect($this->payment_delivery)->except('id')->all());
                 }
 
                 // Lưu products - KHÔNG GỌI product_logs() để KHÔNG trừ tồn kho
@@ -1089,6 +1226,8 @@ class PaymentComponent extends Component
 
             return;
         }
+
+        $this->payment['id'] = $paymentModel->id;
 
         // KHÔNG dispatch print event vì đây là draft
 
@@ -1111,33 +1250,41 @@ class PaymentComponent extends Component
      */
     public function completeDraft(int $paymentId): void
     {
-        $payment = Payment::find($paymentId);
-
-        if (! $payment) {
-            $this->dispatch('error', 'Không tìm thấy hóa đơn tạm.');
-
-            return;
-        }
-
-        if ($payment->status !== 'draft') {
-            $this->dispatch('error', 'Hóa đơn này không phải là hóa đơn tạm.');
-
-            return;
-        }
+        $alreadyDone = false;
 
         try {
-            \Illuminate\Support\Facades\DB::transaction(function () use ($payment): void {
-                ProductInventorySupport::exportPaymentItems($payment->products, $payment);
+            $payment = DB::transaction(function () use ($paymentId, &$alreadyDone): Payment {
+                // Locked before the status check: two clicks cannot both see "draft"
+                // and export the stock twice.
+                $payment = Payment::whereKey($paymentId)->lockForUpdate()->first();
+
+                if (! $payment) {
+                    throw new \RuntimeException('Không tìm thấy hóa đơn tạm.');
+                }
+
+                if ($payment->status !== 'draft') {
+                    $alreadyDone = true;
+
+                    return $payment;
+                }
 
                 // Cập nhật status thành 'success' và đánh dấu ngày hoàn thành
                 $payment->status = 'success';
                 $payment->completed_at = now();
                 $payment->save();
+
+                $this->postSale($payment);
+
+                return $payment;
             });
         } catch (\Throwable $exception) {
             $this->dispatch('error', $exception->getMessage());
 
             return;
+        }
+
+        if ($alreadyDone) {
+            $this->dispatch('warning', "Hóa đơn {$payment->code} đã được hoàn thành trước đó.");
         }
 
         // Cập nhật status trong component để view hiển thị đúng các nút action
@@ -1153,7 +1300,9 @@ class PaymentComponent extends Component
         // KHÔNG reset form - giữ lại payment để hiển thị nút "In lại" và "Tạo hóa đơn mới"
         // User sẽ bấm nút "Tạo phiếu mới" để reset form
 
-        $this->dispatch('success', 'Đã hoàn thành hóa đơn tạm.');
+        if (! $alreadyDone) {
+            $this->dispatch('success', 'Đã hoàn thành hóa đơn tạm.');
+        }
     }
 
     /**
@@ -1162,8 +1311,8 @@ class PaymentComponent extends Component
     #[On('open-draft-payment')]
     public function openDraft(int $paymentId, ?string $tabId = null): void
     {
-        // Ignore if tabId is provided but doesn't match this component's tab
-        if ($tabId && $tabId !== $this->tab_selected) {
+        // Only the tab that asked opens it (every open tab hears the event).
+        if ($tabId !== $this->tab_selected) {
             return;
         }
 
@@ -1239,6 +1388,9 @@ class PaymentComponent extends Component
         } else {
             $this->resetDelivery();
         }
+
+        $this->list_product = array_map('intval', array_keys($this->products));
+        $this->checkoutKey = $payment->checkout_key ?: (string) Str::uuid();
 
         // Auto-switch to the branch of this draft
         user_branch($payment->branch_id);

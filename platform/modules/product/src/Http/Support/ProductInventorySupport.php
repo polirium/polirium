@@ -84,6 +84,44 @@ final class ProductInventorySupport
     }
 
     /**
+     * Put returned goods back into the branch the sale was made from. Combo
+     * lines return their components, mirroring exportPaymentItems().
+     *
+     * @param  array<int, int>  $quantities  product id => returned quantity
+     */
+    public static function returnRefundItems(array $quantities, \Illuminate\Database\Eloquent\Model $refund, int $branchId): void
+    {
+        $requirements = [];
+
+        foreach ($quantities as $productId => $quantity) {
+            $product = Product::find($productId);
+
+            if (! $product) {
+                throw new RuntimeException('Hàng hóa trên phiếu trả không còn tồn tại. Vui lòng kiểm tra lại.');
+            }
+
+            self::mergeRequirements($requirements, self::requirements($product, (int) $quantity));
+        }
+
+        foreach ($requirements as $requirement) {
+            $component = $requirement['product'];
+            $quantity = $requirement['quantity'];
+
+            product_logs(
+                $component->id,
+                $refund->id,
+                $refund::class,
+                $quantity,
+                (int) $component->cost,
+                (int) $component->cost * $quantity,
+                true,
+                $branchId,
+                now(),
+            );
+        }
+    }
+
+    /**
      * Bring the stock exported for a payment in line with its current lines,
      * writing only the per-product difference. Editing an invoice without
      * changing quantities must not produce a reversal and re-export on the

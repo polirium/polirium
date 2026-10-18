@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Polirium\Core\Base\Http\Models\BaseModel;
 use Polirium\Core\Base\Http\Models\User;
+use Polirium\Core\Base\Services\DocumentNumber;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
 
 class Refund extends BaseModel
@@ -14,6 +15,7 @@ class Refund extends BaseModel
 
     protected $fillable = [
         'uuid',
+        'checkout_key',
         'product_payment_id',
         'code',
         'discount_value',           // Giá trị giảm giá
@@ -39,6 +41,16 @@ class Refund extends BaseModel
         'user_id' => 'integer',
         'user_created_id' => 'integer',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($refund) {
+            // Suggested codes (TRH/00004) are replaced by the next number from the counter.
+            if (empty($refund->code) || preg_match('/^TRH\/\d{5,}$/', $refund->code)) {
+                $refund->code = DocumentNumber::next('TRH', $refund->getTable());
+            }
+        });
+    }
 
     /**
      * Get the payment that owns the ProductRefund

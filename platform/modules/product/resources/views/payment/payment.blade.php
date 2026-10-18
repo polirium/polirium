@@ -1,5 +1,5 @@
 <div class="h-100 payment-layout">
-    <div class="pos-invoice">
+    <div class="pos-invoice" wire:loading.delay.attr="data-pos-syncing">
         {{-- Cart --}}
         <section class="pos-cart">
             <div class="pos-cart-items">
@@ -27,69 +27,53 @@
                                         @endif
                                         <input type="text"
                                             class="pos-line-note"
-                                            wire:model.live.debounce.500ms="products.{{ $item['product_id'] }}.note"
+                                            wire:model.blur="products.{{ $item['product_id'] }}.note"
                                             placeholder="{{ __('modules/product::product.note_placeholder') }}"
                                         >
                                     </div>
                                 </td>
                                 <td class="text-secondary text-nowrap">{{ $item['product']['unit'] }}</td>
                                 <td>
-                                    <div class="pos-qty">
-                                        <button type="button"
-                                            class="btn btn-icon btn-sm btn-ghost-secondary"
-                                            wire:click="$set('products.{{ $item['product_id'] }}.amount', {{ max(1, $item['amount'] - 1) }})"
-                                            @disabled($item['amount'] <= 1)
-                                        >
+                                    {{-- The number changes at once; clicks within 250 ms go to the server as one update.
+                                         Keyed by the saved amount so a change made on the server (a second scan) shows. --}}
+                                    <div class="pos-qty"
+                                        wire:key="qty-{{ $item['product_id'] }}-{{ $item['amount'] }}"
+                                        x-data="{
+                                            qty: {{ (int) $item['amount'] }},
+                                            timer: null,
+                                            set(value) {
+                                                this.qty = Math.max(1, parseInt(value) || 1);
+                                                clearTimeout(this.timer);
+                                                this.timer = setTimeout(() => $wire.setQuantity({{ $item['product_id'] }}, this.qty), 250);
+                                            },
+                                        }"
+                                    >
+                                        <button type="button" class="btn btn-icon btn-sm btn-ghost-secondary" @click="set(qty - 1)" :disabled="qty <= 1">
                                             {!! tabler_icon('minus') !!}
                                         </button>
                                         <input type="text"
                                             class="form-control form-control-sm text-center"
                                             inputmode="numeric"
-                                            wire:model.live.debounce.400ms="products.{{ $item['product_id'] }}.amount"
+                                            :value="qty"
+                                            @change="set($event.target.value)"
+                                            @keydown.enter.prevent="set($event.target.value)"
+                                            @focus="$event.target.select()"
                                         >
-                                        <button type="button"
-                                            class="btn btn-icon btn-sm btn-ghost-secondary"
-                                            wire:click="$set('products.{{ $item['product_id'] }}.amount', {{ $item['amount'] + 1 }})"
-                                        >
+                                        <button type="button" class="btn btn-icon btn-sm btn-ghost-secondary" @click="set(qty + 1)">
                                             {!! tabler_icon('plus') !!}
                                         </button>
                                     </div>
                                 </td>
-                                <td class="text-end position-relative"
-                                    x-data="{
-                                        open: false,
-                                        localDiscountType: '{{ $item['discount_type'] ?? 'number' }}',
-                                        localDiscountValue: {{ (int)($item['discount_value'] ?? 0) }},
-                                        originalPrice: {{ (int)$item['value'] }},
-                                        salePrice: 0,
-                                        init() {
-                                            this.updateSalePrice();
-                                            this.$watch('localDiscountType', () => this.updateSalePrice());
-                                            this.$watch('localDiscountValue', () => this.updateSalePrice());
-                                        },
-                                        updateSalePrice() {
-                                            if (this.localDiscountType === 'percent') {
-                                                this.salePrice = this.originalPrice - (this.originalPrice * this.localDiscountValue / 100);
-                                            } else {
-                                                this.salePrice = this.originalPrice - this.localDiscountValue;
-                                            }
-                                            if (this.salePrice < 0) this.salePrice = 0;
-                                        },
-                                        updateDiscountFromSalePrice(newSalePrice) {
-                                            if (newSalePrice > this.originalPrice) newSalePrice = this.originalPrice;
-                                            if (newSalePrice < 0) newSalePrice = 0;
-                                            this.localDiscountType = 'number';
-                                            this.localDiscountValue = this.originalPrice - newSalePrice;
-                                        },
-                                        applyDiscount() {
-                                            $wire.set('products.{{ $item['product_id'] }}.discount_type', this.localDiscountType);
-                                            $wire.set('products.{{ $item['product_id'] }}.discount_value', this.localDiscountValue);
-                                            this.open = false;
-                                        }
-                                    }"
-                                    @click.outside="open = false"
-                                >
-                                    <button type="button" class="pos-price" @click="open = !open" title="{{ trans('modules/product::product.selling_price') }}">
+                                <td class="text-end">
+                                    <button type="button" class="pos-price" title="{{ trans('modules/product::product.selling_price') }}"
+                                        @click="$dispatch('pos-edit-price', {
+                                            id: {{ $item['product_id'] }},
+                                            price: {{ (int) $item['value'] }},
+                                            type: '{{ ($item['discount_type'] ?? 'number') === 'percent' ? 'percent' : 'number' }}',
+                                            discount: {{ (int) ($item['discount_value'] ?? 0) }},
+                                            anchor: $el,
+                                        })"
+                                    >
                                         <span class="text-nowrap">{{ core_number_format((int)$item['value']) }}</span>
                                         @if ((int)$item['discount_value'] > 0)
                                             <span class="d-block text-danger small text-nowrap">
@@ -97,70 +81,6 @@
                                             </span>
                                         @endif
                                     </button>
-
-                                    <div class="dropdown-menu show p-3 text-start" x-show="open" x-cloak style="min-width: 280px; position: absolute; z-index: 1050; right: 0;">
-                                        <div class="mb-3">
-                                            <label class="form-label text-muted small mb-1">{{ __('modules/product::product.unit_price') }}</label>
-                                            <x-form::currency
-                                                wire:model.live.debounce.500ms="products.{{ $item['product_id'] }}.value"
-                                            />
-                                        </div>
-
-                                        <div class="mb-3 pb-3 border-bottom">
-                                            <label class="form-label text-muted small mb-1">{{ trans('modules/product::product.selling_price') }}</label>
-                                            <div class="input-group">
-                                                <input type="text"
-                                                    class="form-control text-end fw-bold text-primary"
-                                                    :value="salePrice.toLocaleString('vi-VN')"
-                                                    @input="
-                                                        let val = parseInt($event.target.value.replace(/[^0-9]/g, '')) || 0;
-                                                        updateDiscountFromSalePrice(val);
-                                                        $nextTick(() => { $event.target.value = salePrice.toLocaleString('vi-VN'); });
-                                                    "
-                                                    @keydown.enter.prevent="applyDiscount()"
-                                                >
-                                                <span class="input-group-text">VNĐ</span>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label class="form-label">{{ trans('modules/product::product.discount') }}</label>
-                                            <div class="btn-group w-100 mb-2">
-                                                <button type="button"
-                                                    @click.stop="localDiscountType = 'percent'; localDiscountValue = 0"
-                                                    :class="localDiscountType === 'percent' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary'">
-                                                    {{ tabler_icon('percentage') }} %
-                                                </button>
-                                                <button type="button"
-                                                    @click.stop="localDiscountType = 'number'; localDiscountValue = 0"
-                                                    :class="localDiscountType === 'number' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary'">
-                                                    {{ tabler_icon('currency-dong') }} VNĐ
-                                                </button>
-                                            </div>
-
-                                            <div class="input-group mb-2">
-                                                <input type="number"
-                                                    x-show="localDiscountType === 'percent'"
-                                                    class="form-control text-end"
-                                                    x-model.number="localDiscountValue"
-                                                    min="0" max="100" step="1"
-                                                    @click.stop
-                                                    @keydown.enter="applyDiscount()">
-                                                <input type="text"
-                                                    x-show="localDiscountType === 'number'"
-                                                    class="form-control text-end"
-                                                    :value="localDiscountValue.toLocaleString('vi-VN')"
-                                                    @click.stop
-                                                    @input="localDiscountValue = parseInt($event.target.value.replace(/[^0-9]/g, '')) || 0; $nextTick(() => { $event.target.value = localDiscountValue.toLocaleString('vi-VN'); });"
-                                                    @keydown.enter="applyDiscount()">
-                                                <span class="input-group-text" x-text="localDiscountType === 'percent' ? '%' : 'VNĐ'"></span>
-                                            </div>
-
-                                            <button type="button" class="btn btn-primary w-100" @click.stop="applyDiscount()">
-                                                {{ tabler_icon('check') }} {{ trans('modules/product::product.apply') }}
-                                            </button>
-                                        </div>
-                                    </div>
                                 </td>
                                 <td class="text-end fw-semibold text-nowrap">
                                     {{ core_number_format((int)$item['total']) }}
@@ -168,6 +88,7 @@
                                 <td>
                                     <button type="button"
                                         class="btn btn-icon btn-sm btn-ghost-danger"
+                                        @click="$el.closest('tr').classList.add('pos-row-removing')"
                                         wire:click="removeProduct({{ $item['product_id'] }})"
                                         title="{{ __('core/base::general.delete') }}"
                                     >
@@ -188,6 +109,91 @@
                 </table>
             </div>
 
+            {{-- One price/discount editor for every line (it used to be rendered on each row) --}}
+            <div class="dropdown-menu show p-3 pos-price-editor"
+                wire:ignore
+                x-data="{
+                    open: false,
+                    id: null,
+                    price: 0,
+                    type: 'number',
+                    discount: 0,
+                    top: 0,
+                    right: 0,
+                    get sale() {
+                        const off = this.type === 'percent' ? this.price * this.discount / 100 : this.discount;
+                        return Math.max(0, Math.round(this.price - off));
+                    },
+                    fmt(n) { return (Number(n) || 0).toLocaleString('vi-VN'); },
+                    num(v) { return parseInt(String(v).replace(/[^0-9]/g, '')) || 0; },
+                    setSale(value) {
+                        const sale = Math.min(this.price, this.num(value));
+                        this.type = 'number';
+                        this.discount = this.price - sale;
+                    },
+                    show(d) {
+                        Object.assign(this, { id: d.id, price: d.price, type: d.type, discount: d.discount });
+                        const host = $el.parentElement.getBoundingClientRect();
+                        const box = d.anchor.getBoundingClientRect();
+                        this.top = box.bottom - host.top + 4;
+                        this.right = host.right - box.right;
+                        this.open = true;
+                        $nextTick(() => $refs.sale.select());
+                    },
+                    apply() {
+                        if (this.type === 'percent') this.discount = Math.min(100, this.discount);
+                        $wire.updateLinePrice(this.id, this.price, this.type, this.discount);
+                        this.open = false;
+                    },
+                }"
+                x-show="open"
+                x-cloak
+                :style="`top: ${top}px; right: ${right}px`"
+                @pos-edit-price.window="show($event.detail)"
+                @click.outside="if (!$event.target.closest('.pos-price')) open = false"
+                @keydown.escape.window="open = false"
+            >
+                <div class="mb-3">
+                    <label class="form-label text-muted small mb-1">{{ __('modules/product::payment.line_unit_price') }}</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control text-end" :value="fmt(price)"
+                            @input="price = num($event.target.value); $nextTick(() => $event.target.value = fmt(price))"
+                            @keydown.enter.prevent="apply()">
+                        <span class="input-group-text">VNĐ</span>
+                    </div>
+                </div>
+
+                <div class="mb-3 pb-3 border-bottom">
+                    <label class="form-label text-muted small mb-1">{{ __('modules/product::payment.line_sale_price') }}</label>
+                    <div class="input-group">
+                        <input type="text" x-ref="sale" class="form-control text-end fw-bold text-primary" :value="fmt(sale)"
+                            @input="setSale($event.target.value); $nextTick(() => $event.target.value = fmt(sale))"
+                            @keydown.enter.prevent="apply()">
+                        <span class="input-group-text">VNĐ</span>
+                    </div>
+                </div>
+
+                <label class="form-label">{{ trans('modules/product::product.discount') }}</label>
+                <div class="btn-group w-100 mb-2">
+                    <button type="button" class="btn btn-sm" :class="type === 'percent' ? 'btn-primary' : 'btn-outline-secondary'" @click="type = 'percent'; discount = 0">
+                        {!! tabler_icon('percentage') !!} %
+                    </button>
+                    <button type="button" class="btn btn-sm" :class="type === 'number' ? 'btn-primary' : 'btn-outline-secondary'" @click="type = 'number'; discount = 0">
+                        {!! tabler_icon('currency-dong') !!} VNĐ
+                    </button>
+                </div>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control text-end" :value="type === 'percent' ? discount : fmt(discount)"
+                        @input="discount = num($event.target.value); $nextTick(() => $event.target.value = type === 'percent' ? discount : fmt(discount))"
+                        @keydown.enter.prevent="apply()">
+                    <span class="input-group-text" x-text="type === 'percent' ? '%' : 'VNĐ'"></span>
+                </div>
+
+                <button type="button" class="btn btn-primary w-100" @click="apply()">
+                    {!! tabler_icon('check') !!} {{ trans('modules/product::product.apply') }}
+                </button>
+            </div>
+
             {{-- Order note --}}
             <div class="pos-cart-footer">
                 {!! tabler_icon('note', ['class' => 'icon text-secondary flex-shrink-0']) !!}
@@ -206,7 +212,15 @@
 
         {{-- Checkout --}}
         <aside class="pos-checkout"
-        x-data
+        x-data="{
+            busy: false,
+            {{-- One save at a time: a second click or F9 while saving does nothing --}}
+            run(action) {
+                if (this.busy) return;
+                this.busy = true;
+                $wire[action]().finally(() => { this.busy = false; });
+            },
+        }"
         @update-payment-user-{{ $tab_selected }}.window="(() => {
              var el = document.getElementById('payment_user_id_{{ $tab_selected }}');
              if (el && el.tomselect) {
@@ -252,7 +266,7 @@
                             </div>
                             <button type="button" class="btn btn-icon btn-sm btn-ghost-secondary"
                                 title="{{ __('core/base::general.edit') }}"
-                                wire:click="$dispatch('show-modal-create-customer', { id: {{ $payment['customer_id'] }} })">
+                                wire:click="$dispatch('show-modal-create-customer', { id: {{ (int) $payment['customer_id'] }}, tab: '{{ $tab_selected }}' })">
                                 {!! tabler_icon('pencil') !!}
                             </button>
                             <button type="button" class="btn btn-icon btn-sm btn-ghost-secondary"
@@ -281,7 +295,7 @@
                                         @endforeach
                                     @elseif (isset_value($search['customer']) && $this->customers?->count() == 0)
                                         <x-form::autocomplete.item
-                                            wire:click="$dispatch('show-modal-create-customer', { id: 0, name: '{{ addslashes($search['customer']) }}' })"
+                                            wire:click="$dispatch('show-modal-create-customer', { id: 0, name: {{ \Illuminate\Support\Js::from((string) $search['customer']) }}, tab: '{{ $tab_selected }}' })"
                                             class="cursor-pointer"
                                         >
                                             <div class="d-flex justify-content-between align-items-center">
@@ -296,7 +310,7 @@
                             </div>
                             <button type="button"
                                 class="btn btn-icon btn-ghost-secondary"
-                                wire:click="$dispatch('show-modal-create-customer', { id: 0 })"
+                                wire:click="$dispatch('show-modal-create-customer', { id: 0, tab: '{{ $tab_selected }}' })"
                                 title="{{ trans('core/base::general.add_new') }}">
                                 {!! tabler_icon('user-plus') !!}
                             </button>
@@ -399,7 +413,7 @@
                     <div class="pos-actions-row">
                         <button type="button"
                             class="btn btn-outline-secondary"
-                            wire:click="saveDraft"
+                            @click="run('saveDraft')"
                             wire:loading.attr="disabled"
                             title="{{ __('modules/product::payment.save_draft') }}"
                             @disabled(count((array)$products) === 0)
@@ -409,14 +423,14 @@
                         </button>
                         <button type="button"
                             class="btn btn-ghost-secondary btn-icon"
-                            wire:click="$dispatch('show-draft-list')"
+                            wire:click="$dispatch('show-draft-list', { tab_id: '{{ $tab_selected }}' })"
                             title="{{ __('modules/product::payment.draft_list') }}"
                         >
                             {!! tabler_icon('files') !!}
                         </button>
                         <button type="button"
                             x-ref="pay"
-                            wire:click="save"
+                            @click="run('save')"
                             wire:loading.attr="disabled"
                             class="btn btn-primary btn-lg flex-fill pos-pay-btn"
                             @if(!(count((array)$products) > 0 && (($payment['value_payment'] ?? 0) >= (int)$total_payment || $isPendingMethod))) disabled @endif
@@ -437,10 +451,7 @@
 
     {{-- Modals --}}
     @livewire('modules/product::payment.modal.modal-payment-type', compact("tab_selected"), "modules/product::v2.modal.payment-type-{$tab_selected}")
-    @livewire('modules/product::payment.draft-payment-list')
-    @livewire('modules/product::payment.modal.modal-create-partner-delivery')
-    @livewire('modules/product::payment.modal.modal-create-sale-channel')
-    @livewire('modules/customer::index.modal.modal-create-customer')
+    {{-- Draft list and create-customer/channel/partner modals are shared, in tab.blade.php --}}
 
     @push('scripts')
         <script>

@@ -4,12 +4,14 @@ namespace Polirium\Modules\Product\Http\Livewire\Refund;
 
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Rule;
 use Livewire\Component;
 
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
 use Polirium\Modules\Product\Http\Model\Refund\Refund;
 use Polirium\Modules\Product\Http\Model\Refund\RefundProduct;
+use Polirium\Modules\Product\Http\Support\ProductInventorySupport;
 
 class RefundComponent extends Component
 {
@@ -21,6 +23,10 @@ class RefundComponent extends Component
     public float $total_after_product_discount = 0;
     public float $total_after_refund_discount = 0;
     public bool $isFinished = false;
+
+    /** One key per return attempt: a resubmit finds the saved return instead of adding another. */
+    #[Locked]
+    public string $checkoutKey = '';
 
     #[Rule([
         'products' => ['required', 'array'],
@@ -54,7 +60,7 @@ class RefundComponent extends Component
 
     public function mount(): void
     {
-        \Log::info('RefundComponent::mount()', ['payment_id' => $this->payment_id, 'tab_id' => $this->tab_id]);
+        $this->checkoutKey = (string) \Illuminate\Support\Str::uuid();
         $this->initRefundData();
         $this->loadPayment();
     }
@@ -95,6 +101,7 @@ class RefundComponent extends Component
     {
         $this->reset('products');
         $this->isFinished = false;
+        $this->checkoutKey = (string) \Illuminate\Support\Str::uuid();
         $this->initRefundData();
         $this->loadPayment();
     }
@@ -108,12 +115,17 @@ class RefundComponent extends Component
         $this->refundData['code'] = code_generate('TRH', Refund::max('id') + 1);
         $this->refundData['original_total_amount'] = $payment->value;
 
-        // Load products từ payment
+        // Load products từ payment, only what has not been returned yet
+        $remaining = $this->returnableQuantities($payment->id);
         $this->products = [];
         foreach ($payment->products as $item) {
+            if (($remaining[(int) $item->product_id] ?? 0) <= 0) {
+                continue;
+            }
+
             $this->products[$item->product_id] = [
                 'product_id' => $item->product_id,
-                'sold_amount' => (int)$item->amount,
+                'sold_amount' => $remaining[(int) $item->product_id],
                 'amount' => 1,
                 'price' => (float)$item->value,
                 'discount_value' => 0,
@@ -124,11 +136,6 @@ class RefundComponent extends Component
         }
 
         $this->updatedRefundData();
-        \Log::info('RefundComponent::loadPayment() completed', [
-            'payment_id' => $this->payment_id,
-            'refundData.product_payment_id' => $this->refundData['product_payment_id'],
-            'products_count' => count($this->products),
-        ]);
     }
 
     public function updatedProducts($value, $key): void
@@ -244,49 +251,72 @@ class RefundComponent extends Component
             return;
         }
 
-        \Log::info('RefundComponent::submitRefund() BEFORE VALIDATE', ['refundData' => $this->refundData]);
+        if ($this->isFinished) {
+            return;
+        }
 
         try {
             $this->validate();
-            \Log::info('RefundComponent::submitRefund() AFTER VALIDATE - passed');
 
-            DB::transaction(function () {
-                // Tạo Refund từ array data
-                $refund = Refund::create($this->refundData);
+            $alreadySaved = false;
 
-                foreach ($this->products as $item) {
-                    RefundProduct::create([
-                        'product_payment_id' => $refund->product_payment_id,
-                        'product_refund_id' => $refund->id,
-                        'product_id' => $item['product_id'],
-                        'amount' => $item['amount'],
-                        'price' => (float)$item['price'] * 100,
-                        'discount_value' => (float)$item['discount_value'] * 100,
-                        'discount_type' => $item['discount_type'],
-                        'value' => (float)$item['value'] * 100,
-                    ]);
+            try {
+                DB::transaction(function () use (&$alreadySaved) {
+                    // One return per key: a retry after a lost response finds the first one.
+                    if ($existing = Refund::where('checkout_key', $this->checkoutKey)->first()) {
+                        $this->refundData['id'] = $existing->id;
+                        $alreadySaved = true;
 
-                    // Update stock
-                    product_logs(
-                        $item['product_id'],
-                        $refund->id,
-                        Refund::class,
-                        $item['amount'],
-                        (float)$item['price'],
-                        (float)$item['value'],
-                        true
-                    );
+                        return;
+                    }
+
+                    // Lock the sale so two returns against it are checked one after the other.
+                    $payment = Payment::whereKey($this->payment_id)->lockForUpdate()->firstOrFail();
+                    $remaining = $this->returnableQuantities($payment->id);
+
+                    foreach ($this->products as $item) {
+                        $left = $remaining[(int) $item['product_id']] ?? 0;
+                        if ((int) $item['amount'] > $left) {
+                            $name = $item['product']['name'] ?? ('#' . $item['product_id']);
+
+                            throw new \RuntimeException("Hàng {$name} chỉ còn trả được {$left} (đã trả hết hoặc đã trả một phần trước đó).");
+                        }
+                    }
+
+                    $refund = Refund::create($this->refundData + ['checkout_key' => $this->checkoutKey]);
+                    $quantities = [];
+
+                    foreach ($this->products as $item) {
+                        RefundProduct::create([
+                            'product_payment_id' => $refund->product_payment_id,
+                            'product_refund_id' => $refund->id,
+                            'product_id' => $item['product_id'],
+                            'amount' => $item['amount'],
+                            'price' => (float)$item['price'] * 100,
+                            'discount_value' => (float)$item['discount_value'] * 100,
+                            'discount_type' => $item['discount_type'],
+                            'value' => (float)$item['value'] * 100,
+                        ]);
+
+                        $quantities[(int) $item['product_id']] = ($quantities[(int) $item['product_id']] ?? 0) + (int) $item['amount'];
+                    }
+
+                    // Goods go back to the branch that sold them, not the one selected now.
+                    ProductInventorySupport::returnRefundItems($quantities, $refund, (int) ($payment->branch_id ?: user_branch() ?: 1));
+
+                    $this->refundData['id'] = $refund->id;
+                });
+            } catch (\Illuminate\Database\QueryException $e) {
+                // A concurrent submit with the same key won the insert.
+                $existing = Refund::where('checkout_key', $this->checkoutKey)->first();
+                if (! $existing) {
+                    throw $e;
                 }
+                $this->refundData['id'] = $existing->id;
+                $alreadySaved = true;
+            }
 
-                // Cập nhật refundData với ID mới
-                $this->refundData['id'] = $refund->id;
-
-                \Log::info('RefundComponent::submitRefund() transaction committed', ['refund_id' => $refund->id]);
-            });
-
-            \Log::info('RefundComponent::submitRefund() finished successfully');
-            session()->flash('success', 'Hoàn trả hàng thành công');
-            $this->dispatch('success', 'Hoàn trả hàng thành công');
+            $this->dispatch('success', $alreadySaved ? 'Phiếu trả hàng này đã được lưu trước đó.' : 'Hoàn trả hàng thành công');
             $this->isFinished = true;
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -297,13 +327,48 @@ class RefundComponent extends Component
 
             throw $e;
         } catch (\Exception $e) {
-            \Log::error('RefundComponent::submitRefund() FAILED: ' . $e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-            ]);
-            session()->flash('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+            \Log::error('RefundComponent::submitRefund() FAILED: ' . $e->getMessage(), ['exception' => $e]);
             $this->dispatch('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Quantity of each product still returnable on a sale: sold minus every
+     * return already recorded against it.
+     *
+     * @return array<int, int>
+     */
+    protected function returnableQuantities(int $paymentId): array
+    {
+        $sold = DB::table('product_payment_products')
+            ->where('product_payment_id', $paymentId)
+            ->groupBy('product_id')
+            ->selectRaw('product_id, SUM(amount) as qty')
+            ->pluck('qty', 'product_id');
+
+        $returned = RefundProduct::query()
+            ->where('product_payment_id', $paymentId)
+            ->groupBy('product_id')
+            ->selectRaw('product_id, SUM(amount) as qty')
+            ->pluck('qty', 'product_id');
+
+        // Returns completed from the accounting screen count too.
+        $returnedElsewhere = DB::table('product_payment_refund_products as line')
+            ->join('product_payment_refunds as refund', 'refund.id', '=', 'line.product_payment_refund_id')
+            ->where('refund.product_payment_id', $paymentId)
+            ->where('refund.status', 'success')
+            ->whereNull('refund.deleted_at')
+            ->whereNull('line.deleted_at')
+            ->groupBy('line.product_id')
+            ->selectRaw('line.product_id, SUM(line.amount) as qty')
+            ->pluck('qty', 'product_id');
+
+        $remaining = [];
+        foreach ($sold as $productId => $qty) {
+            $remaining[(int) $productId] = max(0, (int) $qty - (int) ($returned[$productId] ?? 0) - (int) ($returnedElsewhere[$productId] ?? 0));
+        }
+
+        return $remaining;
     }
 
     public function closeTab()
@@ -313,12 +378,6 @@ class RefundComponent extends Component
 
     public function render()
     {
-        \Log::info('--- PRODUCT_MODULE_REFUND_RENDER ---', [
-            'isFinished' => $this->isFinished,
-            'products_count' => count($this->products),
-            'product_payment_id' => $this->refundData['product_payment_id'] ?? 'NULL',
-        ]);
-
         return view('modules/product::refund.view');
     }
 }

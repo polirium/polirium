@@ -2,12 +2,20 @@
 
 namespace Polirium\Modules\Product\Http\Livewire\Payment;
 
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
+use Polirium\Modules\Product\Http\Model\Payment\PosCart;
 use Polirium\Modules\Product\Http\Model\Product;
-use Str;
 
+/**
+ * Point of sale shell: product search and the open invoice/return tabs.
+ *
+ * Tabs are rows in product_pos_carts, so reopening the page brings back
+ * every cart the cashier left open in this branch.
+ */
 class TabPaymentComponent extends Component
 {
     public $tab = []; // [ ['id' => '...', 'type' => 'invoice'|'refund', 'label' => '...', 'data' => []] ]
@@ -18,12 +26,26 @@ class TabPaymentComponent extends Component
 
     public function mount()
     {
+        // Carts untouched for a week are abandoned.
+        PosCart::ownedBy()->where('updated_at', '<', now()->subDays(7))->delete();
+
+        foreach (PosCart::ownedBy()->where('branch_id', user_branch())->orderBy('position')->orderBy('id')->get() as $cart) {
+            $this->tab[] = [
+                'id' => $cart->tab_key,
+                'type' => $cart->type,
+                'label' => $cart->type === 'refund' ? ($cart->state['label'] ?? 'Trả hàng') : 'Hóa đơn',
+                'data' => $cart->type === 'refund' ? ['payment_id' => (int) ($cart->state['payment_id'] ?? 0)] : [],
+            ];
+        }
+
         $refundId = request()->query('refund_id');
 
         if ($refundId) {
             $this->addRefundTab($refundId);
-        } else {
+        } elseif ($this->tab === []) {
             $this->addNewPayment();
+        } else {
+            $this->tab_selected = $this->tab[0]['id'];
         }
     }
 
@@ -40,8 +62,11 @@ class TabPaymentComponent extends Component
                 ->orWhere('code', 'like', $term)
                 ;
             })
+            // Same order as PaymentComponent::addProduct(), so Enter adds the first row shown.
             ->orderByRaw('code = ? desc', [trim($this->search)])
-            ->limit(50)
+            ->orderBy('name')
+            ->orderBy('id')
+            ->limit(20)
             ->get();
         }
 
@@ -63,9 +88,11 @@ class TabPaymentComponent extends Component
             'data' => [],
         ];
         $this->tab_selected = $id;
+
+        $this->storeTab($id, 'invoice');
     }
 
-    #[\Livewire\Attributes\On('add-refund-tab')]
+    #[On('add-refund-tab')]
     public function addRefundTab($invoiceId)
     {
         $paymentId = $invoiceId;
@@ -86,16 +113,19 @@ class TabPaymentComponent extends Component
         }
 
         $id = Str::random(10);
+        $label = 'Trả hàng ' . $payment->code;
         $this->tab[] = [
             'id' => $id,
             'type' => 'refund',
-            'label' => 'Trả hàng ' . $payment->code,
+            'label' => $label,
             'data' => ['payment_id' => $paymentId],
         ];
         $this->tab_selected = $id;
+
+        $this->storeTab($id, 'refund', ['payment_id' => (int) $paymentId, 'label' => $label]);
     }
 
-    #[\Livewire\Attributes\On('remove-payment-tab')]
+    #[On('remove-payment-tab')]
     public function removePayment($tabId)
     {
         // Không cho xóa nếu chỉ còn 1 tab
@@ -103,9 +133,7 @@ class TabPaymentComponent extends Component
             return;
         }
 
-        // Clean up session for this tab
-        $sessionKey = 'payment_v2_tab_' . $tabId;
-        session()->forget($sessionKey);
+        PosCart::ownedBy()->where('tab_key', $tabId)->delete();
 
         // Tìm key theo id
         $key = -1;
@@ -128,72 +156,28 @@ class TabPaymentComponent extends Component
         }
     }
 
-    public function selectProduct($id)
-    {
-        // Check current tab type
-        $currentTabParams = collect($this->tab)->firstWhere('id', $this->tab_selected);
-
-        if (($currentTabParams['type'] ?? 'invoice') !== 'invoice') {
-            $this->dispatch('error', 'Vui lòng chọn tab Hóa đơn để thêm sản phẩm!');
-
-            return;
-        }
-
-        // 'amount' is an accessor, not a column, so we remove it from select
-        $product = Product::select(['id', 'name', 'type'])
-        ->with('branches:id')
-        ->find($id);
-
-        if (! $product) {
-            return;
-        }
-
-        // Nếu là dịch vụ thì không cần kiểm tra tồn kho
-        // $product->amount is an accessor, so it will be calculated automatically when accessed
-        if ($product->type !== 'service' && $product->amount <= 0) {
-            $this->dispatch('error', "Sản phẩm '{$product->name}' đã hết hàng trong kho!");
-
-            return;
-        }
-
-        $this->dispatch('payment-product-selected', product_id: $id, tab_id: $this->tab_selected);
-
-        // Ready for the next scan or search.
-        $this->search = '';
-        unset($this->products);
-        $this->dispatch('pos-search-reset');
-    }
-
     /**
-     * Enter in the search box (or a barcode scanner): add the product whose
-     * code matches exactly, otherwise the only/first result.
+     * The search box only adds to invoice tabs.
      */
-    public function selectFirstMatch($term = null)
+    public function wrongTab(): void
     {
-        // The typed value is passed in: a scanner's Enter can beat the debounced sync.
-        if ($term !== null) {
-            $this->search = (string) $term;
-            unset($this->products);
-        }
-        $term = trim((string) $this->search);
-        if ($term === '') {
-            return;
-        }
-
-        $product = Product::select(['id'])->where('code', $term)->first()
-            ?? $this->products?->first();
-
-        if (! $product) {
-            $this->dispatch('error', trans('modules/product::product.no_products_found'));
-
-            return;
-        }
-
-        $this->selectProduct($product->id);
+        $this->dispatch('error', 'Vui lòng chọn tab Hóa đơn để thêm sản phẩm!');
     }
 
     public function tabSelected($key)
     {
         $this->tab_selected = $key;
+    }
+
+    private function storeTab(string $tabKey, string $type, ?array $state = null): void
+    {
+        PosCart::create([
+            'user_id' => (int) auth()->id(),
+            'branch_id' => user_branch(),
+            'tab_key' => $tabKey,
+            'type' => $type,
+            'position' => (int) PosCart::ownedBy()->max('position') + 1,
+            'state' => $state,
+        ]);
     }
 }

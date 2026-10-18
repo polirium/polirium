@@ -4,10 +4,10 @@ namespace Polirium\Modules\Product\Http\Model\Payment;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Str;
 use Polirium\Core\Base\Http\Models\BaseModel;
 use Polirium\Core\Base\Http\Models\Branch\Branch;
 use Polirium\Core\Base\Http\Models\User;
+use Polirium\Core\Base\Services\DocumentNumber;
 use Polirium\Modules\Customer\Http\Model\Customer;
 
 class Payment extends BaseModel
@@ -16,6 +16,7 @@ class Payment extends BaseModel
 
     protected $fillable = [
         'uuid',
+        'checkout_key',
         'branch_id',
         'customer_id',
         'code',
@@ -44,24 +45,10 @@ class Payment extends BaseModel
     protected static function booted()
     {
         static::creating(function ($payment) {
-            // Check if code is empty or matches the default auto-generated format (e.g. BH/00021)
-            // If so, replace it with a temporary UUID to prevent race conditions during insert
+            // An empty code or the suggested one shown on screen (BH/00021) gets
+            // the next number from the counter, so concurrent sales never share it.
             if (empty($payment->code) || preg_match('/^BH\/\d{5,}$/', $payment->code)) {
-                $payment->code = 'TEMP-BH-' . (string) Str::uuid();
-            }
-        });
-
-        static::created(function ($payment) {
-            // After the DB assigns the auto-increment ID, we formulate the final sequential code
-            if (str_starts_with($payment->code, 'TEMP-BH-')) {
-                // Use max existing BH/ code number to ensure sequential numbering without gaps
-                $maxCode = static::where('code', 'like', 'BH/%')
-                    ->where('id', '!=', $payment->id)
-                    ->selectRaw('MAX(CAST(SUBSTRING(code, 4) AS UNSIGNED)) as max_num')
-                    ->value('max_num') ?? 0;
-
-                $payment->code = code_generate('BH', $maxCode);
-                $payment->saveQuietly();
+                $payment->code = DocumentNumber::next('BH', $payment->getTable());
             }
         });
     }

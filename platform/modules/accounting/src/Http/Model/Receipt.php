@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Polirium\Core\Base\Http\Models\BaseModel;
 use Polirium\Core\Base\Http\Models\Branch\Branch;
 use Polirium\Core\Base\Http\Models\User;
+use Polirium\Core\Base\Services\DocumentNumber;
 
 class Receipt extends BaseModel
 {
@@ -25,6 +26,17 @@ class Receipt extends BaseModel
         'business_result',
         'note',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($receipt) {
+            // Suggested codes (PT/00012) are replaced by the next number from the
+            // counter: computing max(id) + 1 gave two tills the same code.
+            if (empty($receipt->code) || preg_match('/^PT\/\d{5,}$/', $receipt->code)) {
+                $receipt->code = DocumentNumber::next('PT', $receipt->getTable());
+            }
+        });
+    }
 
     /**
      * Get the branch that owns the Receipt

@@ -41,4 +41,6 @@ return [
     'more' => 'More',
     'checkout' => 'Checkout',
     'checkout_hint' => 'F9',
+    'line_unit_price' => 'Unit price',
+    'line_sale_price' => 'Price after discount',
 ];
