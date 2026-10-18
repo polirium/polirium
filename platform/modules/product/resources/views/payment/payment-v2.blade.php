@@ -282,7 +282,7 @@
                 <h3 class="card-title mb-0">{{ __('modules/product::product.pay_now') }}</h3>
                 <button type="button"
                     class="btn btn-sm btn-ghost-secondary"
-                    wire:click="$dispatch('show-draft-list', { tab_id: '{{ $tab_selected }}' })">
+                    wire:click="$dispatch('show-modal-draft-list', { tab_id: '{{ $tab_selected }}' })">
                     {!! tabler_icon('files') !!}
                     {{ __('modules/product::payment.draft_list') }}
                 </button>

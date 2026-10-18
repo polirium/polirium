@@ -156,8 +156,8 @@
         Livewire.on('open-modal-quick-update', () => {
             const el = document.getElementById('modal-quick-update');
             if (el) {
-                const myModal = new(window.bootstrap || bootstrap).Modal(el);
-                myModal.show();
+                // Reuse the instance app.js may already have opened on click.
+                (window.bootstrap || bootstrap).Modal.getOrCreateInstance(el).show();
             } else {
                 console.error('Modal element not found');
             }

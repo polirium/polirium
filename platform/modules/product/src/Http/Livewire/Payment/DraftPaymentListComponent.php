@@ -10,26 +10,32 @@ class DraftPaymentListComponent extends Component
 {
     use WithPagination;
 
+    protected $paginationTheme = 'bootstrap';
+
     public function getListeners(): array
     {
         return [
             'refresh-draft-list' => '$refresh',
+            'show-modal-draft-list' => 'showModal',
             'show-draft-list' => 'showModal',
         ];
     }
 
-    public bool $showModal = false;
+    /** Drafts are queried only once the list has been opened, not on every POS render. */
+    public bool $loaded = false;
     public ?string $tab_id = null;
 
     public function showModal(?string $tab_id = null): void
     {
         $this->tab_id = $tab_id;
-        $this->showModal = true;
+        $this->loaded = true;
+        $this->resetPage('draftPage');
+        $this->dispatch('modal', 'modal-draft-list');
     }
 
     public function closeModal(): void
     {
-        $this->showModal = false;
+        $this->dispatch('modal', 'modal-draft-list', 'hide');
     }
 
     /**
@@ -41,7 +47,7 @@ class DraftPaymentListComponent extends Component
     public function getDraftsProperty(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return Payment::query()
-            ->with(['customer', 'products', 'user', 'saleChannel', 'branch', 'author'])
+            ->with(['customer:id,name,phone', 'branch:id,name', 'author:id,name'])
             ->where('status', 'draft')
             ->latest()
             ->paginate(10, ['*'], 'draftPage');
@@ -111,7 +117,7 @@ class DraftPaymentListComponent extends Component
     public function render(): \Illuminate\View\View
     {
         return view('modules/product::payment.draft-list', [
-            'drafts' => $this->drafts,
+            'drafts' => $this->loaded ? $this->drafts : null,
         ]);
     }
 }

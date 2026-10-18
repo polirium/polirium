@@ -423,7 +423,7 @@
                         </button>
                         <button type="button"
                             class="btn btn-ghost-secondary btn-icon"
-                            wire:click="$dispatch('show-draft-list', { tab_id: '{{ $tab_selected }}' })"
+                            wire:click="$dispatch('show-modal-draft-list', { tab_id: '{{ $tab_selected }}' })"
                             title="{{ __('modules/product::payment.draft_list') }}"
                         >
                             {!! tabler_icon('files') !!}
