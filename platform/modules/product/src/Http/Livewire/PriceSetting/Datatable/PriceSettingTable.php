@@ -10,41 +10,27 @@ use Polirium\Datatable\Facades\PowerGrid;
 use Polirium\Datatable\PowerGridFields;
 use Polirium\Modules\Product\Http\Model\Product;
 
+/**
+ * Price list: selling prices edited in place, one row per product.
+ */
 final class PriceSettingTable extends BaseTable
 {
     public string $tableName = 'table-products-price-setting';
 
-    public $tab = 1;
-
-    protected function getListeners(): array
-    {
-        return array_merge(
-            parent::getListeners(),
-            [
-                'refresh-datatable-products-price-setting' => '$refresh',
-            ]
-        );
-    }
-
     public function setUp(): array
     {
-        $this->showCheckBox();
-
         return [
             PowerGrid::exportable('export')->striped()->type(Exportable::TYPE_XLS, Exportable::TYPE_CSV),
             PowerGrid::header()->showSearchInput()->showToggleColumns(),
-            PowerGrid::footer()->showPerPage()->showRecordCount(),
-            PowerGrid::detail()->showCollapseIcon()->collapseOthers()->view('modules/product::index.datatable.detail'),
+            PowerGrid::footer()->showPerPage(25)->showRecordCount(),
         ];
     }
 
     public function datasource(): Builder
     {
         return Product::query()->with(['category', 'trademark', 'shelve'])
-        ->when(user_branch(), function ($q) {
-            $q->productBranch();
-        })
-        ->orderByDesc('id');
+            ->when(user_branch(), fn ($query) => $query->productBranch())
+            ->orderByDesc('id');
     }
 
     public function relationSearch(): array
@@ -54,13 +40,14 @@ final class PriceSettingTable extends BaseTable
 
     public function fields(): PowerGridFields
     {
+        $canEdit = (bool) auth()->user()?->can('products.price-setting');
+
         return PowerGrid::fields()
-        ->add('cost_formatted', function (Product $product) {
-            return auth()->user()?->can('products.view-cost') ? core_number_format($product->cost) : '***';
-        })
-        ->add('price_formatted', function (Product $product) {
-            return core_number_format($product->price);
-        });
+            ->add('price_input', fn (Product $product) => $canEdit
+                ? view('modules/product::price-setting.price-input', ['product' => $product])->render()
+                : core_number_format($product->price))
+            ->add('price_formatted', fn (Product $product) => core_number_format($product->price))
+            ->add('cost_formatted', fn (Product $product) => auth()->user()?->can('products.view-cost') ? core_number_format($product->cost) : '***');
     }
 
     public function columns(): array
@@ -68,55 +55,43 @@ final class PriceSettingTable extends BaseTable
         return [
             Column::make(__('modules/product::product.product_code_column'), 'code')->sortable()->searchable(),
             Column::make(__('modules/product::product.product_name_column'), 'name')->sortable()->searchable(),
-            Column::add()->title(__('modules/product::product.selling_price_column'))->field('price_formatted', 'price')->sortable()->searchable(),
-            ...(auth()->user()?->can('products.view-cost') ? [Column::add()->title(__('modules/product::product.cost_price_column'))->field('cost_formatted', 'cost')->sortable()->searchable()] : []),
-            Column::make(__('modules/product::product.stock'), 'id')->hidden(true, false)->sortable()->searchable(),
-            Column::make(__('modules/product::product.product_group_column'), 'category.name')->hidden(true, false)->sortable()->searchable(),
-            Column::make(__('modules/product::product.trademark_column'), 'trademark.name')->hidden(true, false)->sortable()->searchable(),
-            Column::make(__('modules/product::product.location_column'), 'shelve.name')->hidden(true, false)->sortable()->searchable(),
-            Column::make(__('modules/product::product.product_type_column'), 'type_name')->hidden(true, false)->sortable()->searchable(),
-            Column::make(__('modules/product::product.min_stock_level'), 'min_quantity')->hidden(true, false)->sortable()->searchable(),
-            Column::make(__('modules/product::product.max_stock_level'), 'max_quantity')->hidden(true, false)->sortable()->searchable(),
-            Column::action(trans('core/base::general.action')),
+            Column::make(__('modules/product::product.product_group_column'), 'category.name')->hidden(true, false),
+            Column::make(__('modules/product::product.trademark_column'), 'trademark.name')->hidden(true, false),
+            ...(auth()->user()?->can('products.view-cost') ? [Column::add()->title(__('modules/product::product.cost_price_column'))->field('cost_formatted', 'cost')->sortable()->bodyAttribute('text-end')->headerAttribute('text-end')] : []),
+            Column::add()->title(__('modules/product::product.selling_price_column'))->field('price_input', 'price')->sortable()->visibleInExport(false)->bodyAttribute('pg-price-cell')->headerAttribute('text-end'),
+            Column::add()->title(__('modules/product::product.selling_price_column'))->field('price_formatted', 'price')->hidden()->visibleInExport(true),
         ];
     }
 
-    public function filters(): array
+    /**
+     * Save a selling price typed in the list. Returns the formatted price, or
+     * null when the value is not a valid amount.
+     */
+    public function updatePrice(int $id, mixed $value): ?string
     {
-        return [
-            // Có thể thêm filter chi nhánh ở đây nếu cần
-        ];
-    }
-
-    public function actions(Product $row): array
-    {
-        return [
-            // Có thể thêm nút chỉnh giá ở đây
-        ];
-    }
-
-    public function copy(
-        $id
-    ): void {
         $this->authorize('products.price-setting');
-        // Copies the definition only (fresh uuid/code, combo components), never stock or history.
-        Product::findOrFail($id)->duplicate();
 
-        $this->dispatch('refresh-datatable-products-price-setting');
-    }
+        $digits = preg_replace('/\D/', '', (string) $value);
 
-    public function delete(
-        $id
-    ): void {
-        $this->authorize('products.price-setting');
-        try {
-            Product::destroy($id);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            $this->dispatch('error', $e->validator->errors()->first());
+        if ($digits === '' || strlen($digits) > 15) {
+            $this->dispatch('error', __('modules/product::product.price_invalid'));
 
-            return;
+            return null;
         }
 
-        $this->dispatch('refresh-datatable-products-price-setting');
+        $product = Product::query()
+            ->when(user_branch(), fn ($query) => $query->productBranch())
+            ->find($id);
+
+        if (! $product) {
+            return null;
+        }
+
+        $product->price = (int) $digits;
+        $product->save();
+
+        $this->dispatch('success', __('modules/product::product.price_saved', ['code' => $product->code]));
+
+        return core_number_format($product->price);
     }
 }

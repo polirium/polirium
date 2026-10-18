@@ -139,4 +139,8 @@ return [
     'no' => 'No',
     'delete' => 'Delete',
     'stock_card_latest' => 'Showing the latest :shown of :total stock card lines.',
+    'price_list_title' => 'Selling prices',
+    'price_list_hint' => 'Edit selling prices in the table: type a price, then press Enter or leave the field to save.',
+    'price_invalid' => 'Invalid selling price.',
+    'price_saved' => 'Saved the selling price of :code.',
 ];

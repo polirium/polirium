@@ -338,4 +338,8 @@ return [
 
     'out_of_stock' => 'Sản phẩm không đủ tồn kho để xuất. Vui lòng kiểm tra lại số lượng.',
     'stock_card_latest' => 'Đang hiển thị :shown dòng gần nhất trên tổng :total dòng thẻ kho.',
+    'price_list_title' => 'Thiết lập giá bán',
+    'price_list_hint' => 'Sửa giá bán trực tiếp trong bảng: nhập giá rồi nhấn Enter hoặc bấm ra ngoài để lưu.',
+    'price_invalid' => 'Giá bán không hợp lệ.',
+    'price_saved' => 'Đã lưu giá bán :code.',
 ];
