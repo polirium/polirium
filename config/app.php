@@ -20,6 +20,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Demo installation
+    |--------------------------------------------------------------------------
+    |
+    | Only an installation marked as a demo lets `php artisan demo:data --fresh`
+    | wipe its business data and generate sample data.
+    |
+    */
+
+    'demo' => (bool) env('POLIRIUM_DEMO', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
