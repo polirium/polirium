@@ -132,7 +132,6 @@ final class PaymentRefundTable extends BaseTable
 
             Column::make('Ghi chú', 'note'),
 
-            Column::action(trans('core/base::general.action')),
         ];
     }
 

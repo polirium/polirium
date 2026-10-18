@@ -121,7 +121,6 @@ final class AccountingTable extends BaseTable
             Column::make(trans('modules/accounting::accounting.type.name'), 'type_name')->sortable()->searchable(),
             Column::make(trans('modules/accounting::accounting.pay_person.name'), 'finance_name')->sortable()->searchable(),
             Column::make(trans('modules/accounting::accounting.value'), 'value_format')->sortable()->searchable(),
-            Column::action(trans('core/base::general.action')),
         ];
     }
 

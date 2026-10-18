@@ -132,7 +132,6 @@ final class InvoiceTable extends BaseTable
             Column::make(trans('modules/accounting::accounting.payment_amount'), 'pay_format')->searchable()->sortable(),
             Column::make(trans('modules/accounting::accounting.customer_paid'), 'value_format')->searchable()->sortable(),
             Column::make(trans('modules/accounting::accounting.status'), 'status_name')->searchable()->sortable(),
-            Column::action(trans('core/base::general.action')),
         ];
     }
 

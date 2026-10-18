@@ -124,7 +124,6 @@ final class StockTable extends BaseTable
             Column::make(trans('core/base::general.note'), 'note')
                 ->sortable(),
 
-            Column::action(trans('core/base::general.action')),
         ];
     }
 

@@ -146,7 +146,6 @@ final class PurchaseTable extends BaseTable
                 Column::make(trans('modules/vendor::purchase.need_pay'), 'need_pay_formatted')->sortable(),
             ] : []),
             Column::make(trans('core/base::general.status'), 'status')->sortable()->searchable(),
-            Column::action(trans('core/base::general.action')),
         ];
     }
 
