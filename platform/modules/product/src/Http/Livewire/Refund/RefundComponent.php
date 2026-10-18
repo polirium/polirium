@@ -147,6 +147,10 @@ class RefundComponent extends Component
         [$id, $col] = explode('.', $key);
         $id = (int)$id;
 
+        if (in_array($col, ['price', 'discount_value', 'value'], true)) {
+            $this->products[$id][$col] = $this->toNumber($this->products[$id][$col] ?? 0);
+        }
+
         if ($col === 'amount') {
             if ((int)$value <= 0) {
                 $this->products[$id]['amount'] = 1;
@@ -187,13 +191,17 @@ class RefundComponent extends Component
 
     public function updatedRefundData(): void
     {
+        foreach (['discount_value', 'refund_fee'] as $field) {
+            $this->refundData[$field] = $this->toNumber($this->refundData[$field] ?? 0);
+        }
+
         // Tổng sau giảm SP
         $totalAfterProductDiscount = array_sum(array_column($this->products, 'value'));
         $this->total_after_product_discount = $totalAfterProductDiscount;
 
         // Cập nhật số lượng và tổng sau giảm SP
         $this->refundData['amount'] = collect($this->products)->sum('amount');
-        $this->refundData['total_payable_amount'] = (int)($totalAfterProductDiscount * 100);
+        $this->refundData['total_payable_amount'] = (int) round($totalAfterProductDiscount);
 
         // Tính tổng phải trả (sau giảm giá refund)
         $discountValue = (float)($this->refundData['discount_value'] ?? 0);
@@ -211,9 +219,19 @@ class RefundComponent extends Component
             }
         }
 
-        // Cập nhật tổng tiền trả cuối cùng (convert to cents)
+        // Cập nhật tổng tiền trả cuối cùng (VNĐ)
         $finalTotal = $totalAfterRefundDiscount + $fee;
-        $this->refundData['value'] = (int)($finalTotal * 100);
+        $this->refundData['value'] = (int) round($finalTotal);
+    }
+
+    /** Currency inputs send the masked text ("20,000"); read it as a number. */
+    protected function toNumber(mixed $value): float
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        return (float) preg_replace('/[^0-9.\-]/', '', (string) $value);
     }
 
     public function removeProduct($id): void
@@ -265,6 +283,7 @@ class RefundComponent extends Component
                     // One return per key: a retry after a lost response finds the first one.
                     if ($existing = Refund::where('checkout_key', $this->checkoutKey)->first()) {
                         $this->refundData['id'] = $existing->id;
+                        $this->refundData['code'] = $existing->code;
                         $alreadySaved = true;
 
                         return;
@@ -283,7 +302,7 @@ class RefundComponent extends Component
                         }
                     }
 
-                    $refund = Refund::create($this->refundData + ['checkout_key' => $this->checkoutKey]);
+                    $refund = Refund::create(['checkout_key' => $this->checkoutKey, 'money_unit' => Refund::MONEY_UNIT_VND] + $this->refundData);
                     $quantities = [];
 
                     foreach ($this->products as $item) {
@@ -292,10 +311,10 @@ class RefundComponent extends Component
                             'product_refund_id' => $refund->id,
                             'product_id' => $item['product_id'],
                             'amount' => $item['amount'],
-                            'price' => (float)$item['price'] * 100,
-                            'discount_value' => (float)$item['discount_value'] * 100,
+                            'price' => (int) round((float) $item['price']),
+                            'discount_value' => (int) round((float) $item['discount_value']),
                             'discount_type' => $item['discount_type'],
-                            'value' => (float)$item['value'] * 100,
+                            'value' => (int) round((float) $item['value']),
                         ]);
 
                         $quantities[(int) $item['product_id']] = ($quantities[(int) $item['product_id']] ?? 0) + (int) $item['amount'];
@@ -305,6 +324,7 @@ class RefundComponent extends Component
                     ProductInventorySupport::returnRefundItems($quantities, $refund, (int) ($payment->branch_id ?: user_branch() ?: 1));
 
                     $this->refundData['id'] = $refund->id;
+                    $this->refundData['code'] = $refund->code;
                 });
             } catch (\Illuminate\Database\QueryException $e) {
                 // A concurrent submit with the same key won the insert.
@@ -313,6 +333,7 @@ class RefundComponent extends Component
                     throw $e;
                 }
                 $this->refundData['id'] = $existing->id;
+                $this->refundData['code'] = $existing->code;
                 $alreadySaved = true;
             }
 

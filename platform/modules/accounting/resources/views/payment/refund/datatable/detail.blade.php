@@ -1,7 +1,8 @@
 @php
+    $row = \Polirium\Modules\Product\Http\Model\Refund\Refund::with(['payment.customer', 'products.product', 'creator', 'user'])->find($row->id);
     $totalProducts = $row->products->count() ?? 0;
-    $refundAmount = ($row->value ?? 0) / 100;
-    $originalAmount = ($row->original_total_amount ?? 0) / 100;
+    $refundAmount = $row->final_total;
+    $originalAmount = $row->original_total;
 @endphp
 
 <div>
@@ -93,7 +94,7 @@
                             </div>
                             <div class="col-6">
                                 <div class="text-muted small">Sau giảm</div>
-                                <div class="h6 mb-0">{{ core_number_format(($row->total_payable_amount ?? 0) / 100) }} đ</div>
+                                <div class="h6 mb-0">{{ core_number_format($row->total_after_product_discount) }} đ</div>
                             </div>
                         </div>
                     </div>
@@ -127,7 +128,7 @@
                                 <div class="d-flex justify-content-between small mb-1">
                                     <span class="text-muted">Giảm giá:</span>
                                     <span>
-                                        {{ core_number_format(($row->discount_value ?? 0) / 100) }}
+                                        {{ core_number_format($row->refund_discount) }}
                                         {{ ($row->discount_type ?? 'number') === 'percent' ? '%' : 'đ' }}
                                     </span>
                                 </div>
@@ -136,7 +137,7 @@
                                 <div class="d-flex justify-content-between small mb-1">
                                     <span class="text-muted">Phí trả hàng:</span>
                                     <span>
-                                        {{ core_number_format(($row->refund_fee ?? 0) / 100) }}
+                                        {{ core_number_format($row->refund_fee_amount) }}
                                         {{ ($row->refund_fee_type ?? 'number') === 'percent' ? '%' : 'đ' }}
                                     </span>
                                 </div>
@@ -176,16 +177,16 @@
                         <td><span class="badge bg-muted-lt">{{ $item->product?->code ?? 'N/A' }}</span></td>
                         <td><strong>{{ $item->product?->name ?? 'N/A' }}</strong></td>
                         <td class="text-end">{{ core_number_format($item->amount) }}</td>
-                        <td class="text-end">{{ core_number_format(($item->price ?? 0) / 100) }}</td>
+                        <td class="text-end">{{ core_number_format($item->unit_price) }}</td>
                         <td class="text-end">
                             @if(($item->discount_value ?? 0) > 0)
-                                <span class="text-danger">-{{ core_number_format(($item->discount_value ?? 0) / 100) }}</span>
+                                <span class="text-danger">-{{ core_number_format($item->line_discount) }}</span>
                                 {{ ($item->discount_type ?? 'number') === 'percent' ? '%' : 'đ' }}
                             @else
                                 -
                             @endif
                         </td>
-                        <td class="text-end"><strong>{{ core_number_format(($item->value ?? 0) / 100) }}</strong></td>
+                        <td class="text-end"><strong>{{ core_number_format($item->line_total) }}</strong></td>
                     </tr>
                 @empty
                     <tr>

@@ -44,6 +44,39 @@ class RefundProduct extends BaseModel
     }
 
     /**
+     * Lines of returns saved before money_unit existed hold price,
+     * discount_value and value multiplied by 100.
+     */
+    protected function moneyScale(): int
+    {
+        return $this->productRefund?->legacyMoneyScale() ?? 1;
+    }
+
+    /**
+     * Đơn giá (VNĐ)
+     */
+    public function getUnitPriceAttribute(): float
+    {
+        return ($this->price ?? 0) / $this->moneyScale();
+    }
+
+    /**
+     * Giảm giá dòng (VNĐ hoặc %)
+     */
+    public function getLineDiscountAttribute(): float
+    {
+        return ($this->discount_value ?? 0) / $this->moneyScale();
+    }
+
+    /**
+     * Thành tiền (VNĐ)
+     */
+    public function getLineTotalAttribute(): float
+    {
+        return ($this->value ?? 0) / $this->moneyScale();
+    }
+
+    /**
      * Get the product that owns the ProductRefundProduct
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo

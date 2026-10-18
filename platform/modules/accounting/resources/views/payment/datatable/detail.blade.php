@@ -372,7 +372,7 @@
                         <td><a href="#" class="text-primary">{{ $refund->code }}</a></td>
                         <td>{{ $refund->created_at->format('d/m/Y H:i') }}</td>
                         <td>{{ $refund->user->name ?? '-' }}</td>
-                        <td class="text-end">{{ core_number_format($refund->value / 100) }}</td>
+                        <td class="text-end">{{ core_number_format($refund->final_total) }}</td>
                         <td><span class="badge bg-success">{{ trans('modules/accounting::accounting.paid_status') }}</span></td>
                     </tr>
                     @empty

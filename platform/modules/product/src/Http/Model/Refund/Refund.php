@@ -26,6 +26,7 @@ class Refund extends BaseModel
         'original_total_amount',    // Tổng tiền gốc hàng mua
         'total_payable_amount',     // Tổng tiền phải trả
         'value',                    // Tổng tiền trả
+        'money_unit',               // 'vnd'; NULL = phiếu cũ (một số cột nhân 100)
         'user_id',                  // Người thực hiện refund
         'user_created_id',          // Người tạo refund
         'note',                     // Ghi chú
@@ -69,7 +70,7 @@ class Refund extends BaseModel
      */
     public function products(): HasMany
     {
-        return $this->hasMany(RefundProduct::class, 'product_refund_id');
+        return $this->hasMany(RefundProduct::class, 'product_refund_id')->chaperone('productRefund');
     }
 
     /**
@@ -92,6 +93,19 @@ class Refund extends BaseModel
         return $this->belongsTo(User::class, 'user_id')->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
+    public const MONEY_UNIT_VND = 'vnd';
+
+    /**
+     * Divisor for the amounts this return stored as x100: returns saved
+     * before money_unit existed kept total_payable_amount, value and the
+     * line price / discount_value / value multiplied by 100.
+     * original_total_amount, discount_value and refund_fee were always VND.
+     */
+    public function legacyMoneyScale(): int
+    {
+        return $this->money_unit === self::MONEY_UNIT_VND ? 1 : 100;
+    }
+
     /**
      * Tổng tiền gốc từ payment (VNĐ)
      *
@@ -99,7 +113,7 @@ class Refund extends BaseModel
      */
     public function getOriginalTotalAttribute(): float
     {
-        return ($this->original_total_amount ?? 0) / 100;
+        return (float) ($this->original_total_amount ?? 0);
     }
 
     /**
@@ -109,7 +123,7 @@ class Refund extends BaseModel
      */
     public function getTotalAfterProductDiscountAttribute(): float
     {
-        return ($this->total_payable_amount ?? 0) / 100;
+        return ($this->total_payable_amount ?? 0) / $this->legacyMoneyScale();
     }
 
     /**
@@ -135,13 +149,11 @@ class Refund extends BaseModel
             return 0;
         }
 
-        $baseAmount = $this->total_after_refund_discount;
-
         if ($this->refund_fee_type === 'percent') {
-            return ($baseAmount * ($this->refund_fee / 100)) / 100;
-        } else {
-            return ($this->refund_fee ?? 0) / 100;
+            return $this->total_after_refund_discount * $this->refund_fee / 100;
         }
+
+        return (float) $this->refund_fee;
     }
 
     /**
@@ -151,7 +163,7 @@ class Refund extends BaseModel
      */
     public function getFinalTotalAttribute(): float
     {
-        return ($this->value ?? 0) / 100;
+        return ($this->value ?? 0) / $this->legacyMoneyScale();
     }
 
     /**
@@ -161,7 +173,7 @@ class Refund extends BaseModel
      */
     public function getRefundDiscountAttribute(): float
     {
-        return ($this->discount_value ?? 0) / 100;
+        return (float) ($this->discount_value ?? 0);
     }
 
     /**
@@ -171,7 +183,7 @@ class Refund extends BaseModel
      */
     public function getRefundFeeAmountAttribute(): float
     {
-        return ($this->refund_fee ?? 0) / 100;
+        return (float) ($this->refund_fee ?? 0);
     }
 
     /**

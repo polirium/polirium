@@ -256,7 +256,7 @@
                                                     </td>
                                                     <td>{{ $refund->created_at->format('d/m/Y H:i') }}</td>
                                                     <td>{{ $refund->user->name ?? '-' }}</td>
-                                                    <td class="fw-bold text-danger text-end">{{ number_format($refund->value / 100) }}</td>
+                                                    <td class="fw-bold text-danger text-end">{{ number_format($refund->final_total) }}</td>
                                                     <td class="text-end">
                                                         <button type="button" onclick="PoliriumPrint.printUrl('{{ route('products.print.print-payment', $refund->id) }}')" class="btn btn-sm btn-icon btn-ghost-secondary">
                                                             {!! tabler_icon('printer') !!}

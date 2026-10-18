@@ -90,8 +90,8 @@ final class PaymentRefundTable extends BaseTable
             ->add('customer_name', fn ($model) => $model->payment?->customer?->name ?? 'Khách lẻ')
             ->add('customer_phone', fn ($model) => $model->payment?->customer?->phone ?? '')
             ->add('amount')
-            ->add('original_total_amount_formatted', fn ($model) => core_number_format(($model->original_total_amount ?? 0) / 100))
-            ->add('value_formatted', fn ($model) => core_number_format(($model->value ?? 0) / 100))
+            ->add('original_total_amount_formatted', fn ($model) => core_number_format($model->original_total))
+            ->add('value_formatted', fn ($model) => core_number_format($model->final_total))
             ->add('creator_name', fn ($model) => $model->creator?->name ?? '')
             ->add('created_at_formatted', fn ($model) => $model->created_at?->format('d/m/Y H:i'))
             ->add('note');

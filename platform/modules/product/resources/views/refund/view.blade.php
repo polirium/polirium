@@ -167,7 +167,7 @@
                     <tr>
                         <td><b>Tổng tiền gốc:</b> <x-ui::badge color="primary" :label="count((array)$products)" /></td>
                         <td class="text-end">
-                            {{ core_number_format(($refundData['original_total_amount'] ?? 0) / 100) }}
+                            {{ core_number_format($refundData['original_total_amount'] ?? 0) }}
                         </td>
                     </tr>
 
@@ -188,7 +188,7 @@
 
                                 <div class="px-4 py-3" style="min-width: 250px;">
                                     <x-form::currency
-                                        wire:model.live="refundData.discount_value"
+                                        wire:model.live.blur="refundData.discount_value"
                                         placeholder="Giảm giá"
                                         :disabled="$isFinished"
                                     >
@@ -229,7 +229,7 @@
 
                                 <div class="px-4 py-3" style="min-width: 250px;">
                                     <x-form::currency
-                                        wire:model.live="refundData.refund_fee"
+                                        wire:model.live.blur="refundData.refund_fee"
                                         placeholder="Phí trả hàng"
                                         :disabled="$isFinished"
                                     >
@@ -256,7 +256,7 @@
                     <tr>
                         <td><b>Tổng tiền trả:</b></td>
                         <td class="text-end">
-                            <b class="text-success fs-4">{{ core_number_format(($refundData['value'] ?? 0) / 100) }}</b>
+                            <b class="text-success fs-4">{{ core_number_format($refundData['value'] ?? 0) }}</b>
                         </td>
                     </tr>
 
