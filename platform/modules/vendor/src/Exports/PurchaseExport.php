@@ -2,6 +2,7 @@
 
 namespace Polirium\Modules\Vendor\Exports;
 
+use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -12,7 +13,7 @@ class PurchaseExport implements FromCollection, WithHeadings, WithMapping, Shoul
 {
     public function __construct(protected int $purchaseId) {}
 
-    public function collection()
+    public function collection(): Enumerable
     {
         $purchase = Purchase::with(['products.product'])->findOrFail($this->purchaseId);
         return $purchase->products;
