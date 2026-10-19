@@ -124,6 +124,8 @@ class ModalQuickUpdateComponent extends Component
 
         if (! $payment) {
             $this->dispatch('error', 'Không tìm thấy đơn hàng.');
+            // The modal may already be open (it opens on click): do not leave the previous order in it.
+            $this->dispatch('modal', 'modal-quick-update', 'hide');
 
             return;
         }

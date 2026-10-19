@@ -11,6 +11,12 @@ final class ProductInventorySupport
 {
     private const INACTIVE_STATUSES = ['temp', 'draft', 'cancel', 'cancelled', 'failed', 'delivery_failed'];
 
+    /** Whether an invoice in this status has taken its goods out of stock (and so can be returned). */
+    public static function exportsStock(?string $status): bool
+    {
+        return ! in_array($status, self::INACTIVE_STATUSES, true);
+    }
+
     /**
      * Return the maximum number of units that can be sold from a branch.
      * A combo has no stock of its own; its availability is derived from its

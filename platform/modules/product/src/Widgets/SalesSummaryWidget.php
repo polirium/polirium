@@ -64,13 +64,13 @@ class SalesSummaryWidget extends AbstractWidget
     }
 
     /**
-     * Sales of a range that count (not cancelled), in this branch.
+     * Sales of a range that count (not drafts or cancelled), in this branch.
      */
     protected function sales(array $range)
     {
         return Payment::query()
             ->whereBetween('created_at', $range)
-            ->whereNotIn('status', ['cancelled', 'cancel', 'failed', 'delivery_failed'])
+            ->whereNotIn('status', ['draft', 'temp', 'cancelled', 'cancel', 'failed', 'delivery_failed'])
             ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId));
     }
 

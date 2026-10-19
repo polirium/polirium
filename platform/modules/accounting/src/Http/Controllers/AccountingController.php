@@ -35,8 +35,11 @@ class AccountingController extends BaseController
     public function paymentRefundDetail($id)
     {
         // $this->authorize('accountings.refunds');
-        // Redirect to POS V2 integration
-        return redirect()->route('products.payment.v2', ['refund_id' => $id]);
+        // There is no separate return page: show the return in the return list.
+        // (refund_id on the POS screen is an invoice id, not a return id.)
+        $code = \Polirium\Modules\Product\Http\Model\Refund\Refund::whereKey($id)->value('code');
+
+        return redirect()->route('accountings.payment.refund', $code ? ['search' => $code] : []);
     }
 
     public function paymentIndex()

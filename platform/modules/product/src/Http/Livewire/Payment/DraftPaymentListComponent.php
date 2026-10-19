@@ -2,6 +2,7 @@
 
 namespace Polirium\Modules\Product\Http\Livewire\Payment;
 
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Polirium\Modules\Product\Http\Model\Payment\Payment;
@@ -86,28 +87,32 @@ class DraftPaymentListComponent extends Component
      */
     public function deleteDraft(int $paymentId): void
     {
-        $payment = Payment::find($paymentId);
+        $this->authorize('sales.payment.index');
 
-        if (! $payment) {
-            $this->dispatch('error', 'Không tìm thấy hóa đơn tạm.');
+        // Re-read under a lock: another till may be completing this draft right now.
+        $error = DB::transaction(function () use ($paymentId): ?string {
+            $payment = Payment::whereKey($paymentId)->lockForUpdate()->first();
+
+            if (! $payment) {
+                return 'Không tìm thấy hóa đơn tạm.';
+            }
+
+            if ($payment->status !== 'draft') {
+                return 'Hóa đơn này không phải là hóa đơn tạm.';
+            }
+
+            $payment->products()->delete();
+            $payment->delivery?->delete();
+            $payment->delete();
+
+            return null;
+        });
+
+        if ($error) {
+            $this->dispatch('error', $error);
 
             return;
         }
-
-        if ($payment->status !== 'draft') {
-            $this->dispatch('error', 'Hóa đơn này không phải là hóa đơn tạm.');
-
-            return;
-        }
-
-        // Xóa các sản phẩm liên quan
-        $payment->products()->delete();
-
-        // Xóa payment delivery nếu có
-        $payment->delivery?->delete();
-
-        // Xóa payment
-        $payment->delete();
 
         $this->dispatch('success', 'Đã xóa hóa đơn tạm.');
         $this->dispatch('refresh-draft-list');

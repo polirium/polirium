@@ -271,9 +271,11 @@
                 @livewire('modules/accounting::payment.payment-actions', ['payment' => $payment], key('actions-' . $payment->id))
             </x-slot:start>
 
-            <x-ui::button color="secondary" outline size="sm" icon="arrow-back-up" :href="route('products.payment.v2', ['refund_id' => $payment->id])">
-                {{ trans('modules/accounting::accounting.refund') }}
-            </x-ui::button>
+            @if (\Polirium\Modules\Product\Http\Support\ProductInventorySupport::exportsStock($payment->status))
+                <x-ui::button color="secondary" outline size="sm" icon="arrow-back-up" :href="route('products.payment.v2', ['refund_id' => $payment->id])">
+                    {{ trans('modules/accounting::accounting.refund') }}
+                </x-ui::button>
+            @endif
             <x-ui::button color="secondary" outline size="sm" icon="printer" type="button" onclick="PoliriumPrint.printUrl('{{ route('products.print.print-payment', $payment->id) }}')">
                 {{ __('core/base::general.print') }}
             </x-ui::button>
@@ -369,7 +371,7 @@
                 <tbody>
                     @forelse($refunds as $refund)
                     <tr>
-                        <td><a href="#" class="text-primary">{{ $refund->code }}</a></td>
+                        <td><a href="{{ route('accountings.payment.refund', ['search' => $refund->code]) }}" class="text-primary">{{ $refund->code }}</a></td>
                         <td>{{ $refund->created_at->format('d/m/Y H:i') }}</td>
                         <td>{{ $refund->user->name ?? '-' }}</td>
                         <td class="text-end">{{ core_number_format($refund->final_total) }}</td>

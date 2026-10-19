@@ -139,8 +139,10 @@ class DemoDataCommand extends Command
         $fresh = (bool) $this->option('fresh');
         $days = max(30, min(365, (int) $this->option('days')));
 
-        if ($fresh && ! config('app.demo')) {
-            $this->error('Chỉ chạy --fresh trên bản demo: đặt POLIRIUM_DEMO=true trong .env (lệnh này xoá toàn bộ dữ liệu kinh doanh).');
+        // Even without --fresh it renames the first branch and adds staff, roles and
+        // months of sales and cash entries: never on a real installation.
+        if (! config('app.demo')) {
+            $this->error('Chỉ chạy trên bản demo: đặt POLIRIUM_DEMO=true trong .env (lệnh này tạo dữ liệu mẫu, --fresh xoá toàn bộ dữ liệu kinh doanh).');
 
             return self::FAILURE;
         }
@@ -228,6 +230,9 @@ class DemoDataCommand extends Command
             'accouting_payments', 'accounting_receipts', 'accounting_pay_persons',
             'task_comments', 'task_attachments', 'task_time_logs', 'task_dependencies', 'tasks', 'projects',
             'branch_taking_addresses', 'activity_log',
+            // Saved POS tabs point at the wiped products and customers; counters
+            // would continue after codes that no longer exist.
+            'product_pos_carts', 'document_sequences',
         ];
 
         Schema::disableForeignKeyConstraints();

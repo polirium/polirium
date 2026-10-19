@@ -15,6 +15,7 @@ use Polirium\Modules\Product\Http\Support\ProductInventorySupport;
 
 class RefundComponent extends Component
 {
+    #[Locked]
     public int $payment_id = 0;
     public string $tab_id = '';
 
@@ -115,22 +116,41 @@ class RefundComponent extends Component
         $this->refundData['code'] = code_generate('TRH', Refund::max('id') + 1);
         $this->refundData['original_total_amount'] = $payment->value;
 
+        if (! ProductInventorySupport::exportsStock($payment->status)) {
+            $this->products = [];
+            $this->updatedRefundData();
+            session()->flash('error', "Hóa đơn {$payment->code} chưa xuất kho hoặc đã hủy, không thể trả hàng.");
+
+            return;
+        }
+
         // Load products từ payment, only what has not been returned yet
         $remaining = $this->returnableQuantities($payment->id);
+
+        // Default return price is what the customer actually paid per unit: the
+        // line after its own discount, then its share of an invoice discount.
+        $lineTotal = fn ($item) => (float) ($item->total ?: discount_value((float) $item->value * (int) $item->amount, (float) $item->discount_value, $item->discount_type ?: 'number'));
+        $linesSum = $payment->products->sum($lineTotal);
+        $paidShare = $linesSum > 0 && (float) $payment->value > 0 && (float) $payment->value < $linesSum
+            ? (float) $payment->value / $linesSum
+            : 1.0;
+
         $this->products = [];
         foreach ($payment->products as $item) {
             if (($remaining[(int) $item->product_id] ?? 0) <= 0) {
                 continue;
             }
 
+            $unitPaid = round($lineTotal($item) / max(1, (int) $item->amount) * $paidShare);
+
             $this->products[$item->product_id] = [
                 'product_id' => $item->product_id,
                 'sold_amount' => $remaining[(int) $item->product_id],
                 'amount' => 1,
-                'price' => (float)$item->value,
+                'price' => $unitPaid,
                 'discount_value' => 0,
                 'discount_type' => 'number',
-                'value' => (float)$item->value,
+                'value' => $unitPaid,
                 'product' => $item->product?->only(['id', 'name', 'code', 'unit', 'price', 'cost']) ?? [],
             ];
         }
@@ -141,6 +161,13 @@ class RefundComponent extends Component
     public function updatedProducts($value, $key): void
     {
         if ($this->isFinished) {
+            return;
+        }
+
+        // Only "{productId}.{column}" edits come from the form.
+        if (substr_count($key, '.') !== 1) {
+            $this->updatedRefundData();
+
             return;
         }
 
@@ -250,11 +277,6 @@ class RefundComponent extends Component
     {
         $this->authorize('products.edit');
 
-        \Log::info('RefundComponent::submitRefund() started', [
-            'payment_id' => $this->payment_id,
-            'refundData.product_payment_id' => $this->refundData['product_payment_id'] ?? 'NULL',
-        ]);
-
         if (empty($this->refundData['product_payment_id'])) {
             \Log::warning('RefundComponent::submitRefund() - Missing product_payment_id');
             session()->flash('error', 'Vui lòng load đơn hàng trước khi refund');
@@ -291,6 +313,11 @@ class RefundComponent extends Component
 
                     // Lock the sale so two returns against it are checked one after the other.
                     $payment = Payment::whereKey($this->payment_id)->lockForUpdate()->firstOrFail();
+
+                    // Drafts and cancelled invoices never took (or already gave back) their goods.
+                    if (! ProductInventorySupport::exportsStock($payment->status)) {
+                        throw new \RuntimeException("Hóa đơn {$payment->code} chưa xuất kho hoặc đã hủy, không thể trả hàng.");
+                    }
                     $remaining = $this->returnableQuantities($payment->id);
 
                     foreach ($this->products as $item) {
@@ -302,7 +329,14 @@ class RefundComponent extends Component
                         }
                     }
 
-                    $refund = Refund::create(['checkout_key' => $this->checkoutKey, 'money_unit' => Refund::MONEY_UNIT_VND] + $this->refundData);
+                    // Ids come from the locked sale and the session, never from the browser.
+                    $refund = Refund::create([
+                        'checkout_key' => $this->checkoutKey,
+                        'money_unit' => Refund::MONEY_UNIT_VND,
+                        'product_payment_id' => $payment->id,
+                        'user_id' => auth()->id(),
+                        'user_created_id' => auth()->id(),
+                    ] + $this->refundData);
                     $quantities = [];
 
                     foreach ($this->products as $item) {

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Polirium\Modules\Product\Http\Model\Payment\Payment as CustomerPayment;
+use Polirium\Modules\Product\Http\Model\ProductBranch;
 use Polirium\Modules\Product\Http\Model\Refund\Refund as CustomerRefund;
 use Polirium\Modules\Vendor\Http\Model\Purchase\Purchase as VendorPurchase;
 use Polirium\Modules\Vendor\Http\Model\Refund\Refund as VendorRefund;
@@ -13,7 +14,8 @@ class AuditInventoryCommand extends Command
 {
     protected $signature = 'audit:inventory
                             {--product= : Mã sản phẩm cụ thể (VD: XG.741100)}
-                            {--fix : Đồng bộ tồn kho hiện tại theo dòng thẻ kho cuối của từng chi nhánh (không sửa lịch sử)}';
+                            {--fix : Đồng bộ tồn kho hiện tại theo dòng thẻ kho cuối của từng chi nhánh (không sửa lịch sử)}
+                            {--force : Không hỏi xác nhận khi --fix}';
 
     protected $description = 'Kiểm tra toàn bộ tính toán Thẻ Kho (product_logs) và Tồn Kho (products.qty / product_branches.qty)';
 
@@ -27,6 +29,13 @@ class AuditInventoryCommand extends Command
 
     public function handle(): int
     {
+        if ($this->option('fix') && ! $this->option('force')
+            && ! $this->confirm('--fix sẽ xoá bản ghi mồ côi và chỉnh tồn kho hiện tại theo thẻ kho. Tiếp tục?', false)) {
+            $this->warn('Đã huỷ, không thay đổi gì.');
+
+            return self::FAILURE;
+        }
+
         $this->info('');
         $this->info('╔══════════════════════════════════════════════════════════╗');
         $this->info('║          KIỂM TRA TOÀN VẸN DỮ LIỆU TỒN KHO           ║');
@@ -115,6 +124,7 @@ class AuditInventoryCommand extends Command
             if ($this->option('fix')) {
                 $this->line('');
                 $this->line('  <fg=cyan>→</> Đang xóa bản ghi mồ côi...');
+                DB::beginTransaction();
 
                 // Xóa orphan payment logs
                 if ($orphanPaymentLogs > 0) {
@@ -167,6 +177,7 @@ class AuditInventoryCommand extends Command
                     $this->line("    <fg=green>✓</> Đã xóa {$deleted} phiếu Trả hàng mồ côi");
                 }
 
+                DB::commit();
                 $this->line('    <fg=green>✓</> Hoàn tất xóa bản ghi mồ côi!');
             } else {
                 $this->errors[] = "Tồn tại {$totalOrphans} bản ghi mồ côi cần xóa.";
@@ -260,6 +271,7 @@ class AuditInventoryCommand extends Command
 
             $branchRows = DB::table('product_branches')->where('product_id', $productId)->pluck('qty', 'branch_id')->map(fn ($qty) => (int) $qty);
             $issues = [];
+            $unfixable = [];
             $chainErrors = [];
             $cardTotal = 0;
 
@@ -292,7 +304,12 @@ class AuditInventoryCommand extends Command
                     // Only the current quantity is aligned to the stock card;
                     // history is never rewritten.
                     if ($this->option('fix')) {
-                        DB::table('product_branches')->where('product_id', $productId)->where('branch_id', $branchId)->update(['qty' => $cardQty]);
+                        if ($branchId > 0) {
+                            // Creates the branch row when the stock card has lines for a branch without one.
+                            ProductBranch::updateOrCreate(['product_id' => $productId, 'branch_id' => $branchId], ['qty' => $cardQty]);
+                        } else {
+                            $unfixable[] = 'Thẻ kho có dòng không có chi nhánh: cần kiểm tra thủ công';
+                        }
                     }
                 }
             }
@@ -311,7 +328,8 @@ class AuditInventoryCommand extends Command
                 $issues[] = 'Chuỗi thẻ kho bị đứt (' . count($chainErrors) . ' dòng, không tự sửa)';
             }
 
-            $fixed = $this->option('fix') && $chainErrors === [];
+            $issues = array_merge($issues, $unfixable);
+            $fixed = $this->option('fix') && $chainErrors === [] && $unfixable === [];
 
             if ($issues === [] || $fixed) {
                 $this->passedProducts++;
