@@ -4,9 +4,85 @@ All notable changes to Polirium are documented here. Versions follow
 [Semantic Versioning](https://semver.org/). Each release on GitHub carries a
 self-contained package that the in-app updater installs.
 
-## [1.0.5] - unreleased
+## [1.1.0] - 2026-10-19
+
+### Added
+- Point of sale: reworked screen. Enter adds the exact code or the
+  highlighted result (barcode friendly), arrows move through results, F3
+  focuses search and F9 pays; the amount due and the Pay button stay
+  visible; scanning a product again adds to its quantity.
+- Point of sale: open invoices and returns are kept on the server, so a
+  reload, a closed browser or a new session brings every tab back.
+- Header search (Ctrl+K) across products, customers, invoices, suppliers,
+  projects and tasks, limited to what the user may see in their branch.
+- Dashboard: widgets on a grid that can be dragged and resized; widgets
+  load after the page.
+- Price list: selling prices edited in place.
+- `refunds:convert-money`: optional command that rewrites POS returns
+  saved before this version in VND (dry run unless `--apply`).
+- `demo:data`: multi-branch sample data posted through the application
+  itself (only on installations marked `POLIRIUM_DEMO=true`).
+
+### Changed
+- Modals open the moment a button is clicked and show a spinner while
+  their content loads; fades are shorter and the page behind is no longer
+  blurred.
+- Consistent row actions, toolbars and modal footers on every module
+  screen; compact tables with a 300 ms search delay.
+- Faster lists: indexes for list filters and code look-ups, the product
+  list loads once, the stock card in the product detail loads in a few
+  queries.
+
+### Fixed
+- Point of sale could record the same sale, draft or return twice (double
+  click, F9 plus click, resubmit or a second tab), posting stock twice.
+  Each checkout now has a key; completing a draft locks it first; the cash
+  receipt is written in the sale's transaction.
+- Document codes (BH, PT, TRH…) could repeat when two tills saved at once;
+  they now come from a locked counter.
+- Returns could exceed what was sold, counted earlier returns only on one
+  of the two return screens, and put stock back in the selected branch
+  instead of the sale's branch.
+- POS returns showed the original total divided by 100 (a 1,288,000 sale
+  as "12,880") and mixed units between screens; all amounts are VND.
+  Returns saved before this version still display correctly.
+- Amounts typed as "20,000" in a return were read as 20.
+- A draft opened into every open tab, and a new customer was set on every
+  invoice.
+- "Đơn tạm" (drafts) appeared only after the server answered and loaded
+  the list on every POS refresh; its pagination did not work.
+- Modals could open twice and leave a dark backdrop behind after closing.
+- Dashboard widgets: revenue by payment method was always 0, cash flow
+  receipts were always 0, "last 7/30 days" meant this week/month.
+- `audit:inventory` checked stock cards across branches as one chain and
+  `--fix` rewrote history; it now checks per branch and only aligns
+  current quantities.
+- Invoice detail panel, the expanded row of the return list and the
+  product price list failed to open or lost their actions.
+- Saved dashboard layouts were deleted when a permission was revoked or a
+  module disabled; they are now kept.
+- Returns pre-filled the list price, ignoring line and invoice discounts, so
+  a full return refunded more than the customer paid. They now default to
+  what was actually paid.
+- A return could be made against a draft or cancelled invoice, adding stock
+  that never left; such invoices are refused.
+- Deleting a draft did not lock it, so a draft being completed at the same
+  moment could lose its lines; it now needs POS access and is locked.
+- Revenue and sales widgets counted held (draft) invoices as sales.
+- The first document code of a prefix could fail when two tills saved at
+  the same moment (database deadlock).
+- Return codes on the invoice page opened an unrelated invoice and the
+  print button printed one; they now open the return in the return list.
+
+### Changed (commands)
+- `audit:inventory --fix` asks for confirmation (pass `--force` in
+  scripts), removes orphan records in one transaction and creates missing
+  branch stock rows instead of reporting them fixed.
+- `demo:data` runs only on installations marked `POLIRIUM_DEMO=true`,
+  with or without `--fresh`.
 
 ### Security
+- The user form no longer writes edited user details to the log.
 - Dashboard: the widget list and layout could be changed from the browser to
   show widgets the user may not see. They are now locked and checked on the
   server, and every widget checks its own permissions.
@@ -15,10 +91,6 @@ self-contained package that the in-app updater installs.
   the application.
 - Tables with relation search (for example purchases) could return rows from
   other branches when searching; matches now stay inside the table's filters.
-
-### Fixed
-- Saved dashboard layouts were deleted when a permission was revoked or a
-  module disabled; they are now kept.
 
 ## [1.0.4] - 2026-10-17
 
