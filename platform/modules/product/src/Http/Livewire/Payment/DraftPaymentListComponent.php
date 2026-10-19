@@ -41,15 +41,18 @@ class DraftPaymentListComponent extends Component
 
     /**
      * Lấy danh sách hóa đơn tạm
-     * Hiển thị tất cả drafts để user có thể chọn và chuyển branch khi cần
+     * Drafts of every branch the user works in, so they can pick one and switch branch
      *
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public function getDraftsProperty(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
+        $branchIds = user_branch_ids();
+
         return Payment::query()
             ->with(['customer:id,name,phone', 'branch:id,name', 'author:id,name'])
             ->where('status', 'draft')
+            ->when($branchIds !== null, fn ($q) => $q->whereIn('branch_id', $branchIds))
             ->latest()
             ->paginate(10, ['*'], 'draftPage');
     }
@@ -59,9 +62,11 @@ class DraftPaymentListComponent extends Component
      */
     public function openDraft(int $paymentId): void
     {
+        $this->authorize('sales.payment.index');
+
         $payment = Payment::find($paymentId);
 
-        if (! $payment) {
+        if (! $payment || ! user_can_access_branch($payment->branch_id)) {
             $this->dispatch('error', 'Không tìm thấy hóa đơn tạm.');
 
             return;
@@ -93,7 +98,7 @@ class DraftPaymentListComponent extends Component
         $error = DB::transaction(function () use ($paymentId): ?string {
             $payment = Payment::whereKey($paymentId)->lockForUpdate()->first();
 
-            if (! $payment) {
+            if (! $payment || ! user_can_access_branch($payment->branch_id)) {
                 return 'Không tìm thấy hóa đơn tạm.';
             }
 

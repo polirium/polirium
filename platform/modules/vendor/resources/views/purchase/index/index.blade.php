@@ -21,4 +21,7 @@
             </x-ui::card>
         </div>
     </div>
+
+    {{-- Once per page: the expanded rows open it to show a product. --}}
+    @livewire('modules/product::index.modal.modal-create-product')
 </x-ui.layouts::app>

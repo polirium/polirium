@@ -23,4 +23,8 @@
     @livewire('modules/customer::index.modal.modal-create-customer')
     @livewire('modules/customer::index.modal.modal-import-customer')
     @livewire('modules/customer::index.modal.modal-create-customer-group')
+
+    {{-- Once per page for the invoice history in the expanded rows. --}}
+    @livewire('modules/accounting::payment.modal.modal-create-sale-invoice')
+    @livewire('modules/accounting::payment.modal.modal-quick-update-component')
 </x-ui.layouts::app>

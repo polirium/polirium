@@ -277,5 +277,6 @@
 @endsection
 
 @push('scripts')
+    @livewire('modules/accounting::payment.modal.modal-create-sale-invoice')
     @livewire('modules/accounting::payment.modal.modal-quick-update-component')
 @endpush

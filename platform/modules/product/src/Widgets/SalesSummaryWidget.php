@@ -74,34 +74,48 @@ class SalesSummaryWidget extends AbstractWidget
             ->when(user_branch(), fn ($query, $branchId) => $query->where('branch_id', $branchId));
     }
 
+    /**
+     * Orders, items and revenue of a range, added up in the database.
+     */
+    protected function totals(array $range): object
+    {
+        return $this->sales($range)->toBase()
+            ->selectRaw('COUNT(*) AS orders, COALESCE(SUM(amount_products), 0) AS items, COALESCE(SUM(value), 0) AS revenue')
+            ->selectRaw('COUNT(DISTINCT customer_id) AS customers, COUNT(customer_id) AS with_customer')
+            ->first();
+    }
+
     public function render()
     {
         $range = $this->periodRange($this->period);
-        $payments = $this->sales($range)->get(['id', 'customer_id', 'value', 'amount_products', 'created_at']);
-        $previous = $this->sales($this->previousRange($this->period))
-            ->selectRaw('COUNT(*) AS orders, COALESCE(SUM(amount_products), 0) AS items, COALESCE(SUM(value), 0) AS revenue')
-            ->first();
+        $current = $this->totals($range);
+        $previous = $this->totals($this->previousRange($this->period));
 
         $buckets = array_fill_keys($this->periodBuckets($this->period), 0);
         $series = ['orders' => $buckets, 'items' => $buckets, 'revenue' => $buckets];
-        foreach ($payments as $payment) {
-            $bucket = $this->bucketOf($this->period, $payment->created_at);
+        $bucketSql = $this->bucketSql($this->period);
+        $rows = $this->sales($range)->toBase()
+            ->selectRaw("{$bucketSql} AS bucket, COUNT(*) AS orders, COALESCE(SUM(amount_products), 0) AS items, COALESCE(SUM(value), 0) AS revenue")
+            ->groupByRaw($bucketSql)
+            ->get();
+        foreach ($rows as $row) {
+            $bucket = (string) $row->bucket;
             if (array_key_exists($bucket, $buckets)) {
-                $series['orders'][$bucket]++;
-                $series['items'][$bucket] += (int) $payment->amount_products;
-                $series['revenue'][$bucket] += (float) $payment->value;
+                $series['orders'][$bucket] = (int) $row->orders;
+                $series['items'][$bucket] = (int) $row->items;
+                $series['revenue'][$bucket] = (float) $row->revenue;
             }
         }
 
-        $totalOrders = $payments->count();
-        $totalItems = (int) $payments->sum('amount_products');
-        $totalRevenue = (float) $payments->sum('value');
+        $totalOrders = (int) $current->orders;
+        $totalItems = (int) $current->items;
+        $totalRevenue = (float) $current->revenue;
         $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
         $previousAvg = (int) $previous->orders > 0 ? (float) $previous->revenue / (int) $previous->orders : 0;
 
         $topProducts = PaymentProduct::query()
             ->select('product_id', DB::raw('SUM(amount) AS total_sold'), DB::raw('SUM(total) AS total_value'))
-            ->whereIn('product_payment_id', $payments->pluck('id'))
+            ->whereIn('product_payment_id', $this->sales($range)->select('id'))
             ->groupBy('product_id')
             ->orderByDesc('total_sold')
             ->limit(4)
@@ -114,8 +128,8 @@ class SalesSummaryWidget extends AbstractWidget
             'totalItems' => $totalItems,
             'totalRevenue' => $totalRevenue,
             'avgOrderValue' => $avgOrderValue,
-            'customers' => $payments->whereNotNull('customer_id')->pluck('customer_id')->unique()->count(),
-            'withCustomer' => $totalOrders > 0 ? round($payments->whereNotNull('customer_id')->count() / $totalOrders * 100) : 0,
+            'customers' => (int) $current->customers,
+            'withCustomer' => $totalOrders > 0 ? round((int) $current->with_customer / $totalOrders * 100) : 0,
             'changes' => [
                 'orders' => $this->change($totalOrders, (float) $previous->orders),
                 'items' => $this->change($totalItems, (float) $previous->items),

@@ -387,6 +387,3 @@
         </div>
     </div>
 </div>
-
-{{-- Quick Create Sale Invoice Modal --}}
-@livewire('modules/accounting::payment.modal.modal-create-sale-invoice')

@@ -144,6 +144,13 @@ class PaymentComponent extends Component
     #[Locked]
     public string $checkoutKey = '';
 
+    /**
+     * The draft opened in this tab. Locked and re-read under a lock on save:
+     * a crafted request cannot point the cart at someone else's invoice.
+     */
+    #[Locked]
+    public ?int $draftId = null;
+
     public function mount($tab_selected = null)
     {
         Assets::loadCss('professional-table');
@@ -177,6 +184,10 @@ class PaymentComponent extends Component
             $this->list_product = array_map('intval', $state['list_product'] ?? array_keys($this->products));
             $this->payment_delivery = $state['payment_delivery'] ?? $this->payment_delivery;
             $this->checkoutKey = $state['checkout_key'] ?? (string) Str::uuid();
+            // Carts saved before 1.1.1 kept the opened draft in payment.id.
+            $draftId = $state['draft_id'] ?? ($state['payment']['id'] ?? null);
+            $this->draftId = $draftId && Payment::whereKey($draftId)->where('status', 'draft')->exists() ? (int) $draftId : null;
+            unset($this->payment['id']);
 
             $this->payment_user_id = $this->payment['user_id'] ?? null;
             $this->payment_sale_channel_id = $this->payment['sale_channel_id'] ?? null;
@@ -232,6 +243,7 @@ class PaymentComponent extends Component
                 'list_product' => $this->list_product,
                 'payment_delivery' => $this->payment_delivery,
                 'checkout_key' => $this->checkoutKey,
+                'draft_id' => $this->draftId,
             ]),
             'updated_at' => now(),
         ]);
@@ -448,6 +460,7 @@ class PaymentComponent extends Component
         $this->products = [];
         $this->list_product = [];
         $this->checkoutKey = (string) Str::uuid();
+        $this->draftId = null;
         $this->isPendingMethod = false;
         $this->methods_payment = null;
 
@@ -825,6 +838,11 @@ class PaymentComponent extends Component
 
     public function save(): void
     {
+        $this->authorize('sales.payment.index');
+
+        // Only the locked draftId says which invoice is being completed.
+        unset($this->payment['id']);
+
         // Ensure required fields are set
         if (empty($this->payment['code'])) {
             $this->payment['code'] = code_generate('BH', Payment::max('id'));
@@ -933,6 +951,10 @@ class PaymentComponent extends Component
 
         $this->validate();
 
+        if (! $this->ensureBranchAllowed()) {
+            return;
+        }
+
         // Set completed_at nếu tất cả phương thức thanh toán đều là "thu tiền ngay"
         $collectedCodes = PaymentMethod::query()
             ->where('target_payment_status', PaymentMethod::STATUS_COMPLETED)
@@ -957,13 +979,17 @@ class PaymentComponent extends Component
         try {
             DB::transaction(function () use (&$paymentModel, &$alreadySaved) {
                 // The draft being completed, or one saved earlier with this key.
-                $draftId = $this->payment['id'] ?? null;
+                $draftId = $this->draftId;
                 $existing = $draftId
                     ? Payment::whereKey($draftId)->lockForUpdate()->first()
                     : Payment::where('checkout_key', $this->checkoutKey)->lockForUpdate()->first();
 
                 if ($draftId && ! $existing) {
                     throw new \RuntimeException('Không tìm thấy hóa đơn tạm.');
+                }
+
+                if ($existing && ! user_can_access_branch($existing->branch_id)) {
+                    throw new \RuntimeException('Bạn không có quyền với hóa đơn của chi nhánh này.');
                 }
 
                 if ($existing && $existing->status !== 'draft') {
@@ -1097,6 +1123,10 @@ class PaymentComponent extends Component
      */
     public function saveDraft(): void
     {
+        $this->authorize('sales.payment.index');
+
+        unset($this->payment['id']);
+
         // Ensure required fields are set
         if (empty($this->payment['code'])) {
             $this->payment['code'] = code_generate('BH', Payment::max('id'));
@@ -1175,18 +1205,26 @@ class PaymentComponent extends Component
 
         $this->validate();
 
+        if (! $this->ensureBranchAllowed()) {
+            return;
+        }
+
         // Track if this is a new draft or update
-        $isNewDraft = empty($this->payment['id']);
+        $isNewDraft = empty($this->draftId);
 
         try {
             DB::transaction(function () use (&$paymentModel, &$isNewDraft) {
                 // The opened draft, or one already saved with this key (second click, retry).
-                $paymentModel = ! empty($this->payment['id'])
-                    ? Payment::whereKey($this->payment['id'])->lockForUpdate()->first()
+                $paymentModel = $this->draftId
+                    ? Payment::whereKey($this->draftId)->lockForUpdate()->first()
                     : Payment::where('checkout_key', $this->checkoutKey)->lockForUpdate()->first();
 
-                if (! empty($this->payment['id']) && ! $paymentModel) {
+                if ($this->draftId && ! $paymentModel) {
                     throw new \RuntimeException('Không tìm thấy hóa đơn tạm.');
+                }
+
+                if ($paymentModel && ! user_can_access_branch($paymentModel->branch_id)) {
+                    throw new \RuntimeException('Bạn không có quyền với hóa đơn của chi nhánh này.');
                 }
 
                 if ($paymentModel && $paymentModel->status !== 'draft') {
@@ -1227,8 +1265,6 @@ class PaymentComponent extends Component
             return;
         }
 
-        $this->payment['id'] = $paymentModel->id;
-
         // KHÔNG dispatch print event vì đây là draft
 
         // Notify và reset form (luôn reset để tạo "tab" mới)
@@ -1246,63 +1282,17 @@ class PaymentComponent extends Component
     }
 
     /**
-     * Hoàn thành hóa đơn tạm - trừ tồn kho, in hóa đơn
+     * The invoice's branch must be one the cashier works in (the field comes from the browser).
      */
-    public function completeDraft(int $paymentId): void
+    protected function ensureBranchAllowed(): bool
     {
-        $alreadyDone = false;
-
-        try {
-            $payment = DB::transaction(function () use ($paymentId, &$alreadyDone): Payment {
-                // Locked before the status check: two clicks cannot both see "draft"
-                // and export the stock twice.
-                $payment = Payment::whereKey($paymentId)->lockForUpdate()->first();
-
-                if (! $payment) {
-                    throw new \RuntimeException('Không tìm thấy hóa đơn tạm.');
-                }
-
-                if ($payment->status !== 'draft') {
-                    $alreadyDone = true;
-
-                    return $payment;
-                }
-
-                // Cập nhật status thành 'success' và đánh dấu ngày hoàn thành
-                $payment->status = 'success';
-                $payment->completed_at = now();
-                $payment->save();
-
-                $this->postSale($payment);
-
-                return $payment;
-            });
-        } catch (\Throwable $exception) {
-            $this->dispatch('error', $exception->getMessage());
-
-            return;
+        if (user_can_access_branch($this->payment['branch_id'] ?? null)) {
+            return true;
         }
 
-        if ($alreadyDone) {
-            $this->dispatch('warning', "Hóa đơn {$payment->code} đã được hoàn thành trước đó.");
-        }
+        $this->dispatch('error', 'Bạn không có quyền bán hàng ở chi nhánh này.');
 
-        // Cập nhật status trong component để view hiển thị đúng các nút action
-        $this->payment['status'] = 'success';
-
-        // Dispatch print event
-        $this->dispatch('product-print-payment', url: route('products.print.print-payment', $payment->id));
-
-        // Refresh draft list và datatable
-        $this->dispatch('refresh-draft-list');
-        $this->dispatch('refresh-datatable-product-payments');
-
-        // KHÔNG reset form - giữ lại payment để hiển thị nút "In lại" và "Tạo hóa đơn mới"
-        // User sẽ bấm nút "Tạo phiếu mới" để reset form
-
-        if (! $alreadyDone) {
-            $this->dispatch('success', 'Đã hoàn thành hóa đơn tạm.');
-        }
+        return false;
     }
 
     /**
@@ -1316,10 +1306,12 @@ class PaymentComponent extends Component
             return;
         }
 
+        $this->authorize('sales.payment.index');
+
         $payment = Payment::with(['products', 'customer', 'saleChannel'])
             ->find($paymentId);
 
-        if (! $payment) {
+        if (! $payment || ! user_can_access_branch($payment->branch_id)) {
             $this->dispatch('error', 'Không tìm thấy hóa đơn tạm.');
 
             return;
@@ -1332,8 +1324,8 @@ class PaymentComponent extends Component
         }
 
         // Load payment data
+        $this->draftId = $payment->id;
         $this->payment = [
-            'id' => $payment->id,
             'code' => $payment->code,
             'branch_id' => $payment->branch_id,
             'customer_id' => $payment->customer_id,

@@ -74,15 +74,28 @@ class RevenueStatsWidget extends AbstractWidget
 
     public function render()
     {
-        $payments = $this->sales($this->periodRange($this->period))
-            ->get(['id', 'value', 'value_payment', 'type_payment', 'created_at']);
+        $range = $this->periodRange($this->period);
+        $totals = $this->sales($range)->toBase()
+            ->selectRaw('COUNT(*) AS orders, COALESCE(SUM(value), 0) AS revenue')
+            ->first();
+
+        $series = array_fill_keys($this->periodBuckets($this->period), 0);
+        $bucketSql = $this->bucketSql($this->period);
+        $rows = $this->sales($range)->toBase()
+            ->selectRaw("{$bucketSql} AS bucket, COALESCE(SUM(value), 0) AS revenue")
+            ->groupByRaw($bucketSql)
+            ->get();
+        foreach ($rows as $row) {
+            if (array_key_exists((string) $row->bucket, $series)) {
+                $series[(string) $row->bucket] = (float) $row->revenue;
+            }
+        }
 
         // Collected money per payment method (from each invoice's own payment
         // lines); what is still owed (e.g. COD on its way) is "not collected".
+        // The lines are JSON, so they are read in chunks, not all sales at once.
         $methods = ['cash' => 0, 'bank' => 0, 'card' => 0, 'other' => 0];
-        $series = array_fill_keys($this->periodBuckets($this->period), 0);
-
-        foreach ($payments as $payment) {
+        $this->sales($range)->select(['id', 'type_payment'])->lazyById(500)->each(function (Payment $payment) use (&$methods) {
             foreach ((array) $payment->type_payment as $line) {
                 $method = is_array($line) ? ($line['method'] ?? 'other') : (string) $line;
                 $value = is_array($line) ? (float) ($line['value'] ?? 0) : 0;
@@ -94,14 +107,9 @@ class RevenueStatsWidget extends AbstractWidget
                 };
                 $methods[$key] += $value;
             }
+        });
 
-            $bucket = $this->bucketOf($this->period, $payment->created_at);
-            if (array_key_exists($bucket, $series)) {
-                $series[$bucket] += (float) $payment->value;
-            }
-        }
-
-        $totalRevenue = (float) $payments->sum('value');
+        $totalRevenue = (float) $totals->revenue;
         $collected = array_sum($methods);
         $uncollected = max(0, $totalRevenue - $collected);
         $previousRevenue = (float) $this->sales($this->previousRange($this->period))->sum('value');
@@ -117,7 +125,7 @@ class RevenueStatsWidget extends AbstractWidget
         return view('modules/product::widgets.revenue-stats', [
             'period' => $this->period,
             'totalRevenue' => $totalRevenue,
-            'totalOrders' => $payments->count(),
+            'totalOrders' => (int) $totals->orders,
             'change' => $this->change($totalRevenue, $previousRevenue),
             'series' => array_values($series),
             'parts' => array_values(array_filter($parts, fn ($part) => $part['value'] > 0 || in_array($part['icon'], ['cash', 'building-bank', 'credit-card'], true))),

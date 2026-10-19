@@ -197,7 +197,7 @@
                                         size="sm"
                                         icon="eye"
                                         class="btn-icon"
-                                        wire:click="$dispatch('show-modal-create-product', { id: {{ $item['product']['id'] ?? $item->product?->id ?? 0 }}, readonly: true })"
+                                        onclick="Livewire.dispatch('show-modal-create-product', { id: {{ (int) ($item['product']['id'] ?? $item->product?->id ?? 0) }}, readonly: true })"
                                     />
                                 </td>
                             </tr>
@@ -213,8 +213,6 @@
                         @endforelse
                     </tbody>
                 </x-ui::table>
-                {{-- Ensure modal is available to view product --}}
-                @livewire('modules/product::index.modal.modal-create-product')
             </x-ui::tab.item>
         </x-ui::tab>
 

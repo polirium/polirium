@@ -16,6 +16,8 @@ class AccountingController extends BaseController
     {
         // $this->authorize('accountings.payments');
         $payment = \Polirium\Modules\Product\Http\Model\Payment\Payment::findOrFail($id);
+        // Same rule as the invoice list: only invoices of a branch the user works in.
+        abort_unless(user_can_access_branch($payment->branch_id), 404);
 
         return view('modules/accounting::payment.show', compact('payment'));
     }
@@ -50,6 +52,9 @@ class AccountingController extends BaseController
 
     public function exportInvoice($id)
     {
+        $branchId = \Polirium\Modules\Product\Http\Model\Payment\Payment::whereKey($id)->value('branch_id');
+        abort_unless($branchId && user_can_access_branch($branchId), 404);
+
         return \Maatwebsite\Excel\Facades\Excel::download(new \Polirium\Modules\Accounting\Exports\InvoiceExport($id), 'hoa_don_' . $id . '.xlsx');
     }
 
@@ -57,6 +62,7 @@ class AccountingController extends BaseController
     {
         // Logic to duplicate invoice
         $original = \Polirium\Modules\Product\Http\Model\Payment\Payment::with('products')->findOrFail($id);
+        abort_unless(user_can_access_branch($original->branch_id), 404);
 
         // Clone Payment
         $newPayment = $original->replicate(['uuid', 'code', 'created_at', 'updated_at']);

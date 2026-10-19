@@ -42,4 +42,6 @@
     </div>
 
     @include('modules/vendor::purchase.index.datatable.detail')
+
+    @livewire('modules/product::index.modal.modal-create-product')
 </x-ui.layouts::app>

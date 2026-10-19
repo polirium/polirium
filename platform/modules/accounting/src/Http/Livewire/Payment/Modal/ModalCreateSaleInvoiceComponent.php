@@ -135,7 +135,7 @@ class ModalCreateSaleInvoiceComponent extends Component
     public function loadPayment($id)
     {
         $payment = Payment::with(['products.product', 'latestDelivery', 'customer'])->find($id);
-        if (! $payment) {
+        if (! $payment || ! user_can_access_branch($payment->branch_id)) {
             return;
         }
 
@@ -578,6 +578,13 @@ class ModalCreateSaleInvoiceComponent extends Component
 
         $this->validate();
 
+        // branch_id and payment.id come from the browser.
+        if (! user_can_access_branch($this->payment['branch_id'])) {
+            $this->dispatch('error', 'Bạn không có quyền với hóa đơn của chi nhánh này.');
+
+            return;
+        }
+
         // Set completed_at nếu tất cả phương thức thanh toán đều là "thu tiền ngay"
         $collectedCodes = \Polirium\Modules\Product\Http\Model\Payment\PaymentMethod::query()
             ->where('target_payment_status', \Polirium\Modules\Product\Http\Model\Payment\PaymentMethod::STATUS_COMPLETED)
@@ -606,6 +613,9 @@ class ModalCreateSaleInvoiceComponent extends Component
             \Illuminate\Support\Facades\DB::transaction(function () use (&$paymentModel, $allCollected) {
                 if (! empty($this->payment['id'])) {
                     $paymentModel = Payment::lockForUpdate()->find($this->payment['id']);
+                    if ($paymentModel && ! user_can_access_branch($paymentModel->branch_id)) {
+                        throw new \RuntimeException('Bạn không có quyền với hóa đơn của chi nhánh này.');
+                    }
                     if ($paymentModel) {
                         // Remember the lines so an edit that keeps them (note, payment, customer)
                         // never re-reads combo components that changed after the sale.

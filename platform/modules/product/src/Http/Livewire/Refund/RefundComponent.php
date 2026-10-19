@@ -275,7 +275,8 @@ class RefundComponent extends Component
 
     public function submitRefund()
     {
-        $this->authorize('products.edit');
+        // Same permission as the return route (products.payment.refund).
+        $this->authorize('sales.payment.refund');
 
         if (empty($this->refundData['product_payment_id'])) {
             \Log::warning('RefundComponent::submitRefund() - Missing product_payment_id');
@@ -313,6 +314,10 @@ class RefundComponent extends Component
 
                     // Lock the sale so two returns against it are checked one after the other.
                     $payment = Payment::whereKey($this->payment_id)->lockForUpdate()->firstOrFail();
+
+                    if (! user_can_access_branch($payment->branch_id)) {
+                        throw new \RuntimeException('Bạn không có quyền với hóa đơn của chi nhánh này.');
+                    }
 
                     // Drafts and cancelled invoices never took (or already gave back) their goods.
                     if (! ProductInventorySupport::exportsStock($payment->status)) {

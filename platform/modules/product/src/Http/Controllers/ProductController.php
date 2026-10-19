@@ -51,6 +51,7 @@ class ProductController extends BaseController
     {
         $this->authorize('sales.print');
         $payment = Payment::with(['products.product'])->findOrFail($id);
+        abort_unless(user_can_access_branch($payment->branch_id), 404);
         $form = Form::where('type', 'invoice')->where('active', 1)->first();
 
         if (! $form) {

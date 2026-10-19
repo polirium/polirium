@@ -172,6 +172,7 @@
 
         {{-- Actions --}}
         <div class="pos-actions">
+            @can('sales.payment.refund')
             <button type="button"
                 class="btn btn-sm btn-ghost-secondary"
                 title="{{ trans('modules/product::product.refund') }}"
@@ -180,6 +181,7 @@
                 {!! tabler_icon('arrow-back-up', ['class' => 'icon']) !!}
                 <span class="d-none d-xl-inline">{{ trans('modules/product::product.refund') }}</span>
             </button>
+            @endcan
             <div class="dropdown">
                 <button type="button"
                     class="btn btn-sm btn-ghost-secondary"
