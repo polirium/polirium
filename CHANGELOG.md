@@ -4,28 +4,6 @@ All notable changes to Polirium are documented here. Versions follow
 [Semantic Versioning](https://semver.org/). Each release on GitHub carries a
 self-contained package that the in-app updater installs.
 
-## [Unreleased]
-
-### Fixed
-- Point of sale: saving, saving as draft and opening a draft check the
-  sales permission and the branch; the opened draft is kept on the server,
-  so a crafted request can no longer overwrite or complete another
-  branch's draft. The unused `completeDraft` action is removed (drafts are
-  completed through the normal payment). The draft list shows only drafts
-  of the user's branches.
-- Invoice page, export, copy and print, and the invoice edit dialog, open
-  only invoices of a branch the user works in.
-- Returns from the point of sale need the "Hoàn tiền" permission
-  (`sales.payment.refund`), the same as the return page, instead of
-  product editing; the Return button is hidden without it.
-- Roles: the delete button works; a role still assigned to users is not
-  deleted.
-- Invoice and purchase lists no longer mount a dialog in every expanded
-  row; the customer list, invoice page and purchase page mount it once.
-  The product button on the purchase page opens the product again.
-- Sales dashboard widgets add up in the database instead of loading every
-  sale of the period.
-
 ## [1.1.0] - 2026-10-19
 
 ### Added
