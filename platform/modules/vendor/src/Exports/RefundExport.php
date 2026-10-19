@@ -2,6 +2,7 @@
 
 namespace Polirium\Modules\Vendor\Exports;
 
+use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -12,7 +13,7 @@ class RefundExport implements FromCollection, WithHeadings, WithMapping, ShouldA
 {
     public function __construct(protected Refund $refund, protected bool $canViewPrice) {}
 
-    public function collection()
+    public function collection(): Enumerable
     {
         return $this->refund->products;
     }

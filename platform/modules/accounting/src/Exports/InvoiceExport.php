@@ -2,6 +2,7 @@
 
 namespace Polirium\Modules\Accounting\Exports;
 
+use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -14,7 +15,7 @@ class InvoiceExport implements FromCollection, WithHeadings, WithMapping, Should
     {
     }
 
-    public function collection()
+    public function collection(): Enumerable
     {
         $payment = Payment::with(['products.product'])->findOrFail($this->paymentId);
 
