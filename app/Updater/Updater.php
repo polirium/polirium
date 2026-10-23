@@ -649,12 +649,34 @@ class Updater
         ]);
 
         foreach ($candidates as $candidate) {
-            if (is_executable($candidate) && ! str_contains(basename($candidate), 'fpm')) {
+            if ($this->allowedByOpenBasedir($candidate) && is_executable($candidate) && ! str_contains(basename($candidate), 'fpm')) {
                 return $candidate;
             }
         }
 
         return null;
+    }
+
+    /**
+     * With open_basedir set (hosting panels enable it per site), touching a
+     * path outside it raises a warning that fails the request. The PHP binary
+     * usually lives outside, so the update then runs in-process.
+     */
+    private function allowedByOpenBasedir(string $path): bool
+    {
+        $allowed = (string) ini_get('open_basedir');
+        if ($allowed === '') {
+            return true;
+        }
+
+        foreach (explode(PATH_SEPARATOR, $allowed) as $dir) {
+            $dir = rtrim($dir, '/\\');
+            if ($dir !== '' && ($path === $dir || str_starts_with($path, $dir . DIRECTORY_SEPARATOR) || str_starts_with($path, $dir . '/'))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function canRunProcesses(): bool
